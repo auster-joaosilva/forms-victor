@@ -1,0 +1,114 @@
+.barra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+  background: var(--cor-primaria);
+  color: var(--cor-primaria-texto);
+  padding: var(--esp-4);
+}
+
+.lista {
+  display: flex;
+  flex-direction: row;
+  gap: var(--esp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.etapa {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  width: 100%;
+  padding: var(--esp-3) var(--esp-4);
+  background: none;
+  border: none;
+  border-radius: var(--raio-md);
+  color: rgb(255 255 255 / 70%);
+  font-size: var(--texto-sm);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--transicao), color var(--transicao);
+}
+
+.etapa:hover {
+  background: rgb(255 255 255 / 10%);
+}
+
+.etapa[data-estado='atual'] {
+  background: rgb(255 255 255 / 14%);
+  color: var(--cor-primaria-texto);
+}
+
+.numero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--raio-pilula);
+  background: rgb(255 255 255 / 12%);
+  color: rgb(255 255 255 / 60%);
+  font-size: var(--texto-xs);
+  font-weight: 700;
+}
+
+.etapa[data-estado='atual'] .numero {
+  background: var(--cor-destaque);
+  color: var(--cor-destaque-texto);
+}
+
+.etapa[data-estado='concluida'] .numero {
+  background: var(--cor-sucesso);
+  color: #fff;
+}
+
+.rodape {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  padding: 0 var(--esp-4);
+}
+
+.contagem {
+  font-size: var(--texto-xs);
+  color: rgb(255 255 255 / 45%);
+}
+
+.trilha {
+  height: 0.35rem;
+  border-radius: var(--raio-pilula);
+  background: rgb(255 255 255 / 12%);
+  overflow: hidden;
+}
+
+.preenchido {
+  height: 100%;
+  width: var(--progresso, 0%);
+  border-radius: var(--raio-pilula);
+  background: var(--cor-destaque);
+  transition: width 400ms ease;
+}
+
+/* Coluna lateral fixa a partir do desktop. */
+@media (min-width: 64rem) {
+  .barra {
+    width: var(--largura-lateral);
+    flex-shrink: 0;
+    padding: var(--esp-6) var(--esp-3);
+  }
+
+  .lista {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+
+  .etapa {
+    white-space: normal;
+  }
+}

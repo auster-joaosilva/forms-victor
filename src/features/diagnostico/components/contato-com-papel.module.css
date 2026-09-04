@@ -1,0 +1,31 @@
+.bloco {
+  margin: 0;
+  padding: var(--esp-5);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  background: var(--cor-superficie-suave);
+}
+
+.legenda {
+  padding: 0 var(--esp-2);
+  font-size: var(--texto-sm);
+  font-weight: 700;
+  color: var(--cor-primaria);
+}
+
+.descricao {
+  margin-bottom: var(--esp-4);
+  font-size: var(--texto-sm);
+  color: var(--cor-texto-suave);
+}
+
+.campos {
+  display: grid;
+  gap: var(--esp-4);
+}
+
+@media (min-width: 40rem) {
+  .campos {
+    grid-template-columns: 1fr 1fr;
+  }
+}

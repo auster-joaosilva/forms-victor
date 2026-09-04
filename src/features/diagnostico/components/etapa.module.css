@@ -1,0 +1,38 @@
+/**
+ * Layout comum das etapas.
+ *
+ * Uma folha para as oito, e nao oito folhas identicas: a que ninguem
+ * lembrasse de atualizar ficaria diferente das outras.
+ */
+
+.pilha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-6);
+}
+
+.bloco {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+}
+
+.subtitulo {
+  font-size: var(--texto-lg);
+  font-weight: 600;
+  color: var(--cor-primaria);
+}
+
+.apoio {
+  margin-top: var(--esp-1);
+  font-size: var(--texto-sm);
+  color: var(--cor-texto-suave);
+  line-height: 1.6;
+}
+
+.erro {
+  margin-top: var(--esp-2);
+  font-size: var(--texto-sm);
+  font-weight: 500;
+  color: var(--cor-erro);
+}

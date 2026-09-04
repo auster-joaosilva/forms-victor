@@ -1,0 +1,39 @@
+.manual {
+  padding: var(--esp-4);
+  background: var(--cor-superficie-suave);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-destaque);
+  border-radius: var(--raio-md);
+}
+
+.pergunta {
+  font-size: var(--texto-sm);
+  font-weight: 600;
+}
+
+.explicacao {
+  margin-top: var(--esp-1);
+  font-size: var(--texto-xs);
+  color: var(--cor-texto-suave);
+}
+
+.acoes {
+  display: flex;
+  gap: var(--esp-3);
+  margin-top: var(--esp-3);
+}
+
+.link {
+  padding: var(--esp-1) var(--esp-3);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-sm);
+  color: var(--cor-primaria);
+  font-size: var(--texto-xs);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link:hover {
+  background: var(--cor-borda);
+}

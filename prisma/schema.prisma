@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Todo {
+  id        Int      @id @default(autoincrement())
+  title     String
+  createdAt DateTime @default(now())
+}
+
+/// Tipos de formulario publico. O prefixo do protocolo sai daqui
+/// (ver lib/protocolo.ts): DTT, DTR, PPS, CAN, PAR, CPG.
+enum TipoFormulario {
+  diagnostico_transacao
+  diagnostico_reforma
+  planejamento
+  candidato
+  parceiro
+  capag
+}
+
+/// Um envio de formulario publico.
+///
+/// `payload` guarda o formulario como veio, validado pelo Zod da feature. Nao
+/// se normaliza cada campo em coluna: o formulario muda por decisao de
+/// produto, e migration a cada pergunta nova travaria o negocio. O que sobe
+/// para coluna e o que a operacao consulta: protocolo, prioridade e prazo.
+model Solicitacao {
+  id        String         @id @default(cuid())
+  protocolo String         @unique
+  tipo      TipoFormulario
+  payload   Json
+
+  /// A, B, C ou D. Derivada de risco imediato + onda de calor.
+  /// NAO classifica a demanda para a equipe — e dado bruto para a triagem.
+  prioridade String
+  slaHoras   Int
+  /// Calculado no servidor em horas uteis, fuso America/Sao_Paulo.
+  retornoPrevistoEm DateTime
+
+  criadoEm DateTime @default(now())
+  anexos   Anexo[]
+
+  @@index([tipo, criadoEm])
+}
+
+/// Metadado do arquivo no MinIO. O byte nunca vem para o Postgres.
+model Anexo {
+  id            String @id @default(cuid())
+  solicitacaoId String
+
+  /// Para qual campo do formulario o arquivo foi enviado
+  /// (situacao_fiscal, cdas_pgfn, contabeis).
+  campo    String
+  nome     String
+  tamanho  Int
+  mimeType String
+  bucket   String
+  chave    String
+
+  criadoEm    DateTime    @default(now())
+  solicitacao Solicitacao @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
+
+  @@index([solicitacaoId])
+}
+
+/// Sequencia do protocolo, por (tipo, ano-mes).
+///
+/// O ano-mes e sempre calculado em America/Sao_Paulo. Em UTC, das 21h a
+/// meia-noite do dia 31 a chave do mes seguinte era aberta cedo e o primeiro
+/// protocolo legitimo do mes nascia 002.
+model ContadorProtocolo {
+  tipo         TipoFormulario
+  anoMes       String
+  valor        Int            @default(0)
+  atualizadoEm DateTime       @updatedAt
+
+  @@id([tipo, anoMes])
+}

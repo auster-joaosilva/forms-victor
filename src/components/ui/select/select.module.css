@@ -1,0 +1,24 @@
+.selecao {
+  width: 100%;
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  font-size: var(--texto-base);
+  cursor: pointer;
+  transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+
+.selecao:hover {
+  border-color: var(--cor-borda-forte);
+}
+
+.selecao:focus {
+  border-color: var(--cor-destaque-escuro);
+  box-shadow: 0 0 0 3px rgb(113 207 235 / 30%);
+  outline: none;
+}
+
+.selecao[aria-invalid='true'] {
+  border-color: var(--cor-erro);
+}

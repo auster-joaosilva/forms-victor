@@ -1,0 +1,33 @@
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.rotulo {
+  display: block;
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  color: var(--cor-texto);
+}
+
+.marca {
+  margin-left: var(--esp-1);
+  color: var(--cor-erro);
+}
+
+.descricao {
+  font-size: var(--texto-sm);
+  color: var(--cor-texto-suave);
+  line-height: 1.6;
+}
+
+.controle {
+  display: block;
+}
+
+.erro {
+  font-size: var(--texto-sm);
+  font-weight: 500;
+  color: var(--cor-erro);
+}

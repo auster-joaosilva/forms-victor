@@ -1,0 +1,68 @@
+/**
+ * Tokens da Auster. Todo `.module.css` consome daqui.
+ *
+ * Cor, espaco, raio e sombra literais em componente sao divida: a paleta
+ * muda por decisao de marca e precisa mudar em um arquivo, nao em quarenta.
+ */
+
+:root {
+  /* Marca */
+  --cor-primaria: #052c47;
+  --cor-primaria-clara: #0b3f63;
+  --cor-primaria-texto: #ffffff;
+  --cor-destaque: #71cfeb;
+  --cor-destaque-escuro: #4bb8d9;
+  --cor-destaque-texto: #052c47;
+
+  /* Superficies e texto */
+  --cor-fundo: #f6f8fa;
+  --cor-superficie: #ffffff;
+  --cor-superficie-suave: #eef2f6;
+  --cor-borda: #dbe3ea;
+  --cor-borda-forte: #b9c6d2;
+  --cor-texto: #16232e;
+  --cor-texto-suave: #5c6b7a;
+
+  /* Estados */
+  --cor-erro: #c0392b;
+  --cor-erro-fundo: #fdecea;
+  --cor-sucesso: #1e8e5a;
+  --cor-sucesso-fundo: #e6f6ee;
+
+  /* Espacamento — escala de 4px */
+  --esp-1: 0.25rem;
+  --esp-2: 0.5rem;
+  --esp-3: 0.75rem;
+  --esp-4: 1rem;
+  --esp-5: 1.25rem;
+  --esp-6: 1.5rem;
+  --esp-8: 2rem;
+  --esp-10: 2.5rem;
+  --esp-12: 3rem;
+
+  /* Tipografia */
+  --fonte-corpo:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --texto-xs: 0.75rem;
+  --texto-sm: 0.875rem;
+  --texto-base: 1rem;
+  --texto-lg: 1.125rem;
+  --texto-xl: 1.375rem;
+  --texto-2xl: 1.75rem;
+
+  /* Forma */
+  --raio-sm: 4px;
+  --raio-md: 8px;
+  --raio-lg: 12px;
+  --raio-pilula: 999px;
+
+  --sombra-sm: 0 1px 2px rgb(5 44 71 / 6%);
+  --sombra-md: 0 4px 16px rgb(5 44 71 / 8%);
+
+  /* Layout */
+  --largura-conteudo: 48rem;
+  --largura-lateral: 17rem;
+  --altura-topo: 4rem;
+
+  --transicao: 150ms ease;
+}

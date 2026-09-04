@@ -1,0 +1,21 @@
+.area {
+  width: 100%;
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  font-size: var(--texto-base);
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+
+.area:focus {
+  border-color: var(--cor-destaque-escuro);
+  box-shadow: 0 0 0 3px rgb(113 207 235 / 30%);
+  outline: none;
+}
+
+.area[aria-invalid='true'] {
+  border-color: var(--cor-erro);
+}

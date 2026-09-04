@@ -1,0 +1,89 @@
+.area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  padding: var(--esp-4);
+  background: var(--cor-superficie);
+  border: 1px dashed var(--cor-borda-forte);
+  border-radius: var(--raio-md);
+}
+
+.oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.gatilho {
+  align-self: flex-start;
+  padding: var(--esp-2) var(--esp-4);
+  background: var(--cor-superficie-suave);
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-md);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transicao);
+}
+
+.gatilho:hover {
+  background: var(--cor-borda);
+}
+
+.oculto:focus-visible + .gatilho {
+  outline: 2px solid var(--cor-destaque-escuro);
+  outline-offset: 2px;
+}
+
+.vazio {
+  font-size: var(--texto-xs);
+  color: var(--cor-texto-suave);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-2) var(--esp-3);
+  background: var(--cor-superficie-suave);
+  border-radius: var(--raio-sm);
+  font-size: var(--texto-sm);
+}
+
+.nome {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.tamanho {
+  color: var(--cor-texto-suave);
+  font-size: var(--texto-xs);
+  white-space: nowrap;
+}
+
+.remover {
+  background: none;
+  border: none;
+  color: var(--cor-erro);
+  font-size: var(--texto-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.remover:hover {
+  text-decoration: underline;
+}

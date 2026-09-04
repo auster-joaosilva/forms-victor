@@ -1,0 +1,40 @@
+.cartao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  box-shadow: var(--sombra-sm);
+  padding: var(--esp-6);
+}
+
+@media (min-width: 40rem) {
+  .cartao {
+    padding: var(--esp-8);
+  }
+}
+
+.aviso {
+  padding: var(--esp-4);
+  border: 1px solid;
+  border-radius: var(--raio-md);
+  font-size: var(--texto-sm);
+  line-height: 1.6;
+}
+
+.aviso[data-tom='info'] {
+  background: var(--cor-superficie-suave);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto);
+}
+
+.aviso[data-tom='erro'] {
+  background: var(--cor-erro-fundo);
+  border-color: var(--cor-erro);
+  color: var(--cor-erro);
+  font-weight: 500;
+}
+
+.aviso[data-tom='sucesso'] {
+  background: var(--cor-sucesso-fundo);
+  border-color: var(--cor-sucesso);
+  color: var(--cor-sucesso);
+}

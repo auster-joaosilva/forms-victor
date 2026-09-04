@@ -1,0 +1,10 @@
+/**
+ * Unica folha global. Tokens e reset — nada de componente.
+ *
+ * O Tailwind saiu junto com a decisao de estilizar por CSS Module: classe
+ * utilitaria no TSX e exatamente o "css estatico por arquivo" que este
+ * projeto nao quer. Componente estiliza pelo `.module.css` ao lado dele.
+ */
+
+@import './theme.css';
+@import './reset.css';

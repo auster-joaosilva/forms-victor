@@ -24,4 +24,4 @@ EXPOSE 3000
 
 # Sem pasta de migrations no repo ainda: `db push` cria o esquema.
 # Trocar por `prisma migrate deploy` quando a primeira migration existir.
-CMD ["sh", "-c", "npx prisma db push && node .output/server/index.mjs"]
+CMD ["sh", "-c", "npx prisma db push && node dist/server/server.js"]

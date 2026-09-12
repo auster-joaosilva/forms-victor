@@ -1,13 +1,3 @@
-# App do victor-forms para o Dokploy. Postgres e MinIO ja existem como stacks
-# proprias — este compose sobe so a aplicacao e aponta para elas.
-#
-# S3_ENDPOINT precisa ser o endereco que o NAVEGADOR alcanca: a URL assinada
-# carrega o host, e quem faz o PUT do anexo e o cliente, nao o servidor. Por
-# isso o dominio publico do S3, nunca um nome de servico interno.
-#
-# Variaveis a preencher no Dokploy (aba Environment):
-#   DATABASE_URL, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY
-
 services:
   app:
     build:
@@ -23,11 +13,13 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       S3_UPLOAD_URL_TTL_MINUTOS: ${S3_UPLOAD_URL_TTL_MINUTOS:-15}
     expose:
-      # Dominio e TLS ficam no Traefik do Dokploy, apontando para esta porta.
       - 3000
     networks:
       - dokploy-network
+      - shared-postgres
 
 networks:
   dokploy-network:
+    external: true
+  shared-postgres:
     external: true

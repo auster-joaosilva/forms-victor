@@ -22,6 +22,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
 
+# react-start (build Vite nativo, sem Nitro) so exporta um fetch handler em
+# dist/server/server.js - nao sobe HTTP sozinho. srvx eh quem escuta a porta
+# e serve dist/client como estatico. -s eh relativo ao dir do entry (dist/server).
+#
 # Sem pasta de migrations no repo ainda: `db push` cria o esquema.
 # Trocar por `prisma migrate deploy` quando a primeira migration existir.
-CMD ["sh", "-c", "npx prisma db push && node dist/server/server.js"]
+CMD ["sh", "-c", "npx prisma db push && npx srvx serve --entry dist/server/server.js -s ../client --prod --port $PORT"]

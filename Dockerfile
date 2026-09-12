@@ -8,7 +8,11 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# npm ci exige lockfile == package.json byte a byte, e o lockfile foi
+# regravado em ambiente nao-linux, perdendo os optionalDependencies de
+# musl/wasm (lightningcss/esbuild) que o alpine precisa. npm install
+# resolve certo pra plataforma da imagem.
+RUN npm install
 
 COPY . .
 

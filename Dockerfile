@@ -13,6 +13,9 @@ RUN npm ci
 COPY . .
 
 # Cliente Prisma e gerado, nao versionado (ver CLAUDE.md).
+# `generate` so le o schema, nao conecta no banco, mas prisma.config.ts exige
+# DATABASE_URL setada pra carregar. Valor real entra em runtime via compose.
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 RUN npx prisma generate && npm run build
 
 ENV NODE_ENV=production

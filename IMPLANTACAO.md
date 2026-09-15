@@ -14,7 +14,7 @@ Uma aplicação Node que serve três coisas na mesma porta:
 | `GET /` | o formulário público |
 | `GET /?c=TOKEN` | o mesmo formulário, pré-preenchido pelo convite |
 | `POST /api/respostas` | recebe o preenchimento |
-| `GET /backoffice` | conferência interna, protegida por senha |
+| `GET /backoffice` | conferência interna, com usuário e senha próprios |
 | `GET /saude` | verificação de saúde para o orquestrador |
 
 **Zero dependência de terceiro.** Não há `npm install`, `package-lock.json` nem
@@ -30,16 +30,45 @@ Definir no painel do Dokploy. **Nenhuma delas vai para o repositório.**
 
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
-| `AUSTER_SENHA_BACKOFFICE` | **sim** | senha do backoffice. Sem ela o processo se recusa a subir, com mensagem explícita — é proteção deliberada, não defeito |
+| `AUSTER_SENHA_BACKOFFICE` | **sim** | **senha de implantação**: abre o backoffice só enquanto não existe usuário interno ativo, para criar o primeiro. Sem ela o processo se recusa a subir, com mensagem explícita — é proteção deliberada, não defeito |
 | `AUSTER_ENDERECO_PUBLICO` | quase | URL pública, ex. `https://diagnostico.austercontabil.com.br`. Sem ela os links de convite saem sem domínio e não dá para copiar e enviar |
 | `AUSTER_BANCO` | não | caminho do SQLite. O contêiner já aponta para `/app/dados/portal.db` |
 | `PORT` | não | padrão 8080 |
 | `NODE_ENV` | não | `production` liga o cache das páginas em memória |
 
-A senha do backoffice é **compartilhada pela equipe**; o **usuário** é livre e
-fica registrado na auditoria. Quem entrar como `maria` aparece como `maria` no
-histórico de cada resposta validada. Não há cadastro de usuário: é de propósito,
-para não guardar mais credencial do que o necessário.
+### Usuários internos
+
+O backoffice tem **usuários próprios**, criados na aba **Usuários** por quem é
+administrador. Cada pessoa entra com usuário e senha seus, e é esse nome que
+fica gravado na auditoria de cada resposta validada — é o que faz a trilha
+significar alguma coisa.
+
+Dois papéis:
+
+| Papel | Pode |
+|---|---|
+| `admin` | tudo, mais criar, alterar, promover e desativar usuários |
+| `equipe` | conferir respostas, tratar situação, gerar convites, e trocar **a própria** senha |
+
+**A senha nunca é guardada.** Guarda-se o resumo `scrypt` com sal por usuário —
+scrypt vem do próprio Node e é lento de propósito, o que inviabiliza força bruta
+contra um banco vazado. O resumo não sai do banco nem para a tela do
+administrador.
+
+**Como nasce o primeiro usuário.** Enquanto não existe usuário ativo, a senha de
+`AUSTER_SENHA_BACKOFFICE` abre o backoffice como administrador e a tela já abre
+na aba Usuários, com aviso. O primeiro usuário criado **nasce administrador**,
+mesmo que se peça "equipe" — sem isso ninguém conseguiria criar o segundo.
+
+**E aí a senha de ambiente para de abrir o backoffice.** É deliberado: com
+usuário ativo, só vale credencial individual. A tela avisa e manda fechar a aba,
+porque o navegador guarda a credencial antiga enquanto ela estiver aberta.
+
+**Saída de emergência.** Se todos os usuários forem desativados, a senha de
+ambiente volta a valer. Não é preciso mexer no banco para recuperar o acesso.
+
+**Trava contra ficar sem administrador.** O sistema recusa desativar ou rebaixar
+o único administrador ativo. Crie ou promova outro antes — a mensagem diz isso.
 
 ---
 
@@ -103,13 +132,16 @@ cliente: fora do repositório, com acesso restrito, dentro da política da casa.
    regerado (`node construir.mjs`).
 3. No bloco 1, digitar um CNPJ real e sair do campo: o nome da empresa deve
    chegar preenchido. **É o teste de que a publicação resolveu o `file://`.**
-4. Enviar. Abrir `/backoffice`, entrar com o usuário próprio e ver a resposta na
-   lista.
-5. Abrir a ficha, mudar a situação para "Em análise" e conferir se o seu nome
-   aparece em "último tratamento".
-6. Na aba **Convites**, gerar um link de teste e abri-lo: nome e CNPJ devem vir
+4. Enviar. Abrir `/backoffice` com a **senha de implantação** e, na aba
+   **Usuários**, criar o primeiro usuário — ele nasce administrador. Fechar a
+   aba e entrar de novo com ele: a senha de ambiente já não abre mais.
+5. Criar um usuário de **equipe** para quem vai conferir respostas no dia a dia.
+6. Abrir a ficha de uma resposta, mudar a situação para "Em análise" e conferir
+   se o **seu usuário** aparece em "último tratamento".
+7. Na aba **Convites**, gerar um link de teste e abri-lo: nome e CNPJ devem vir
    preenchidos, e a aba deve contar a abertura.
-7. Na aba **Auditoria**, confirmar que os eventos acima estão registrados.
+8. Na aba **Auditoria**, confirmar que os eventos acima estão registrados —
+   inclusive `usuario_criado` e, se alguém errar a senha, `acesso_negado`.
 
 ---
 
@@ -124,7 +156,7 @@ Testes, todos sem dependência:
 
 ```bash
 node testes.mjs            # 26 invariantes sobre 40.000 preenchimentos
-node testes_servidor.mjs   # 37 verificações sobre o servidor e o backoffice
+node testes_servidor.mjs   # 63 verificações sobre servidor, backoffice e usuários
 node varredura.mjs         # distribuição das saídas, sorteio uniforme
 node varredura_pesos.mjs   # distribuição com pesos plausíveis (premissa, não dado)
 ```
@@ -167,4 +199,7 @@ gera sozinha.
 | build aborta dizendo "função exposta em window" | um botão deixou de chamar a função, ou a função sobrou; o build não deixa passar tela que não alcança o código |
 | respostas somem entre deploys | volume `dados` não montado |
 | links de convite sem domínio | `AUSTER_ENDERECO_PUBLICO` não definida |
-| backoffice pede senha em loop | senha com caractere que o navegador escapa; trocar por algo sem dois-pontos |
+| backoffice pede senha em loop | usuário desativado, ou senha errada; a aba **Auditoria** registra `acesso_negado` |
+| a senha de implantação deixou de abrir | é o comportamento: já existe usuário ativo. Entre com o usuário criado |
+| ninguém consegue entrar | desative todos os usuários no banco (`UPDATE usuarios SET ativo = 0`) e a senha de implantação volta a valer |
+| não dá para desativar um administrador | é a trava do único administrador ativo: promova outro antes |

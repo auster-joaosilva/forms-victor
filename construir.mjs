@@ -70,7 +70,11 @@ export function conferirFuncoesOrfas(texto) {
   const orfas = [];
   for (const m of texto.matchAll(/window\.([a-zA-Z_$][\w$]*)\s*=\s*(?:\(|function|async)/g)) {
     const nome = m[1];
-    const chamada = new RegExp(`on(?:click|change|input|blur|submit)="[^"]*window\\.${nome}\\(`);
+    // O handler pode chamar com ou sem o prefixo `window.`: as duas formas
+    // funcionam, porque o atributo roda no escopo global. Exigir o prefixo
+    // acusava como órfã toda função do backoffice — falso positivo.
+    const chamada = new RegExp(
+      `on(?:click|change|input|blur|submit)="[^"]*(?:window\\.)?${nome}\\(`);
     if (!chamada.test(texto)) orfas.push(nome);
   }
   return orfas;
@@ -91,6 +95,21 @@ if (suspeitos.length) {
   for (const x of suspeitos) console.error(`  ${x}`);
   console.error('Interpole o valor no template em vez de escrever o nome.');
   process.exit(1);
+}
+
+/* O backoffice não é montado pelo build — é servido como está. Mas as duas
+ * guardas valem para ele igual, e até aqui ninguém as aplicava: é HTML com
+ * handler inline e funções em `window`, os mesmos dois defeitos. */
+const backoffice = readFileSync('backoffice.html', 'utf8');
+for (const [rotulo, achados] of [
+  ['função exposta em window e não chamada por handler nenhum', conferirFuncoesOrfas(backoffice)],
+  ['handler inline citando identificador de módulo', conferirHandlersInline(backoffice)],
+]) {
+  if (achados.length) {
+    console.error(`ERRO em backoffice.html: ${rotulo}.`);
+    for (const x of achados) console.error(`  ${x}`);
+    process.exit(1);
+  }
 }
 
 writeFileSync('portal.html', html, 'utf8');

@@ -11,7 +11,7 @@
  */
 
 import { DatabaseSync } from 'node:sqlite';
-import { randomBytes, createHash } from 'node:crypto';
+import { randomBytes, createHash, scryptSync, timingSafeEqual } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
@@ -56,6 +56,26 @@ CREATE INDEX IF NOT EXISTS idx_respostas_protocolo ON respostas(protocolo);
 CREATE INDEX IF NOT EXISTS idx_respostas_situacao  ON respostas(situacao);
 CREATE INDEX IF NOT EXISTS idx_respostas_recebido  ON respostas(recebido_em);
 
+/* Usuários internos da equipe.
+   A senha NUNCA é guardada: guarda-se o resumo scrypt com sal por usuário.
+   scrypt vem do próprio Node e é lento de propósito — é o que torna inútil
+   testar senha por força bruta contra um banco vazado.
+   A coluna nome guarda nome de pessoa, e por isso mora aqui, no banco,
+   nunca no repositorio. */
+CREATE TABLE IF NOT EXISTS usuarios (
+  usuario      TEXT PRIMARY KEY,
+  nome         TEXT,
+  papel        TEXT NOT NULL DEFAULT 'equipe',
+  sal          TEXT NOT NULL,
+  resumo       TEXT NOT NULL,
+  ativo        INTEGER NOT NULL DEFAULT 1,
+  criado_em    TEXT NOT NULL,
+  criado_por   TEXT,
+  alterado_em  TEXT,
+  alterado_por TEXT,
+  acesso_em    TEXT
+);
+
 /* Trilha de auditoria: quem mudou o quê e quando. Só insere, nunca altera —
    é o que permite explicar depois por que um registro está como está. */
 CREATE TABLE IF NOT EXISTS eventos (
@@ -69,6 +89,13 @@ CREATE TABLE IF NOT EXISTS eventos (
 `;
 
 export const SITUACOES = ['nova', 'em_analise', 'validada', 'descartada'];
+export const PAPEIS = ['admin', 'equipe'];
+
+/** Regras mínimas de usuário e senha. Comprimento é a única exigência de senha:
+ *  obrigar símbolo e maiúscula produz senha curta e anotada em papel, que é
+ *  pior. Doze caracteres com scrypt já inviabiliza força bruta. */
+export const REGRA_USUARIO = /^[a-z][a-z0-9._-]{2,31}$/;
+export const MINIMO_SENHA = 12;
 
 export function abrirBanco(caminho) {
   try { mkdirSync(dirname(caminho), { recursive: true }); } catch { }
@@ -213,7 +240,118 @@ function criarApi(db) {
     eventos(limite = 200) {
       return db.prepare('SELECT * FROM eventos ORDER BY id DESC LIMIT ?').all(limite);
     },
+
+    // ------------------------------------------------------------- usuários
+    /** Lista sem sal e sem resumo. O resumo da senha não sai do banco nem para
+     *  a tela do administrador: não há uso legítimo para isso. */
+    usuarios() {
+      return db.prepare(`SELECT usuario, nome, papel, ativo, criado_em, criado_por,
+        alterado_em, alterado_por, acesso_em FROM usuarios ORDER BY usuario`).all();
+    },
+
+    temUsuarioAtivo() {
+      return db.prepare('SELECT COUNT(*) AS n FROM usuarios WHERE ativo = 1').get().n > 0;
+    },
+
+    administradoresAtivos() {
+      return db.prepare(`SELECT COUNT(*) AS n FROM usuarios
+                         WHERE ativo = 1 AND papel = 'admin'`).get().n;
+    },
+
+    criarUsuario({ usuario, nome, senha, papel, criadoPor }) {
+      const u = String(usuario || '').trim().toLowerCase();
+      if (!REGRA_USUARIO.test(u)) {
+        return { ok: false, motivo: 'usuário deve começar por letra e ter de 3 a 32 caracteres, sem espaço nem acento' };
+      }
+      if (String(senha || '').length < MINIMO_SENHA) {
+        return { ok: false, motivo: `senha de no mínimo ${MINIMO_SENHA} caracteres` };
+      }
+      if (db.prepare('SELECT 1 FROM usuarios WHERE usuario = ?').get(u)) {
+        return { ok: false, motivo: 'esse usuário já existe' };
+      }
+      // O primeiro usuário é administrador por necessidade: sem isso ninguém
+      // conseguiria criar o segundo, e a senha de implantação já teria parado
+      // de funcionar. Depois disso vale o papel informado.
+      const primeiro = !this.temUsuarioAtivo();
+      const p = primeiro ? 'admin' : (PAPEIS.includes(papel) ? papel : 'equipe');
+      const sal = randomBytes(16).toString('hex');
+      db.prepare(`INSERT INTO usuarios
+        (usuario, nome, papel, sal, resumo, ativo, criado_em, criado_por)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?)`)
+        .run(u, nome || null, p, sal, resumoDeSenha(senha, sal), agora(), criadoPor || null);
+      // O detalhe do evento jamais inclui a senha.
+      registrar(criadoPor, 'usuario_criado', u, { papel: p, primeiro });
+      return { ok: true, usuario: u, papel: p, primeiro };
+    },
+
+    alterarUsuario(usuario, { nome, senha, papel, ativo, quem }) {
+      const u = String(usuario || '').trim().toLowerCase();
+      const atual = db.prepare('SELECT * FROM usuarios WHERE usuario = ?').get(u);
+      if (!atual) return { ok: false, motivo: 'usuário não encontrado' };
+      if (papel !== undefined && !PAPEIS.includes(papel)) {
+        return { ok: false, motivo: 'papel inválido' };
+      }
+      if (senha !== undefined && String(senha).length < MINIMO_SENHA) {
+        return { ok: false, motivo: `senha de no mínimo ${MINIMO_SENHA} caracteres` };
+      }
+      // Trava deliberada: a casa não pode ficar sem administrador ativo. Sem
+      // isto, desativar a si mesmo por engano fecha o backoffice para todos, e
+      // só sobra mexer no banco à mão.
+      const perdeAdmin = atual.papel === 'admin' && atual.ativo === 1
+        && ((ativo === false) || (papel !== undefined && papel !== 'admin'));
+      if (perdeAdmin && this.administradoresAtivos() <= 1) {
+        return { ok: false, motivo: 'este é o único administrador ativo: crie ou promova outro antes' };
+      }
+
+      const mudou = [];
+      if (nome !== undefined) mudou.push('nome');
+      if (papel !== undefined && papel !== atual.papel) mudou.push('papel');
+      if (ativo !== undefined && (ativo ? 1 : 0) !== atual.ativo) mudou.push(ativo ? 'reativado' : 'desativado');
+      if (senha !== undefined) mudou.push('senha');
+
+      const sal = senha !== undefined ? randomBytes(16).toString('hex') : atual.sal;
+      db.prepare(`UPDATE usuarios SET
+          nome = COALESCE(?, nome),
+          papel = COALESCE(?, papel),
+          ativo = COALESCE(?, ativo),
+          sal = ?, resumo = ?,
+          alterado_em = ?, alterado_por = ?
+        WHERE usuario = ?`)
+        .run(nome ?? null, papel ?? null,
+             ativo === undefined ? null : (ativo ? 1 : 0),
+             sal, senha !== undefined ? resumoDeSenha(senha, sal) : atual.resumo,
+             agora(), quem || null, u);
+      registrar(quem, 'usuario_alterado', u, { mudou });
+      return { ok: true, mudou };
+    },
+
+    /** Confere usuário e senha. Devolve o papel, que é o que decide se a pessoa
+     *  pode administrar usuários. Senha errada vira evento de auditoria: é o
+     *  único sinal que a casa tem de tentativa de acesso indevido. */
+    autenticarUsuario(usuario, senha) {
+      const u = String(usuario || '').trim().toLowerCase();
+      const linha = db.prepare('SELECT * FROM usuarios WHERE usuario = ?').get(u);
+      if (!linha || !linha.ativo) {
+        if (linha) registrar(u, 'acesso_negado', u, { motivo: 'usuário desativado' });
+        return null;
+      }
+      const a = Buffer.from(resumoDeSenha(senha, linha.sal), 'hex');
+      const b = Buffer.from(linha.resumo, 'hex');
+      if (a.length !== b.length || !timingSafeEqual(a, b)) {
+        registrar(u, 'acesso_negado', u, { motivo: 'senha incorreta' });
+        return null;
+      }
+      db.prepare('UPDATE usuarios SET acesso_em = ? WHERE usuario = ?').run(agora(), u);
+      return { usuario: u, nome: linha.nome, papel: linha.papel };
+    },
   };
+}
+
+/** Resumo da senha: scrypt com sal por usuário. Parâmetros de fábrica do Node
+ *  (N=16384, r=8, p=1), que custam ~50 ms por tentativa — irrelevante num
+ *  acesso, proibitivo numa varredura de dicionário. */
+function resumoDeSenha(senha, sal) {
+  return scryptSync(String(senha), sal, 64).toString('hex');
 }
 
 /** Comparação de senha em tempo constante, sem guardar a senha em nenhum lugar

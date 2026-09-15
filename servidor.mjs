@@ -19,7 +19,7 @@
 
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
-import { abrirBanco, senhaConfere, SITUACOES } from './src/banco.mjs';
+import { abrirBanco, senhaConfere, MINIMO_SENHA } from './src/banco.mjs';
 
 const PORTA = Number(process.env.PORT || 8080);
 const CAMINHO_BANCO = process.env.AUSTER_BANCO || './dados/portal.db';
@@ -30,6 +30,9 @@ const LIMITE_CORPO = 256 * 1024;   // um preenchimento cabe folgado em 30 KB
 if (!SENHA) {
   console.error('ERRO: defina AUSTER_SENHA_BACKOFFICE. Sem senha, o backoffice');
   console.error('ficaria aberto na internet junto com dados de cliente.');
+  console.error('');
+  console.error('Ela e a senha de IMPLANTACAO: serve para criar o primeiro');
+  console.error('usuario interno e, feito isso, para de abrir o backoffice.');
   process.exit(1);
 }
 
@@ -120,15 +123,32 @@ function lerCorpo(req) {
   });
 }
 
-/** Autenticação básica. Usuário é livre e fica no registro de auditoria — é o
- *  que permite saber QUEM validou cada resposta. */
+/** Autenticação básica, em duas camadas.
+ *
+ *  1. Se existe usuário ativo na tabela, vale só a tabela: usuário e senha
+ *     próprios, com papel. É o que dá responsabilidade individual —
+ *     "quem validou esta resposta" passa a ter uma resposta verificável.
+ *  2. Enquanto NÃO existe usuário ativo, vale a senha de implantação da
+ *     variável de ambiente, com papel de administrador. É o only-way-in para
+ *     criar o primeiro usuário.
+ *
+ *  A consequência, deliberada: criado o primeiro usuário, a senha de ambiente
+ *  para de abrir o backoffice. E se um dia todos os usuários forem desativados,
+ *  ela volta a valer — é a saída de emergência, sem precisar mexer no banco. */
 function autenticado(req) {
   const cabecalho = req.headers.authorization || '';
   if (!cabecalho.startsWith('Basic ')) return null;
   try {
-    const [usuario, senha] = Buffer.from(cabecalho.slice(6), 'base64')
-      .toString('utf8').split(':');
-    return senhaConfere(senha, SENHA) ? (usuario || 'equipe') : null;
+    const cru = Buffer.from(cabecalho.slice(6), 'base64').toString('utf8');
+    const corte = cru.indexOf(':');            // senha pode conter ':'
+    const usuario = corte === -1 ? cru : cru.slice(0, corte);
+    const senha = corte === -1 ? '' : cru.slice(corte + 1);
+
+    if (banco.temUsuarioAtivo()) return banco.autenticarUsuario(usuario, senha);
+
+    return senhaConfere(senha, SENHA)
+      ? { usuario: usuario || 'implantacao', papel: 'admin', implantacao: true }
+      : null;
   } catch { return null; }
 }
 
@@ -180,15 +200,55 @@ const servidor = createServer(async (req, res) => {
 
     // --------------------------------------------------------- backoffice
     if (rota === '/backoffice' || rota.startsWith('/api/backoffice')) {
-      const quem = autenticado(req);
-      if (!quem) return pedirSenha(res);
+      const sessao = autenticado(req);
+      if (!sessao) return pedirSenha(res);
+      const quem = sessao.usuario;
+      const ehAdmin = sessao.papel === 'admin';
 
       if (req.method === 'GET' && rota === '/backoffice') {
         const html = pagina('./backoffice.html');
         if (!html) return responder(res, 500, 'backoffice.html não encontrado.');
         return responder(res, 200, html.replace('/*__QUEM__*/',
-          `window.__QUEM__ = ${JSON.stringify(quem)};`),
+          `window.__QUEM__ = ${JSON.stringify(quem)};\n`
+          + `window.__PAPEL__ = ${JSON.stringify(sessao.papel)};\n`
+          + `window.__IMPLANTACAO__ = ${sessao.implantacao === true};`),
           'text/html; charset=utf-8', { 'Cache-Control': 'no-store' });
+      }
+
+      // ------------------------------------------------------------ usuários
+      if (rota.startsWith('/api/backoffice/usuarios')) {
+        if (req.method === 'GET' && rota === '/api/backoffice/usuarios') {
+          if (!ehAdmin) return json(res, 403, { ok: false, erro: 'só administrador' });
+          return json(res, 200, {
+            ok: true, usuarios: banco.usuarios(), minimoSenha: MINIMO_SENHA,
+            implantacao: sessao.implantacao === true,
+          });
+        }
+
+        if (req.method === 'POST' && rota === '/api/backoffice/usuarios') {
+          if (!ehAdmin) return json(res, 403, { ok: false, erro: 'só administrador' });
+          const corpo = JSON.parse(await lerCorpo(req) || '{}');
+          const r = banco.criarUsuario({ ...corpo, criadoPor: quem });
+          return json(res, r.ok ? 201 : 400, r);
+        }
+
+        if (req.method === 'POST' && rota === '/api/backoffice/usuarios/alterar') {
+          const corpo = JSON.parse(await lerCorpo(req) || '{}');
+          const alvo = String(corpo.usuario || '').trim().toLowerCase();
+          // Quem não é administrador só pode trocar a PRÓPRIA senha, e nada
+          // mais: nome, papel e situação seguem sendo decisão de quem administra.
+          const soAPropriaSenha = alvo === quem
+            && corpo.senha !== undefined
+            && corpo.papel === undefined && corpo.ativo === undefined
+            && corpo.nome === undefined;
+          if (!ehAdmin && !soAPropriaSenha) {
+            return json(res, 403, { ok: false, erro: 'só administrador' });
+          }
+          const r = banco.alterarUsuario(alvo, { ...corpo, quem });
+          return json(res, r.ok ? 200 : 400, r);
+        }
+
+        return json(res, 404, { ok: false, erro: 'rota desconhecida' });
       }
 
       if (req.method === 'GET' && rota === '/api/backoffice/respostas') {

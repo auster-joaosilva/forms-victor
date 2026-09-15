@@ -202,6 +202,125 @@ try {
   r = await postar('/api/respostas', { respostas: { aceiteLgpd: 'sim' }, lixo: 'x'.repeat(300000) });
   conferir('corpo grande demais é recusado', r.status >= 400, 'status ' + r.status);
 
+  // ------------------------------------------------------------- usuarios
+  // Daqui para baixo a senha de ambiente vai PARAR de abrir o backoffice: e o
+  // efeito de existir usuario ativo, e esta ordem faz parte do que se testa.
+  const SENHA_MARIA = 'senha-da-maria-1234';
+  const SENHA_JOAO = 'senha-do-joao-1234';
+  const SENHA_JOAO_NOVA = 'outra-senha-do-joao-1234';
+  const cabecalhoDe = (usuario, senha) =>
+    'Basic ' + Buffer.from(`${usuario}:${senha}`).toString('base64');
+
+  r = await fetch(BASE + '/api/backoffice/usuarios', { headers: { Authorization: cabecalhoSenha() } });
+  const antes = await r.json();
+  conferir('sem usuario, a senha de implantacao abre a tela de usuarios',
+    r.ok && antes.usuarios.length === 0 && antes.implantacao === true, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios', { usuario: 'maria', nome: 'Maria', senha: 'curta' },
+    { Authorization: cabecalhoSenha() });
+  conferir('senha curta e recusada', r.status === 400, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios', { usuario: 'Maria Silva', senha: SENHA_MARIA },
+    { Authorization: cabecalhoSenha() });
+  conferir('usuario com espaco e maiuscula e recusado', r.status === 400, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios',
+    { usuario: 'maria', nome: 'Maria', senha: SENHA_MARIA, papel: 'equipe' },
+    { Authorization: cabecalhoSenha('implantacao') });
+  const criada = await r.json();
+  conferir('cria o primeiro usuario', r.status === 201 && criada.ok, 'status ' + r.status);
+  conferir('o primeiro usuario nasce administrador, mesmo pedindo equipe',
+    criada.papel === 'admin' && criada.primeiro === true, JSON.stringify(criada));
+
+  r = await fetch(BASE + '/api/backoffice/usuarios', { headers: { Authorization: cabecalhoSenha() } });
+  conferir('criado o primeiro usuario, a senha de ambiente para de abrir',
+    r.status === 401, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/usuarios',
+    { headers: { Authorization: cabecalhoDe('maria', SENHA_MARIA) } });
+  const listada = await r.json();
+  conferir('o usuario criado entra com a propria senha', r.ok, 'status ' + r.status);
+  conferir('a lista nunca devolve resumo nem sal',
+    !JSON.stringify(listada).match(/resumo|"sal"/), 'vazou campo de senha');
+
+  r = await fetch(BASE + '/api/backoffice/usuarios',
+    { headers: { Authorization: cabecalhoDe('maria', 'senha-errada-mas-longa') } });
+  conferir('senha errada de usuario existente nao entra', r.status === 401, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios', { usuario: 'maria', senha: SENHA_MARIA },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  conferir('usuario repetido e recusado', r.status === 400, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios',
+    { usuario: 'joao', nome: 'Joao', senha: SENHA_JOAO, papel: 'equipe' },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  conferir('administrador cria usuario de equipe', r.status === 201, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/usuarios',
+    { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO) } });
+  conferir('equipe nao ve a lista de usuarios', r.status === 403, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/respostas',
+    { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO) } });
+  conferir('equipe continua vendo as respostas', r.ok, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'joao', papel: 'admin' },
+    { Authorization: cabecalhoDe('joao', SENHA_JOAO) });
+  conferir('equipe nao se promove', r.status === 403, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', senha: 'invasao-1234567' },
+    { Authorization: cabecalhoDe('joao', SENHA_JOAO) });
+  conferir('equipe nao troca a senha de outra pessoa', r.status === 403, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'joao', senha: SENHA_JOAO_NOVA },
+    { Authorization: cabecalhoDe('joao', SENHA_JOAO) });
+  conferir('equipe troca a propria senha', r.ok, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/respostas',
+    { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO_NOVA) } });
+  conferir('a senha nova passa a valer', r.ok, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/respostas',
+    { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO) } });
+  conferir('a senha antiga deixa de valer', r.status === 401, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', ativo: false },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  const trava = await r.json();
+  conferir('o unico administrador ativo nao se desativa',
+    r.status === 400 && /[uú]nico administrador/.test(trava.motivo || ''), JSON.stringify(trava));
+
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', papel: 'equipe' },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  conferir('o unico administrador tambem nao se rebaixa', r.status === 400, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'joao', ativo: false },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  conferir('administrador desativa usuario', r.ok, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/respostas',
+    { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO_NOVA) } });
+  conferir('usuario desativado nao entra', r.status === 401, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'joao', ativo: true, papel: 'admin' },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  conferir('administrador reativa e promove', r.ok, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', papel: 'equipe' },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  conferir('com dois administradores, a trava libera o rebaixamento', r.ok, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/eventos',
+    { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO_NOVA) } });
+  const trilha = (await r.json()).eventos;
+  const tiposUsuario = new Set(trilha.map(e => e.o_que));
+  conferir('auditoria registra criacao, alteracao e acesso negado',
+    tiposUsuario.has('usuario_criado') && tiposUsuario.has('usuario_alterado')
+    && tiposUsuario.has('acesso_negado'), [...tiposUsuario].join(','));
+  conferir('a auditoria nunca guarda a senha',
+    !JSON.stringify(trilha).includes(SENHA_MARIA)
+    && !JSON.stringify(trilha).includes(SENHA_JOAO), 'senha apareceu na trilha');
+
 } catch (e) {
   falhou++;
   console.log('  FALHA geral · ' + e.message);

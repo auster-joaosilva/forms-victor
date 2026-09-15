@@ -6,7 +6,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Copia so o que o servidor precisa em execucao.
-COPY servidor.mjs construir.mjs modelo.html backoffice.html ./
+COPY servidor.mjs construir.mjs modelo.html backoffice.html entrar.html ./
 COPY src ./src
 COPY ativos ./ativos
 

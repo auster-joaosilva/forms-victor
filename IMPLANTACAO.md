@@ -14,7 +14,9 @@ Uma aplicação Node que serve três coisas na mesma porta:
 | `GET /` | o formulário público |
 | `GET /?c=TOKEN` | o mesmo formulário, pré-preenchido pelo convite |
 | `POST /api/respostas` | recebe o preenchimento |
-| `GET /backoffice` | conferência interna, com usuário e senha próprios |
+| `GET /entrar` | tela de entrada: usuário e senha na própria página |
+| `GET /sair` | encerra a sessão |
+| `GET /backoffice` | conferência interna; sem sessão, manda para `/entrar` |
 | `GET /saude` | verificação de saúde para o orquestrador |
 
 **Zero dependência de terceiro.** Não há `npm install`, `package-lock.json` nem
@@ -35,6 +37,20 @@ Definir no painel do Dokploy. **Nenhuma delas vai para o repositório.**
 | `AUSTER_BANCO` | não | caminho do SQLite. O contêiner já aponta para `/app/dados/portal.db` |
 | `PORT` | não | padrão 8080 |
 | `NODE_ENV` | não | `production` liga o cache das páginas em memória |
+
+### Como se entra
+
+Pela tela `/entrar`, com **campo de usuário e campo de senha na própria página**.
+A sessão vive num **cookie assinado** (HMAC-SHA256, `node:crypto`): `HttpOnly`,
+`SameSite=Strict`, `Secure` quando a conexão é HTTPS de fato, 12 horas de
+validade. Há botão **Sair** no cabeçalho.
+
+A chave da assinatura deriva da senha de implantação, e não de bytes sorteados
+na subida: **reiniciar o contêiner não desloga a equipe**. Trocar
+`AUSTER_SENHA_BACKOFFICE` invalida todas as sessões — o que é o desejado.
+
+Autenticação HTTP (`curl -u`) continua aceita, para script e teste. Pessoa
+nenhuma precisa dela.
 
 ### Usuários internos
 
@@ -156,7 +172,7 @@ Testes, todos sem dependência:
 
 ```bash
 node testes.mjs            # 26 invariantes sobre 40.000 preenchimentos
-node testes_servidor.mjs   # 63 verificações sobre servidor, backoffice e usuários
+node testes_servidor.mjs   # 78 verificações: servidor, backoffice, usuários e sessão
 node varredura.mjs         # distribuição das saídas, sorteio uniforme
 node varredura_pesos.mjs   # distribuição com pesos plausíveis (premissa, não dado)
 ```
@@ -199,7 +215,9 @@ gera sozinha.
 | build aborta dizendo "função exposta em window" | um botão deixou de chamar a função, ou a função sobrou; o build não deixa passar tela que não alcança o código |
 | respostas somem entre deploys | volume `dados` não montado |
 | links de convite sem domínio | `AUSTER_ENDERECO_PUBLICO` não definida |
-| backoffice pede senha em loop | usuário desativado, ou senha errada; a aba **Auditoria** registra `acesso_negado` |
+| `/entrar` responde 500 | `entrar.html` não entrou na imagem; o Dockerfile copia lista explícita de arquivos, e a suíte tem teste para isso |
+| backoffice pede senha em loop | não deve mais acontecer: sem sessão, a rota redireciona para `/entrar`. Se acontecer, é `curl` com `-u` errado |
+| todos deslogados de repente | `AUSTER_SENHA_BACKOFFICE` foi trocada: ela é a chave das sessões |
 | a senha de implantação deixou de abrir | é o comportamento: já existe usuário ativo. Entre com o usuário criado |
 | ninguém consegue entrar | desative todos os usuários no banco (`UPDATE usuarios SET ativo = 0`) e a senha de implantação volta a valer |
 | não dá para desativar um administrador | é a trava do único administrador ativo: promova outro antes |

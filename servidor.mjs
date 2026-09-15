@@ -18,8 +18,11 @@
  */
 
 import { createServer } from 'node:http';
+import { createHmac, scryptSync, timingSafeEqual } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
 import { abrirBanco, senhaConfere, MINIMO_SENHA } from './src/banco.mjs';
+
+const HORAS_DE_SESSAO = 12;
 
 const PORTA = Number(process.env.PORT || 8080);
 const CAMINHO_BANCO = process.env.AUSTER_BANCO || './dados/portal.db';
@@ -37,6 +40,52 @@ if (!SENHA) {
 }
 
 const banco = abrirBanco(CAMINHO_BANCO);
+
+// --------------------------------------------------------------------------
+// Sessão em cookie assinado.
+//
+// A chave deriva da senha de implantação, e não de bytes sorteados na subida:
+// assim reiniciar o contêiner não desloga a equipe inteira. Trocar a senha de
+// implantação invalida as sessões — o que é o desejado.
+// --------------------------------------------------------------------------
+
+const CHAVE_SESSAO = scryptSync(SENHA, 'sessao-do-backoffice-auster', 32);
+const b64url = b => Buffer.from(b).toString('base64url');
+
+function assinarSessao(dados) {
+  const corpo = b64url(JSON.stringify(dados));
+  const selo = createHmac('sha256', CHAVE_SESSAO).update(corpo).digest('base64url');
+  return `${corpo}.${selo}`;
+}
+
+/** Devolve a sessão se o selo confere e o prazo não venceu. Qualquer sinal de
+ *  adulteração devolve null — nunca uma sessão parcial. */
+function lerSessao(valor) {
+  if (!valor || !valor.includes('.')) return null;
+  const [corpo, selo] = valor.split('.', 2);
+  const esperado = createHmac('sha256', CHAVE_SESSAO).update(corpo).digest('base64url');
+  const a = Buffer.from(selo), b = Buffer.from(esperado);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  try {
+    const dados = JSON.parse(Buffer.from(corpo, 'base64url').toString('utf8'));
+    if (!dados || typeof dados.expira !== 'number' || dados.expira < Date.now()) return null;
+    return dados;
+  } catch { return null; }
+}
+
+const biscoitos = req => Object.fromEntries(
+  (req.headers.cookie || '').split(';').map(p => {
+    const i = p.indexOf('=');
+    return i === -1 ? [p.trim(), ''] : [p.slice(0, i).trim(), p.slice(i + 1).trim()];
+  }).filter(([k]) => k));
+
+/** Secure só quando a conexão é HTTPS de fato: marcar Secure atrás de HTTP puro
+ *  faria o navegador descartar o cookie, e ninguém entraria em desenvolvimento. */
+const porHttps = req => (req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
+
+const cookieDeSessao = (req, valor, segundos) =>
+  `auster_sessao=${valor}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${segundos}`
+  + (porHttps(req) ? '; Secure' : '');
 
 // --------------------------------------------------------------------------
 // Páginas, lidas do disco a cada pedido em desenvolvimento e uma vez em
@@ -136,6 +185,19 @@ function lerCorpo(req) {
  *  para de abrir o backoffice. E se um dia todos os usuários forem desativados,
  *  ela volta a valer — é a saída de emergência, sem precisar mexer no banco. */
 function autenticado(req) {
+  // 1. Cookie de sessão: o caminho das pessoas.
+  const sessao = lerSessao(biscoitos(req).auster_sessao);
+  if (sessao) {
+    // Usuário desativado depois de entrar perde a sessão na hora seguinte.
+    if (!sessao.implantacao && banco.temUsuarioAtivo()) {
+      const vivo = banco.usuarios().find(u => u.usuario === sessao.usuario && u.ativo);
+      if (!vivo) return null;
+      return { usuario: vivo.usuario, papel: vivo.papel };
+    }
+    return sessao;
+  }
+
+  // 2. Autenticação HTTP: mantida para script, curl e teste automatizado.
   const cabecalho = req.headers.authorization || '';
   if (!cabecalho.startsWith('Basic ')) return null;
   try {
@@ -152,8 +214,30 @@ function autenticado(req) {
   } catch { return null; }
 }
 
+/** Confere usuário e senha pelas mesmas duas camadas de `autenticado`, para uso
+ *  da tela de entrada. */
+function conferirCredencial(usuario, senha) {
+  if (banco.temUsuarioAtivo()) return banco.autenticarUsuario(usuario, senha);
+  return senhaConfere(senha, SENHA)
+    ? { usuario: usuario || 'implantacao', papel: 'admin', implantacao: true }
+    : null;
+}
+
 const pedirSenha = res => responder(res, 401, 'Acesso restrito.', 'text/plain; charset=utf-8',
   { 'WWW-Authenticate': 'Basic realm="Backoffice Auster", charset="UTF-8"' });
+
+/** A tela de entrada, com aviso de primeiro acesso quando ainda não há usuário. */
+function telaDeEntrada(erro) {
+  const html = pagina('./entrar.html');
+  if (!html) return null;
+  const aviso = erro
+    ? `<div class="erro">${erro}</div>`
+    : (banco.temUsuarioAtivo() ? '' : `<div class="primeiro"><b>Primeiro acesso.</b>
+        Ainda não existe usuário interno. Entre com a <b>senha de implantação</b> — o usuário
+        pode ser qualquer nome — e crie o primeiro na aba <b>Usuários</b>. Ele nasce
+        administrador, e a senha de implantação deixa de abrir esta tela.</div>`);
+  return html.replace('<!--__AVISO__-->', aviso);
+}
 
 // --------------------------------------------------------------------------
 // Rotas
@@ -198,10 +282,52 @@ const servidor = createServer(async (req, res) => {
       return json(res, 201, { ok: true, id, protocolo: pacote.protocolo });
     }
 
+    // ------------------------------------------------ entrar e sair
+    if (rota === '/entrar') {
+      if (req.method === 'GET') {
+        if (autenticado(req)) {
+          return responder(res, 302, '', 'text/plain', { Location: '/backoffice' });
+        }
+        const html = telaDeEntrada(null);
+        return html ? responder(res, 200, html, 'text/html; charset=utf-8',
+                                { 'Cache-Control': 'no-store' })
+                    : responder(res, 500, 'entrar.html não encontrado.');
+      }
+      if (req.method === 'POST') {
+        const corpo = new URLSearchParams(await lerCorpo(req));
+        const sessao = conferirCredencial(corpo.get('usuario') || '', corpo.get('senha') || '');
+        if (!sessao) {
+          // 401 com a própria tela: a pessoa vê o erro no lugar onde digitou.
+          const html = telaDeEntrada('Usuário ou senha não conferem. Tente de novo.');
+          return responder(res, 401, html || 'Não conferem.', 'text/html; charset=utf-8',
+                           { 'Cache-Control': 'no-store' });
+        }
+        const valor = assinarSessao({ ...sessao, expira: Date.now() + HORAS_DE_SESSAO * 3600e3 });
+        return responder(res, 302, '', 'text/plain', {
+          Location: '/backoffice',
+          'Set-Cookie': cookieDeSessao(req, valor, HORAS_DE_SESSAO * 3600),
+        });
+      }
+    }
+
+    if (req.method === 'GET' && rota === '/sair') {
+      return responder(res, 302, '', 'text/plain', {
+        Location: '/entrar',
+        'Set-Cookie': cookieDeSessao(req, '', 0),
+      });
+    }
+
     // --------------------------------------------------------- backoffice
     if (rota === '/backoffice' || rota.startsWith('/api/backoffice')) {
       const sessao = autenticado(req);
-      if (!sessao) return pedirSenha(res);
+      if (!sessao) {
+        // Pessoa vai para a tela de entrada; script continua recebendo 401 com
+        // o desafio HTTP. Sem isso o navegador abriria a caixa que causou toda
+        // a confusão, ou o `fetch` do painel abriria caixa no meio da tela.
+        return req.method === 'GET' && rota === '/backoffice'
+          ? responder(res, 302, '', 'text/plain', { Location: '/entrar' })
+          : pedirSenha(res);
+      }
       const quem = sessao.usuario;
       const ehAdmin = sessao.papel === 'admin';
 
@@ -315,6 +441,7 @@ const servidor = createServer(async (req, res) => {
 servidor.listen(PORTA, () => {
   console.log(`portal em http://localhost:${PORTA}`);
   console.log(`backoffice em http://localhost:${PORTA}/backoffice`);
+  console.log(`entrada    em http://localhost:${PORTA}/entrar`);
   console.log(`banco em ${CAMINHO_BANCO}`);
   if (!ENDERECO_PUBLICO) {
     console.log('AUSTER_ENDERECO_PUBLICO não definido — os links de convite sairão relativos.');

@@ -5,7 +5,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -100,11 +100,18 @@ try {
   conferir('recusa corpo que não é JSON', r.status === 400, 'status ' + r.status);
 
   // ----------------------------------------------------------- backoffice
-  r = await fetch(BASE + '/backoffice');
-  conferir('backoffice exige senha', r.status === 401, 'status ' + r.status);
+  r = await fetch(BASE + '/backoffice', { redirect: 'manual' });
+  conferir('backoffice sem credencial manda para a tela de entrada',
+    r.status === 302 && r.headers.get('location') === '/entrar', 'status ' + r.status);
 
-  r = await fetch(BASE + '/backoffice', { headers: { Authorization: 'Basic ' + Buffer.from('x:errada').toString('base64') } });
-  conferir('senha errada não entra', r.status === 401, 'status ' + r.status);
+  r = await fetch(BASE + '/backoffice', { redirect: 'manual',
+    headers: { Authorization: 'Basic ' + Buffer.from('x:errada').toString('base64') } });
+  conferir('senha errada não entra: vai para a tela de entrada, sem repetir o desafio',
+    r.status === 302 && r.headers.get('location') === '/entrar', 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/respostas',
+    { headers: { Authorization: 'Basic ' + Buffer.from('x:errada').toString('base64') } });
+  conferir('senha errada na API continua em 401', r.status === 401, 'status ' + r.status);
 
   r = await fetch(BASE + '/backoffice', { headers: { Authorization: cabecalhoSenha() } });
   const paginaBack = await r.text();
@@ -320,6 +327,85 @@ try {
   conferir('a auditoria nunca guarda a senha',
     !JSON.stringify(trilha).includes(SENHA_MARIA)
     && !JSON.stringify(trilha).includes(SENHA_JOAO), 'senha apareceu na trilha');
+
+  // -------------------------------------------------------- tela de entrada
+  r = await fetch(BASE + '/entrar');
+  const telaEntrada = await r.text();
+  conferir('a tela de entrada tem campo de usuario e de senha',
+    r.ok && /name="usuario"/.test(telaEntrada) && /type="password"/.test(telaEntrada),
+    'status ' + r.status);
+  conferir('a tela de entrada nao abre caixa do navegador',
+    !r.headers.get('www-authenticate'), 'veio desafio HTTP');
+
+  const entrar = (usuario, senha) => fetch(BASE + '/entrar', {
+    method: 'POST', redirect: 'manual',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ usuario, senha }).toString(),
+  });
+
+  r = await entrar('joao', 'senha-errada-mas-longa');
+  const recusa = await r.text();
+  conferir('senha errada volta para a tela, com o erro',
+    r.status === 401 && /não conferem/i.test(recusa), 'status ' + r.status);
+
+  r = await entrar('joao', SENHA_JOAO_NOVA);
+  const biscoito = (r.headers.get('set-cookie') || '');
+  conferir('senha certa cria a sessao e redireciona',
+    r.status === 302 && r.headers.get('location') === '/backoffice'
+    && /auster_sessao=/.test(biscoito), 'status ' + r.status);
+  conferir('o cookie e HttpOnly e SameSite',
+    /HttpOnly/.test(biscoito) && /SameSite=Strict/.test(biscoito), biscoito.slice(0, 80));
+  conferir('o cookie nao carrega a senha',
+    !biscoito.includes(SENHA_JOAO_NOVA), 'senha no cookie');
+
+  const sessao = biscoito.split(';')[0];
+  r = await fetch(BASE + '/backoffice', { headers: { Cookie: sessao } });
+  conferir('a sessao abre o backoffice sem senha nenhuma', r.ok, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/respostas', { headers: { Cookie: sessao } });
+  conferir('a sessao tambem serve a API', r.ok, 'status ' + r.status);
+
+  const adulterado = sessao.replace(/.$/, c => (c === 'A' ? 'B' : 'A'));
+  r = await fetch(BASE + '/api/backoffice/respostas', { headers: { Cookie: adulterado } });
+  conferir('cookie adulterado nao entra', r.status === 401, 'status ' + r.status);
+
+  r = await fetch(BASE + '/entrar', { headers: { Cookie: sessao }, redirect: 'manual' });
+  conferir('quem ja entrou nao ve a tela de entrada de novo',
+    r.status === 302 && r.headers.get('location') === '/backoffice', 'status ' + r.status);
+
+  r = await fetch(BASE + '/sair', { headers: { Cookie: sessao }, redirect: 'manual' });
+  conferir('sair apaga o cookie e volta para a entrada',
+    r.status === 302 && /auster_sessao=;|Max-Age=0/.test(r.headers.get('set-cookie') || ''),
+    r.headers.get('set-cookie') || 'sem set-cookie');
+
+  // Sessao de quem foi desativado morre no pedido seguinte, sem esperar o prazo.
+  // Neste ponto quem administra e o joao: a maria foi rebaixada no teste da
+  // trava. Promove a maria de volta para ela poder desativar o joao.
+  await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', papel: 'admin' },
+    { Authorization: cabecalhoDe('joao', SENHA_JOAO_NOVA) });
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'joao', ativo: false },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  const desativou = r.ok;
+  r = await fetch(BASE + '/api/backoffice/respostas', { headers: { Cookie: sessao } });
+  conferir('sessao de usuario desativado deixa de valer na hora',
+    desativou && r.status === 401, 'status ' + r.status);
+
+  await postar('/api/backoffice/usuarios/alterar', { usuario: 'joao', ativo: true },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+
+  // ------------------------------------- a imagem leva tudo o que o servidor le
+  // Defeito real: a tela de entrada nasceu e o Dockerfile copia uma LISTA
+  // EXPLICITA de arquivos. `entrar.html` ficou fora, e em producao a tela de
+  // entrada responderia 500 — ninguem entraria. Teste de HTTP nao pega isso:
+  // na maquina o arquivo esta la. So a conferencia do Dockerfile pega.
+  const fonteServidor = readFileSync('servidor.mjs', 'utf8');
+  const dockerfile = readFileSync('Dockerfile', 'utf8');
+  const lidos = [...fonteServidor.matchAll(/pagina\('\.\/([\w.-]+)'\)/g)].map(m => m[1]);
+  conferir('o servidor le pelo menos tres paginas do disco', lidos.length >= 3, lidos.join(','));
+  const foraDaImagem = [...new Set(lidos)]
+    .filter(arquivo => arquivo !== 'portal.html' && !dockerfile.includes(arquivo));
+  conferir('todo arquivo que o servidor le esta no Dockerfile',
+    foraDaImagem.length === 0, 'fora: ' + foraDaImagem.join(', '));
 
 } catch (e) {
   falhou++;

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23052C47%27/%3E%3Cpath d=%27M8 21l8-11 8 11%27 stroke=%27%2371CFEB%27 stroke-width=%273%27 fill=%27none%27/%3E%3C/svg%3E">
+<title>Entrar — Conferência do Diagnóstico</title>
+<style>
+/* Tela de entrada do backoffice.
+   Existe porque autenticação HTTP não tem tela: a caixa é do navegador, não
+   tem botão de sair, guarda a credencial na aba e, quando alguém troca a
+   própria senha, obriga a fechar tudo. Com usuários e papéis isso deixou de
+   servir. Aqui os campos são da página, e há como sair. */
+:root{
+  --escuro:#052C47; --claro:#71CFEB; --fundo:#f4f7f9; --tinta:#123;
+  --cinza:#5b6b78; --borda:#e3e9ee; --borda-forte:#cfd8df;
+  --sombra:0 1px 3px rgba(5,44,71,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:var(--fundo);color:var(--tinta);padding:24px;
+  font-family:Kanit,Montserrat,Raleway,Arial,sans-serif;font-weight:300;line-height:1.55}
+.caixa{background:#fff;border:1px solid var(--borda);border-radius:12px;
+  box-shadow:var(--sombra);padding:34px 32px;width:100%;max-width:400px}
+h1{font-size:21px;font-weight:400;margin:0 0 6px;color:var(--escuro)}
+p.nota{font-size:13px;color:var(--cinza);margin:0 0 22px;line-height:1.6}
+label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.9px;
+  color:var(--cinza);margin-bottom:6px}
+input{display:block;width:100%;padding:12px 14px;margin-bottom:16px;font:inherit;
+  border:1px solid var(--borda-forte);border-radius:8px;background:#fff}
+input:focus{outline:2px solid var(--claro);outline-offset:1px;border-color:var(--claro)}
+button{width:100%;padding:13px 18px;font:inherit;font-weight:500;cursor:pointer;
+  background:var(--escuro);color:#fff;border:1px solid var(--escuro);border-radius:8px}
+button:hover{background:#0a3d60}
+.erro{background:#fdf0f0;border:1px solid #f0c4c4;color:#8d2226;border-radius:8px;
+  padding:11px 14px;font-size:13px;margin:0 0 18px;line-height:1.5}
+.primeiro{background:#fdf9f0;border:1px solid #f0dcb4;color:#6a4a00;border-radius:8px;
+  padding:12px 14px;font-size:12.5px;margin:0 0 18px;line-height:1.55}
+.marca{display:flex;align-items:center;gap:9px;margin-bottom:20px}
+.marca .sinal{width:26px;height:26px;border-radius:6px;background:var(--escuro);
+  display:flex;align-items:center;justify-content:center;flex:0 0 26px}
+.marca .sinal svg{display:block}
+.marca span{font-size:12px;text-transform:uppercase;letter-spacing:1.1px;color:var(--cinza)}
+</style>
+</head>
+<body>
+<form class="caixa" method="POST" action="/entrar" autocomplete="on">
+  <div class="marca">
+    <div class="sinal"><svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M8 21l8-11 8 11" stroke="#71CFEB" stroke-width="3" fill="none"/></svg></div>
+    <span>auster · uso interno</span>
+  </div>
+
+  <h1>Conferência do Diagnóstico</h1>
+  <p class="nota">Entre com o seu usuário e a sua senha. É esse nome que fica gravado
+  na auditoria de cada resposta que você validar.</p>
+
+  <!--__AVISO__-->
+
+  <label for="usuario">Usuário</label>
+  <input type="text" id="usuario" name="usuario" autocomplete="username"
+         autocapitalize="none" spellcheck="false" required autofocus>
+
+  <label for="senha">Senha</label>
+  <input type="password" id="senha" name="senha" autocomplete="current-password" required>
+
+  <button type="submit">Entrar</button>
+</form>
+</body>
+</html>

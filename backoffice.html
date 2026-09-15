@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23052C47%27/%3E%3Cpath d=%27M8 21l8-11 8 11%27 stroke=%27%2371CFEB%27 stroke-width=%273%27 fill=%27none%27/%3E%3C/svg%3E">
+<title>Conferência — Diagnóstico Simples | auster</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --escuro:#052C47; --claro:#71CFEB; --acento:#007E99;
+  --tinta:#052C47; --cinza:#5b6b78; --fundo:#f1f5f8;
+  --borda:#cfd9e0; --borda-forte:#8496a5;
+  --sombra:0 1px 2px rgba(5,44,71,.06), 0 4px 12px rgba(5,44,71,.05);
+  --alto:#b63b32; --medio:#9a6608; --baixo:#2f7d52;
+  --t-meta:12px; --t-corpo:14px; --t-destaque:16px; --t-titulo:20px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--tinta);
+  font-family:Kanit,Montserrat,Raleway,Arial,sans-serif;font-weight:300;
+  font-size:var(--t-corpo);line-height:1.55}
+header{background:var(--escuro);color:#fff;padding:18px 24px;display:flex;
+  justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px}
+header h1{margin:0;font-size:var(--t-titulo);font-weight:300}
+header .quem{color:var(--claro);font-size:var(--t-meta)}
+main{max-width:1180px;margin:0 auto;padding:22px 20px 60px}
+.abas{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.aba{padding:9px 16px;border:1px solid var(--borda-forte);border-radius:7px;background:#fff;
+  cursor:pointer;font-family:inherit;font-size:var(--t-corpo);color:var(--escuro)}
+.aba.ativa{background:var(--escuro);color:#fff;border-color:var(--escuro)}
+.aba.oculta{display:none}
+#formSenha input{display:block;width:100%;margin-bottom:10px;padding:10px 12px;
+  border:1px solid var(--borda-forte);border-radius:7px;font:inherit}
+.erro-senha{color:#a4262c;font-size:var(--t-meta);min-height:18px;margin-bottom:6px}
+.papel{font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;
+  border:1px solid var(--borda-forte);border-radius:20px;padding:2px 9px}
+.papel.admin{background:var(--escuro);color:#fff;border-color:var(--escuro)}
+.inativo{opacity:.55}
+.painel{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:20px 22px;
+  box-shadow:var(--sombra)}
+.filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+input[type=text],select,textarea{padding:9px 11px;border:1px solid var(--borda-forte);
+  border-radius:7px;font-family:inherit;font-size:var(--t-corpo);font-weight:300;background:#fff}
+input[type=text]{min-width:230px}
+textarea{width:100%;min-height:74px;resize:vertical}
+button{font-family:inherit;font-size:var(--t-corpo);font-weight:500;padding:9px 18px;
+  border-radius:7px;border:1px solid var(--escuro);background:var(--escuro);color:#fff;cursor:pointer}
+button.claro{background:#fff;color:var(--escuro)}
+button:disabled{opacity:.4;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:var(--t-corpo)}
+th{text-align:left;font-weight:500;font-size:var(--t-meta);text-transform:uppercase;
+  letter-spacing:.7px;color:var(--cinza);padding:8px 10px;border-bottom:1px solid var(--borda-forte)}
+td{padding:11px 10px;border-bottom:1px solid var(--borda);vertical-align:top}
+tr.linha:hover{background:#f7fafc;cursor:pointer}
+.selo{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11.5px}
+.s-nova{background:#dff0f5;color:#00596b}
+.s-em_analise{background:#fdf4e3;color:#7a5200}
+.s-validada{background:#eaf5ee;color:#1f5c3b}
+.s-descartada{background:#eef3f6;color:var(--cinza)}
+.u-ALTA{background:#fdeceb;color:var(--alto)}
+.u-MÉDIA{background:#fdf4e3;color:var(--medio)}
+.u-BAIXA{background:#eaf5ee;color:var(--baixo)}
+.contagem{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.caixa{background:#fff;border:1px solid var(--borda);border-radius:9px;padding:13px 17px;
+  box-shadow:var(--sombra);min-width:118px}
+.caixa .rot{font-size:var(--t-meta);color:var(--cinza);text-transform:uppercase;letter-spacing:.6px}
+.caixa .val{font-size:22px;font-weight:400;margin-top:3px}
+.vazio{color:var(--cinza);padding:26px 0;text-align:center}
+dialog{border:0;border-radius:12px;padding:0;max-width:900px;width:94%;
+  box-shadow:0 20px 60px rgba(5,44,71,.3)}
+dialog::backdrop{background:rgba(5,44,71,.45)}
+.ficha{padding:26px 28px}
+.ficha h2{margin:0 0 4px;font-size:var(--t-titulo);font-weight:400}
+.ficha .prot{color:var(--cinza);font-size:var(--t-meta);letter-spacing:.8px;text-transform:uppercase}
+.ficha .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:18px 0}
+.ficha .item .rot{font-size:var(--t-meta);color:var(--cinza)}
+.ficha .item .val{font-weight:500}
+.ficha h3{font-size:var(--t-corpo);text-transform:uppercase;letter-spacing:.8px;
+  color:var(--cinza);margin:22px 0 8px;font-weight:500}
+.respostas{border:1px solid var(--borda);border-radius:8px;max-height:280px;overflow:auto}
+.respostas div{display:flex;gap:12px;padding:7px 12px;border-bottom:1px solid var(--borda);font-size:var(--t-meta)}
+.respostas div:last-child{border-bottom:0}
+.respostas .k{flex:0 0 42%;color:var(--cinza)}
+.respostas .v{flex:1;font-weight:500}
+.alerta-qsa{background:#fdf4e3;border:1px solid #f0dcb4;border-radius:7px;padding:11px 13px;
+  font-size:var(--t-meta);line-height:1.55;margin:14px 0}
+.acoes-ficha{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px;padding-top:16px;
+  border-top:1px solid var(--borda)}
+.link-convite{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--t-meta);
+  background:#f1f5f8;padding:3px 7px;border-radius:5px;word-break:break-all}
+.nota{font-size:var(--t-meta);color:var(--cinza);line-height:1.6;margin:14px 0 0;max-width:80ch}
+</style>
+</head>
+<body>
+<header>
+  <h1>Conferência do Diagnóstico</h1>
+  <div class="quem" id="quem"></div>
+  <button class="claro" id="minhaSenha" onclick="window.trocarMinhaSenha()"
+          style="margin-top:8px">Trocar minha senha</button>
+  <a class="claro" href="/sair" style="margin-top:8px;display:inline-block;padding:9px 16px;
+     border:1px solid var(--borda-forte);border-radius:7px;background:#fff;color:var(--escuro);
+     text-decoration:none;font-size:var(--t-meta)">Sair</a>
+</header>
+<main>
+  <div class="abas">
+    <button class="aba ativa" data-aba="respostas">Respostas</button>
+    <button class="aba" data-aba="convites">Convites</button>
+    <button class="aba" data-aba="eventos">Auditoria</button>
+    <button class="aba oculta" data-aba="usuarios" id="abaUsuarios">Usuários</button>
+  </div>
+  <div id="conteudo" class="painel">carregando…</div>
+</main>
+<dialog id="ficha"><div class="ficha" id="corpoFicha"></div></dialog>
+<dialog id="dlgSenha"><form class="ficha" id="formSenha" method="dialog">
+  <h3 id="tituloSenha" style="margin:0 0 4px">Definir senha</h3>
+  <p class="nota" id="regraSenha" style="margin:0 0 14px"></p>
+  <input type="password" id="senha1" placeholder="Senha" autocomplete="new-password">
+  <input type="password" id="senha2" placeholder="Repita a senha" autocomplete="new-password">
+  <div class="erro-senha" id="erroSenha"></div>
+  <div class="acoes-ficha">
+    <button value="ok">Definir</button>
+    <button class="claro" value="cancelar">Cancelar</button>
+  </div>
+</form></dialog>
+
+<script>
+/*__QUEM__*/
+const quem = (typeof window.__QUEM__ === 'string') ? window.__QUEM__ : 'equipe';
+const papel = (typeof window.__PAPEL__ === 'string') ? window.__PAPEL__ : 'equipe';
+const porImplantacao = window.__IMPLANTACAO__ === true;
+const ehAdmin = papel === 'admin';
+document.getElementById('quem').textContent = quem;
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const conteudo = document.getElementById('conteudo');
+const ficha = document.getElementById('ficha');
+const corpoFicha = document.getElementById('corpoFicha');
+let abaAtual = 'respostas';
+let filtroSituacao = '', filtroBusca = '';
+
+const SITUACOES = { nova:'Nova', em_analise:'Em análise', validada:'Validada', descartada:'Descartada' };
+
+const quando = iso => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
+};
+
+async function pedir(rota, opcoes) {
+  const r = await fetch(rota, opcoes);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ----------------------------------------------------------------- respostas
+async function verRespostas() {
+  const q = new URLSearchParams();
+  if (filtroSituacao) q.set('situacao', filtroSituacao);
+  if (filtroBusca) q.set('busca', filtroBusca);
+  const { contagem, respostas } = await pedir('/api/backoffice/respostas?' + q);
+
+  const caixas = ['total', ...Object.keys(SITUACOES)].map(k => `
+    <div class="caixa"><div class="rot">${k === 'total' ? 'Total' : SITUACOES[k]}</div>
+      <div class="val">${contagem[k] ?? 0}</div></div>`).join('');
+
+  const linhas = respostas.map(r => `
+    <tr class="linha" onclick="abrirFicha(${r.id})">
+      <td><b>${esc(r.nome_empresa || '(sem nome)')}</b><br>
+          <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(r.cnpj || '')}</span></td>
+      <td>${esc(r.solicitante || '—')}<br>
+          <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(r.email || '')}</span></td>
+      <td>${esc(r.posicao || '—')}<br>
+          <span style="color:var(--cinza);font-size:var(--t-meta)">saída ${esc(r.saida || '—')} ·
+          ${r.certeza === 'fechada' ? 'fechada' : 'aberta'}</span></td>
+      <td><span class="selo u-${esc(r.urgencia || 'BAIXA')}">${esc(r.urgencia || '—')}</span><br>
+          <span style="color:var(--cinza);font-size:var(--t-meta)">confiança ${esc(r.confianca || '—')}</span></td>
+      <td>${quando(r.recebido_em)}<br>
+          <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(r.versao || '')}${r.token_convite ? ' · convite' : ''}</span></td>
+      <td><span class="selo s-${esc(r.situacao)}">${esc(SITUACOES[r.situacao] || r.situacao)}</span></td>
+    </tr>`).join('');
+
+  conteudo.innerHTML = `
+    <div class="contagem">${caixas}</div>
+    <div class="filtros">
+      <input type="text" id="busca" placeholder="Empresa, CNPJ, protocolo ou respondente"
+        value="${esc(filtroBusca)}">
+      <select id="situacao">
+        <option value="">Todas as situações</option>
+        ${Object.entries(SITUACOES).map(([k, v]) =>
+          `<option value="${k}" ${filtroSituacao === k ? 'selected' : ''}>${v}</option>`).join('')}
+      </select>
+      <button class="claro" onclick="aplicarFiltro()">Filtrar</button>
+    </div>
+    ${respostas.length ? `<table><thead><tr>
+      <th>Empresa</th><th>Quem respondeu</th><th>Posição</th><th>Urgência</th>
+      <th>Recebido</th><th>Situação</th></tr></thead><tbody>${linhas}</tbody></table>`
+      : '<div class="vazio">Nenhuma resposta com esse filtro.</div>'}
+    <p class="nota">A conferência existe porque a resposta é autodeclarada. Antes de virar
+    trabalho, alguém da casa precisa olhar o CNPJ, o anexo e a alíquota — e é nesta tela que
+    isso fica registrado, com autor e data.</p>`;
+
+  document.getElementById('busca').addEventListener('keydown', e => {
+    if (e.key === 'Enter') aplicarFiltro();
+  });
+}
+
+window.aplicarFiltro = () => {
+  filtroBusca = document.getElementById('busca').value.trim();
+  filtroSituacao = document.getElementById('situacao').value;
+  verRespostas();
+};
+
+window.abrirFicha = async id => {
+  const { resposta } = await pedir('/api/backoffice/resposta?id=' + id);
+  const p = resposta.pacote || {};
+  const d = p.diagnostico || {};
+  const r = p.respostas || {};
+
+  const item = (rot, val) => `<div class="item"><div class="rot">${rot}</div>
+    <div class="val">${esc(val ?? '—')}</div></div>`;
+
+  const respostasLista = Object.entries(r)
+    .filter(([k]) => k !== 'aceiteLgpd')
+    .map(([k, v]) => `<div><span class="k">${esc(k)}</span>
+      <span class="v">${esc(typeof v === 'object' ? JSON.stringify(v) : v)}</span></div>`).join('');
+
+  const qsa = resposta.solicitante_no_qsa;
+  corpoFicha.innerHTML = `
+    <div class="prot">Protocolo ${esc(resposta.protocolo)}${resposta.token_convite ? ' · convite ' + esc(resposta.token_convite) : ' · link aberto'}</div>
+    <h2>${esc(resposta.nome_empresa || '(sem nome)')}</h2>
+    <div class="grade">
+      ${item('CNPJ', resposta.cnpj)}
+      ${item('Quem respondeu', resposta.solicitante)}
+      ${item('E-mail', resposta.email)}
+      ${item('Telefone', resposta.telefone)}
+      ${item('Recebido em', quando(resposta.recebido_em))}
+      ${item('Versão', resposta.versao)}
+    </div>
+
+    <h3>O que o motor devolveu</h3>
+    <div class="grade">
+      ${item('Posição', d.posicao)}
+      ${item('Certeza', d.certeza)}
+      ${item('Saída', d.saida)}
+      ${item('Urgência', d.urgencia)}
+      ${item('Confiança', d.confianca)}
+    </div>
+    ${(d.pontosEmAberto || []).length ? `<h3>Pontos em aberto</h3>
+      <ul style="margin:0;padding-left:20px;font-size:var(--t-meta);line-height:1.7;color:var(--cinza)">
+      ${d.pontosEmAberto.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${(d.lacunas || []).length ? `<h3>Campos em "não sei"</h3>
+      <div style="font-size:var(--t-meta);color:var(--cinza)">${d.lacunas.map(esc).join(' · ')}</div>` : ''}
+
+    ${qsa === 'nao' ? `<div class="alerta-qsa"><b>Quem respondeu não consta do quadro de sócios
+      do CNPJ consultado.</b> Pode ser procurador, contador ou funcionário — só não dá para
+      tratar como decisor sem confirmar.</div>`
+    : qsa === 'sim' ? `<div class="alerta-qsa" style="background:#eaf5ee;border-color:#bfe0cc">
+      Quem respondeu consta do quadro de sócios.</div>` : ''}
+
+    <h3>Todas as respostas</h3>
+    <div class="respostas">${respostasLista || '<div>(vazio)</div>'}</div>
+
+    <h3>Tratamento interno</h3>
+    <textarea id="nota" placeholder="O que foi conferido, o que ficou pendente, o que combinar com o cliente">${esc(resposta.nota_interna || '')}</textarea>
+    <div style="font-size:var(--t-meta);color:var(--cinza);margin-top:7px">
+      ${resposta.tratado_por ? `Último tratamento: ${esc(resposta.tratado_por)} em ${quando(resposta.tratado_em)}` : 'Nunca tratada.'}
+    </div>
+    <div class="acoes-ficha">
+      ${Object.entries(SITUACOES).map(([k, v]) =>
+        `<button class="${resposta.situacao === k ? '' : 'claro'}"
+          onclick="tratar(${resposta.id}, '${k}')">${v}</button>`).join('')}
+      <button class="claro" onclick="tratar(${resposta.id}, null)">Só salvar a nota</button>
+      <button class="claro" onclick="document.getElementById('ficha').close()">Fechar</button>
+    </div>`;
+  ficha.showModal();
+};
+
+window.tratar = async (id, situacao) => {
+  const nota = document.getElementById('nota').value;
+  await pedir('/api/backoffice/tratar', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, situacao, nota }),
+  });
+  ficha.close();
+  verRespostas();
+};
+
+// ------------------------------------------------------------------ convites
+async function verConvites() {
+  const { convites, base } = await pedir('/api/backoffice/convites');
+  const link = t => `${base || ''}/?c=${t}`;
+
+  const linhas = convites.map(c => `
+    <tr>
+      <td><b>${esc(c.nome_empresa || '(sem nome)')}</b><br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(c.cnpj || '')}</span></td>
+      <td><span class="link-convite">${esc(link(c.token))}</span></td>
+      <td>${c.aberturas || 0}${c.aberto_em ? `<br><span style="color:var(--cinza);font-size:var(--t-meta)">${quando(c.aberto_em)}</span>` : ''}</td>
+      <td>${c.respostas || 0}</td>
+      <td>${quando(c.criado_em)}<br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(c.criado_por || '')}</span></td>
+      <td>
+        <button class="claro" onclick="copiar('${esc(link(c.token))}')">Copiar</button>
+        ${c.respostas ? '' : `<button class="claro" onclick="apagarConvite('${esc(c.token)}')">Apagar</button>`}
+      </td>
+    </tr>`).join('');
+
+  conteudo.innerHTML = `
+    <h2 style="margin:0 0 4px;font-size:var(--t-titulo);font-weight:400">Um link por cliente</h2>
+    <p class="nota" style="margin:0 0 18px">O link de convite já chega com o nome e o CNPJ
+    preenchidos, e amarra a resposta ao cliente a quem foi enviado. Para divulgação aberta —
+    redes sociais, por exemplo — use o endereço sem <code>?c=</code>: a resposta entra como
+    "link aberto".</p>
+    <div class="filtros">
+      <input type="text" id="nomeEmpresa" placeholder="Nome da empresa">
+      <input type="text" id="cnpj" placeholder="CNPJ" style="min-width:170px">
+      <input type="text" id="email" placeholder="E-mail de contato">
+      <button onclick="criarConvite()">Gerar link</button>
+    </div>
+    ${convites.length ? `<table><thead><tr>
+      <th>Cliente</th><th>Link</th><th>Aberturas</th><th>Respostas</th><th>Criado</th><th></th>
+      </tr></thead><tbody>${linhas}</tbody></table>`
+      : '<div class="vazio">Nenhum convite gerado ainda.</div>'}
+    ${base ? '' : `<p class="nota"><b>AUSTER_ENDERECO_PUBLICO não está definido</b> no ambiente,
+      então os links saem sem domínio. Defina no painel do Dokploy para poder copiar e enviar.</p>`}`;
+}
+
+window.criarConvite = async () => {
+  const corpo = {
+    nomeEmpresa: document.getElementById('nomeEmpresa').value.trim(),
+    cnpj: document.getElementById('cnpj').value.trim(),
+    email: document.getElementById('email').value.trim(),
+  };
+  if (!corpo.nomeEmpresa && !corpo.cnpj) {
+    alert('Informe ao menos o nome da empresa ou o CNPJ — o link serve para amarrar a resposta a alguém.');
+    return;
+  }
+  await pedir('/api/backoffice/convites', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo),
+  });
+  verConvites();
+};
+
+window.apagarConvite = async token => {
+  if (!confirm('Apagar este convite? O link para de funcionar.')) return;
+  const r = await fetch('/api/backoffice/convites/apagar', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  if (!r.ok) { const d = await r.json(); alert('Não deu: ' + (d.motivo || 'erro')); }
+  verConvites();
+};
+
+window.copiar = async texto => {
+  try { await navigator.clipboard.writeText(texto); }
+  catch { prompt('Copie o link:', texto); }
+};
+
+// ----------------------------------------------------------------- auditoria
+async function verEventos() {
+  const { eventos } = await pedir('/api/backoffice/eventos');
+  conteudo.innerHTML = `
+    <h2 style="margin:0 0 4px;font-size:var(--t-titulo);font-weight:400">Auditoria</h2>
+    <p class="nota" style="margin:0 0 18px">Registro só de inserção: nada aqui é alterado
+    depois. É o que permite explicar por que um registro está como está.</p>
+    ${eventos.length ? `<table><thead><tr><th>Quando</th><th>Quem</th><th>O quê</th>
+      <th>Referência</th><th>Detalhe</th></tr></thead><tbody>
+      ${eventos.map(e => `<tr><td>${quando(e.quando)}</td><td>${esc(e.quem || '—')}</td>
+        <td>${esc(e.o_que)}</td><td>${esc(e.referencia || '—')}</td>
+        <td style="font-size:var(--t-meta);color:var(--cinza)">${esc(e.detalhe || '')}</td></tr>`).join('')}
+      </tbody></table>` : '<div class="vazio">Nada registrado ainda.</div>'}`;
+}
+
+// ------------------------------------------------------------------ usuarios
+/** Pede uma senha em dialogo, com os dois campos, e devolve o texto ou null.
+ *  Nunca escreve a senha em lugar nenhum: nem em log, nem em URL, nem no
+ *  histórico do navegador. */
+function pedirSenha(titulo, minimo) {
+  const dlg = document.getElementById('dlgSenha');
+  const s1 = document.getElementById('senha1');
+  const s2 = document.getElementById('senha2');
+  const erro = document.getElementById('erroSenha');
+  document.getElementById('tituloSenha').textContent = titulo;
+  document.getElementById('regraSenha').textContent =
+    'No mínimo ' + minimo + ' caracteres. Comprimento é o que protege: não exigimos '
+    + 'símbolo nem maiúscula, porque isso produz senha curta e anotada em papel.';
+  s1.value = ''; s2.value = ''; erro.textContent = '';
+
+  return new Promise(resolve => {
+    const fechar = () => {
+      dlg.removeEventListener('close', aoFechar);
+      resolve(dlg.returnValue === 'ok' ? s1.value : null);
+      s1.value = ''; s2.value = '';
+    };
+    const aoFechar = () => fechar();
+    const form = document.getElementById('formSenha');
+    form.onsubmit = ev => {
+      if (dlg.returnValue === 'cancelar') return;
+      if (s1.value.length < minimo) { erro.textContent = 'Curta demais.'; ev.preventDefault(); return; }
+      if (s1.value !== s2.value) { erro.textContent = 'As duas não conferem.'; ev.preventDefault(); return; }
+    };
+    dlg.addEventListener('close', aoFechar);
+    dlg.showModal();
+    s1.focus();
+  });
+}
+
+async function verUsuarios() {
+  const { usuarios, minimoSenha, implantacao } = await pedir('/api/backoffice/usuarios');
+
+  const linhas = usuarios.map(u => `
+    <tr class="${u.ativo ? '' : 'inativo'}">
+      <td><b>${esc(u.usuario)}</b><br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(u.nome || '')}</span></td>
+      <td><span class="papel ${u.papel}">${u.papel === 'admin' ? 'administrador' : 'equipe'}</span></td>
+      <td>${u.ativo ? 'ativo' : 'desativado'}</td>
+      <td>${quando(u.acesso_em)}</td>
+      <td>${quando(u.criado_em)}<br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(u.criado_por || '')}</span></td>
+      <td>
+        <button class="claro" onclick="window.trocarSenhaDe('${esc(u.usuario)}')">Trocar senha</button>
+        <button class="claro" onclick="window.alternarPapel('${esc(u.usuario)}','${u.papel === 'admin' ? 'equipe' : 'admin'}')">${u.papel === 'admin' ? 'Tornar equipe' : 'Tornar administrador'}</button>
+        <button class="claro" onclick="window.alternarAtivo('${esc(u.usuario)}',${u.ativo ? 'false' : 'true'})">${u.ativo ? 'Desativar' : 'Reativar'}</button>
+      </td>
+    </tr>`).join('');
+
+  conteudo.innerHTML = `
+    <h2 style="margin:0 0 4px;font-size:var(--t-titulo);font-weight:400">Usuários internos</h2>
+    <p class="nota" style="margin:0 0 18px">Cada pessoa entra com usuário e senha próprios, e é
+    esse nome que fica gravado na auditoria de cada resposta validada. <b>Administrador</b> cria e
+    altera usuários; <b>equipe</b> confere respostas e gera convites, e pode trocar a própria
+    senha. A senha nunca é guardada: guarda-se o resumo <code>scrypt</code> com sal por usuário.</p>
+
+    ${implantacao ? `<div class="aviso-implantacao" style="border:1px solid #f0dcb4;
+      background:#fdf9f0;border-radius:8px;padding:14px 17px;margin:0 0 18px">
+      <b>Você entrou com a senha de implantação.</b> Ela vale só enquanto não existe usuário
+      ativo. Crie o seu usuário abaixo — o primeiro nasce administrador — e, feito isso, a senha
+      da variável de ambiente para de abrir esta tela. Se um dia todos os usuários forem
+      desativados, ela volta a valer: é a saída de emergência.</div>` : ''}
+
+    <div class="filtros">
+      <input type="text" id="novoUsuario" placeholder="usuario (sem espaço nem acento)">
+      <input type="text" id="novoNome" placeholder="Nome de quem usa" style="min-width:190px">
+      <select id="novoPapel">
+        <option value="equipe">equipe</option>
+        <option value="admin">administrador</option>
+      </select>
+      <button onclick="window.criarUsuario()">Criar usuário</button>
+    </div>
+    <div class="erro-senha" id="erroUsuario"></div>
+
+    ${usuarios.length ? `<table><thead><tr><th>Usuário</th><th>Papel</th><th>Situação</th>
+      <th>Último acesso</th><th>Criado</th><th></th></tr></thead>
+      <tbody>${linhas}</tbody></table>`
+    : '<div class="vazio">Nenhum usuário ainda. O primeiro que você criar nasce administrador.</div>'}`;
+}
+
+window.criarUsuario = async () => {
+  const usuario = document.getElementById('novoUsuario').value.trim().toLowerCase();
+  const nome = document.getElementById('novoNome').value.trim();
+  const papelNovo = document.getElementById('novoPapel').value;
+  const erro = document.getElementById('erroUsuario');
+  erro.textContent = '';
+  if (!usuario) { erro.textContent = 'Informe o usuário.'; return; }
+
+  const senha = await pedirSenha('Senha de ' + usuario, 12);
+  if (senha === null) return;
+  let r;
+  try {
+    r = await fetch('/api/backoffice/usuarios', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, nome, senha, papel: papelNovo }),
+    }).then(x => x.json());
+  } catch (e) {
+    erro.textContent = 'Não deu para falar com o servidor: ' + e.message;
+    return;
+  }
+  if (!r.ok) { erro.textContent = r.motivo || r.erro || 'não deu'; return; }
+
+  // Aqui está uma armadilha real, encontrada na conferência: se esta sessão
+  // entrou pela senha de IMPLANTAÇÃO, criar o primeiro usuário invalida a
+  // própria sessão no mesmo instante — a senha de ambiente para de abrir o
+  // backoffice. Recarregar a lista tomaria 401. Então a tela para aqui e diz
+  // o que fazer, em vez de deixar um erro de rede sem explicação.
+  if (porImplantacao) {
+    conteudo.innerHTML = `
+      <h2 style="margin:0 0 10px;font-size:var(--t-titulo);font-weight:400">Usuário
+      <b>${esc(usuario)}</b> criado como administrador</h2>
+      <p class="nota" style="max-width:70ch">A partir de agora <b>a senha de implantação não
+      abre mais esta tela</b> — é assim de propósito: enquanto houver usuário ativo, só vale
+      usuário e senha próprios, e é isso que faz a auditoria significar alguma coisa.</p>
+      <p class="nota" style="max-width:70ch"><b>Feche esta aba e abra o backoffice de novo</b>,
+      entrando como <code>${esc(usuario)}</code>. O navegador guarda a credencial antiga
+      enquanto a aba estiver aberta.</p>
+      <p class="nota" style="max-width:70ch">Se um dia todos os usuários forem desativados, a
+      senha de implantação volta a valer. É a saída de emergência, e não exige mexer no banco.</p>`;
+    return;
+  }
+  verUsuarios();
+};
+
+async function alterar(usuario, mudanca, titulo) {
+  let r;
+  try {
+    r = await fetch('/api/backoffice/usuarios/alterar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, ...mudanca }),
+    }).then(x => x.json());
+  } catch (e) {
+    alert((titulo ? titulo + ': ' : '') + 'não deu para falar com o servidor (' + e.message + ')');
+    return false;
+  }
+  if (!r.ok) alert((titulo ? titulo + ': ' : '') + (r.motivo || r.erro || 'não deu'));
+  return r.ok;
+}
+
+window.trocarSenhaDe = async usuario => {
+  const senha = await pedirSenha('Nova senha de ' + usuario, 12);
+  if (senha === null) return;
+  if (await alterar(usuario, { senha }, 'Trocar senha')) verUsuarios();
+};
+
+window.alternarPapel = async (usuario, para) => {
+  if (await alterar(usuario, { papel: para }, 'Mudar papel')) verUsuarios();
+};
+
+window.alternarAtivo = async (usuario, para) => {
+  if (await alterar(usuario, { ativo: para }, 'Mudar situação')) verUsuarios();
+};
+
+/** Autoatendimento: qualquer pessoa troca a própria senha, inclusive quem não
+ *  administra. Sem isso, trocar senha viraria pedido a outra pessoa — e senha
+ *  que passa pela mão de terceiro deixa de ser senha. */
+window.trocarMinhaSenha = async () => {
+  if (porImplantacao) {
+    alert('Você entrou com a senha de implantação, que não é de usuário. '
+      + 'Crie o seu usuário na aba Usuários.');
+    return;
+  }
+  const senha = await pedirSenha('Nova senha de ' + quem, 12);
+  if (senha === null) return;
+  if (await alterar(quem, { senha }, 'Trocar minha senha')) {
+    alert('Senha trocada. O navegador ainda guarda a antiga nesta aba: '
+      + 'feche e abra de novo para entrar com a nova.');
+  }
+};
+
+// ---------------------------------------------------------------------- abas
+document.querySelectorAll('.aba').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.aba').forEach(x => x.classList.toggle('ativa', x === b));
+  abaAtual = b.dataset.aba;
+  desenhar();
+}));
+
+function desenhar() {
+  conteudo.innerHTML = 'carregando…';
+  const fn = { respostas: verRespostas, convites: verConvites, eventos: verEventos,
+               usuarios: verUsuarios }[abaAtual];
+  fn().catch(e => { conteudo.innerHTML = `<div class="vazio">Falha ao carregar: ${esc(e.message)}</div>`; });
+}
+
+// Quem nao administra nao ve a aba de usuarios — e o servidor recusa a rota
+// de todo modo: esconder e conforto de tela, nao controle de acesso.
+if (ehAdmin) document.getElementById('abaUsuarios').classList.remove('oculta');
+if (porImplantacao) { abaAtual = 'usuarios';
+  document.querySelectorAll('.aba').forEach(x =>
+    x.classList.toggle('ativa', x.dataset.aba === 'usuarios')); }
+
+desenhar();
+</script>
+</body>
+</html>

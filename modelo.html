@@ -1,0 +1,1575 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico — Simples padrão ou híbrido | auster</title>
+<meta name="description" content="Em 4 a 10 minutos, descubra se a sua empresa do Simples Nacional deve recolher IBS e CBS na guia única ou por fora do DAS. A opção é feita até 30 de setembro de 2026.">
+<meta name="author" content="Auster Inteligência Contábil">
+<meta name="theme-color" content="#052C47">
+<!-- Não indexar: o público é a carteira e os convidados da palestra, por link
+     direto. Trocar para "index" só se o portal virar porta de entrada aberta. -->
+<meta name="robots" content="noindex, nofollow">
+<!-- Cartão de compartilhamento no WhatsApp e no LinkedIn. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Simples padrão ou híbrido: qual a sua empresa deve escolher até 30 de setembro">
+<meta property="og:description" content="Diagnóstico gratuito da Auster Inteligência Contábil sobre o recolhimento de IBS e CBS em 2027. De 4 a 10 minutos.">
+<meta property="og:locale" content="pt_BR">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23052C47'/%3E%3Cpath d='M16 7l9 9h-4v9h-10v-9H7z' fill='%2371CFEB'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Marca */
+  --escuro:#052C47; --claro:#71CFEB; --branco:#fff;
+  /* #71CFEB tem 1,78:1 sobre branco — inutilizável como texto ou contorno.
+     O acento sobre fundo claro é a mesma família de matiz, escurecida até
+     passar de 4,5:1. Decisão já validada no painel fiscal da casa. */
+  --acento:#007E99;
+  --tinta:#052C47; --cinza:#5b6b78; --fundo:#f1f5f8;
+  /* Borda em DUAS camadas: divisória discreta e contorno de controle.
+     A WCAG 1.4.11 exige 3:1 só para fronteira de controle. Escurecer tudo
+     a 3:1 deixa a tela pesada; deixar tudo em 1,28:1 apaga os objetos. */
+  --borda:#cfd9e0;        /* ~1,6:1  — divisória */
+  --borda-forte:#8496a5;  /* 3,05:1 — contorno de campo e de opção (WCAG 1.4.11) */
+  --sombra:0 1px 2px rgba(5,44,71,.06), 0 4px 12px rgba(5,44,71,.05);
+  --alto:#b63b32; --medio:#9a6608; --baixo:#2f7d52;
+  /* Escala tipográfica com degraus reais: 12 · 14 · 16 · 20 · 28.
+     Antes havia quatro tamanhos entre 11 e 14 px — sem hierarquia. */
+  --t-meta:12px; --t-corpo:14px; --t-destaque:16px; --t-titulo:20px; --t-tela:28px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--tinta);
+  font-family:Kanit,Montserrat,Raleway,Arial,sans-serif;font-weight:300;line-height:1.55}
+header{background:var(--escuro);color:#fff;padding:30px 24px 26px;box-shadow:var(--sombra);text-align:center}
+header .cabecalho{display:flex;justify-content:center;align-items:center}
+header .logo{height:52px;width:auto;display:block}
+header .logo.papel{display:none}
+header .sub{color:var(--claro);font-size:13.5px;margin-top:14px;line-height:1.5;
+  max-width:60ch;margin-left:auto;margin-right:auto}
+@media (max-width: 560px){
+  header{padding:24px 16px 20px}
+  header .logo{height:42px}
+}
+main{max-width:820px;margin:0 auto;padding:28px 24px 48px}
+.etapa-conta{color:var(--cinza);font-size:var(--t-meta);margin:0 0 26px;
+  text-transform:uppercase;letter-spacing:.8px}
+.passos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px}
+.passo{flex:1 1 90px;font-size:var(--t-meta);text-align:center;padding:10px 6px;border-radius:6px;
+  background:#fff;border:1px solid var(--borda);color:var(--cinza);cursor:pointer;
+  transition:border-color .15s,color .15s}
+.passo:hover{border-color:var(--borda-forte);color:var(--tinta)}
+.passo.ativo{background:var(--escuro);color:#fff;border-color:var(--escuro)}
+.passo.feito{border-color:var(--acento);color:var(--acento);background:#f2fafc}
+.cartao{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:30px 32px;box-shadow:var(--sombra)}
+h1{font-weight:300;font-size:var(--t-tela);margin:0 0 2px;letter-spacing:-.2px;line-height:1.2}
+h2{font-weight:500;font-size:var(--t-titulo);margin:0 0 18px}
+h3{font-weight:500;font-size:var(--t-destaque);margin:28px 0 12px;color:var(--escuro);
+  padding-bottom:8px;border-bottom:2px solid var(--borda)}
+.campo{margin-bottom:26px}
+.campo>label{display:block;font-weight:500;font-size:var(--t-corpo);margin-bottom:8px;
+  line-height:1.4}
+.obr{color:var(--alto)}
+.opcoes{display:flex;flex-direction:column;gap:7px}
+.opcoes.curtas{flex-direction:row;flex-wrap:wrap}
+.opcoes.curtas .opcao{flex:0 1 auto;min-width:118px}
+.opcao{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--borda-forte);
+  border-radius:8px;cursor:pointer;font-size:var(--t-corpo);background:#fff;
+  transition:border-color .12s,background .12s,box-shadow .12s}
+.opcao:hover{border-color:var(--acento);background:#f7fcfd}
+.opcao.marcada{border-color:var(--acento);background:#eef8fb;box-shadow:inset 0 0 0 1px var(--acento)}
+.opcao input{accent-color:var(--escuro);margin:0}
+textarea,input[type=text],input[type=email],input[type=tel],select{width:100%;padding:11px 13px;
+  border:1px solid var(--borda-forte);border-radius:8px;font-family:inherit;
+  font-size:var(--t-corpo);font-weight:300;background:#fff;color:var(--tinta);
+  transition:border-color .12s,box-shadow .12s}
+textarea{resize:vertical;min-height:76px;line-height:1.55}
+textarea:focus,input[type=text]:focus,input[type=email]:focus,input[type=tel]:focus,select:focus{
+  outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba(0,126,153,.16)}
+/* 7 colunas nao cabem em tela de telefone: a tabela rola dentro do proprio
+   quadro, e a coluna do rotulo fica presa a esquerda. */
+.matriz-rolo{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.matriz{width:100%;min-width:430px;border-collapse:collapse;font-size:12.5px}
+table.matriz th{font-weight:500;color:var(--tinta);padding:9px 4px;text-align:center;font-size:var(--t-meta)}
+table.matriz td{padding:9px 4px;text-align:center;border-top:1px solid var(--borda)}
+table.matriz td:first-child{text-align:left;font-size:var(--t-corpo)}
+table.matriz tbody tr:hover{background:#f7fafc}
+table.matriz input{accent-color:var(--acento);width:17px;height:17px}
+table.matriz .na{border-left:1px solid var(--borda-forte);color:var(--cinza)}
+.soma{font-size:12.5px;color:var(--cinza);margin-top:8px}
+.soma.alerta{color:var(--medio)}
+.rodape-nav{display:flex;justify-content:space-between;margin-top:26px;padding-top:18px;border-top:1px solid var(--borda)}
+button{font-family:inherit;font-size:var(--t-corpo);font-weight:500;padding:12px 28px;
+  border-radius:8px;border:1px solid var(--escuro);cursor:pointer;transition:background .12s,box-shadow .12s}
+button.principal:hover{background:#0a3d5f;box-shadow:var(--sombra)}
+button.secundario:hover{background:#f1f5f8}
+button.principal{background:var(--escuro);color:#fff}
+button.secundario{background:#fff;color:var(--escuro)}
+button:disabled{opacity:.35;cursor:default}
+.erro{color:var(--alto);font-size:var(--t-meta);margin-top:6px;font-weight:400}
+.dica{font-size:var(--t-meta);color:var(--cinza);margin:-2px 0 10px;line-height:1.5}
+.cadastro{font-size:var(--t-meta);margin-top:7px;padding:9px 12px;border-radius:7px;line-height:1.5}
+.cadastro.buscando{background:#f1f5f8;color:var(--cinza)}
+.cadastro.achou{background:#eef8fb;border:1px solid var(--acento);color:var(--tinta)}
+.cadastro.alerta{background:#fdf4e3;border:1px solid #e8cf9a;color:#7a5200}
+.cadastro.mudo{display:none}
+.cadastro b{font-weight:500}
+.opcao.com-desc{align-items:flex-start}
+.opcao .texto-opcao{display:flex;flex-direction:column;gap:2px}
+.opcao .texto-opcao b{font-weight:400}
+.opcao .desc{font-size:var(--t-meta);color:var(--cinza);line-height:1.5}
+/* resultado */
+.selo{display:inline-block;padding:4px 11px;border-radius:20px;font-size:11.5px;font-weight:400}
+.selo.ALTA{background:#fdeceb;color:var(--alto)} .selo.MÉDIA{background:#fdf4e3;color:var(--medio)}
+.selo.BAIXA{background:#eaf5ee;color:var(--baixo)}
+.saida{background:var(--escuro);color:#fff;border-radius:10px;padding:30px 32px;margin-bottom:20px;box-shadow:var(--sombra)}
+.saida .codigo{color:var(--claro);font-size:12px;letter-spacing:1.5px}
+.saida h2{color:#fff;font-size:var(--t-tela);font-weight:300;margin:8px 0 12px;letter-spacing:-.2px}
+.saida p{margin:0;color:#cfe3ee;font-size:var(--t-destaque);line-height:1.6;max-width:62ch}
+/* A DECISÃO — heroi da tela. Um cartao so: antes havia dois titulos grandes
+   competindo (a faixa de regime e o cartao escuro da saida). */
+.regime{background:var(--escuro);color:#fff;border-radius:12px;padding:38px 40px 34px;
+  margin-bottom:16px;box-shadow:0 10px 28px rgba(5,44,71,.22);
+  border-top:7px solid var(--claro)}
+/* A cor segue a CERTEZA, não a família. Decisão fechada ganha a cor do caminho;
+   decisão aberta é sempre âmbar, inclusive quando o caminho já tem nome. */
+.regime.fechada.f-hibrido{border-top-color:var(--claro)}
+.regime.fechada.f-padrao{border-top-color:#4fbf85}
+.regime.aberta{border-top-color:#f0b64a}
+.regime .rot{font-size:12px;letter-spacing:1.8px;text-transform:uppercase;color:var(--claro);
+  font-weight:400}
+.regime .nome{font-size:clamp(32px,5.4vw,46px);font-weight:300;letter-spacing:-1px;color:#fff;
+  margin:10px 0 0;line-height:1.08}
+.regime .qual{display:inline-block;margin-top:14px;padding:6px 15px;border-radius:20px;
+  font-size:13px;background:rgba(113,207,235,.18);color:var(--claro);
+  border:1px solid rgba(113,207,235,.45)}
+.regime.aberta .qual{background:rgba(240,182,74,.16);color:#f5c97a;
+  border-color:rgba(240,182,74,.45)}
+.regime.aberta .rot{color:#f5c97a}
+.regime .faca{margin:22px 0 0;font-size:19px;font-weight:400;line-height:1.5;max-width:60ch;color:#fff}
+.regime .porque{margin:20px 0 0;padding-top:17px;border-top:1px solid rgba(113,207,235,.3);
+  font-size:var(--t-corpo);line-height:1.6;max-width:70ch;color:#cfe3ee}
+.regime .porque b{font-weight:400;color:#fff}
+.regime .porque .prefixo{color:var(--claro);font-size:var(--t-meta);text-transform:uppercase;
+  letter-spacing:.8px}
+.regime .abertos{margin-top:18px;padding:14px 16px;border-radius:8px;
+  background:rgba(240,182,74,.12);border:1px solid rgba(240,182,74,.35)}
+.regime .abertos .t{font-size:11.5px;text-transform:uppercase;letter-spacing:1px;color:#f5c97a}
+.regime .abertos ul{margin:9px 0 0;padding-left:19px;color:#e4eef4;font-size:var(--t-corpo);
+  line-height:1.6;max-width:66ch}
+.regime .abertos li{margin-bottom:4px}
+.regime .det{margin:8px 0 0;font-size:var(--t-corpo);line-height:1.6;max-width:70ch;color:#a8cbdd}
+.regime .prelim{margin:12px 0 0;font-size:var(--t-corpo);line-height:1.6;max-width:70ch;color:#a8cbdd}
+.regime .prelim b{font-weight:400;color:#fff}
+.regime .trava{margin:20px 0 0;font-size:13px;line-height:1.6;max-width:70ch;color:#2b1d00;
+  background:var(--claro);border-radius:8px;padding:14px 16px}
+.regime .trava b{font-weight:500}
+.regime .trava .fonte{display:block;margin-top:5px;font-size:11.5px;color:#0d4457}
+
+/* Aviso de que o diagnostico de verdade depende dos numeros. */
+.precisa-numeros{display:flex;gap:14px;align-items:flex-start;background:#fff;
+  border:1px solid var(--borda-forte);border-left:4px solid var(--escuro);border-radius:9px;
+  padding:17px 20px;margin-bottom:20px;box-shadow:var(--sombra)}
+.precisa-numeros .marca{font-size:20px;line-height:1}
+.precisa-numeros p{margin:0;font-size:var(--t-corpo);line-height:1.6;max-width:74ch}
+.precisa-numeros b{font-weight:500}
+/* Conferência */
+.rev-bloco{margin-bottom:26px}
+.rev-bloco h3{font-size:var(--t-corpo);font-weight:500;color:var(--escuro);margin:0 0 4px;
+  text-transform:uppercase;letter-spacing:.8px}
+.rev-bloco .conta{font-size:var(--t-meta);color:var(--cinza);margin:0 0 12px}
+.rev-linha{display:flex;gap:14px;align-items:baseline;padding:11px 0;border-top:1px solid var(--borda)}
+.rev-linha:last-child{border-bottom:1px solid var(--borda)}
+.rev-linha .pergunta{flex:1 1 52%;font-size:var(--t-corpo);color:var(--cinza);line-height:1.5}
+.rev-linha .resposta{flex:1 1 40%;font-size:var(--t-corpo);color:var(--tinta);font-weight:500;line-height:1.5}
+.rev-linha .resposta .sub{display:block;font-weight:300;color:var(--cinza);font-size:var(--t-meta)}
+.rev-linha .linha-matriz{display:block;font-weight:300;color:var(--cinza);font-size:var(--t-meta);
+  line-height:1.65}
+.rev-linha .linha-matriz b{font-weight:500;color:var(--tinta)}
+.rev-linha .linha-matriz.na b{color:#7a5200}
+.rev-linha .resposta.vazia{font-weight:300;color:#8496a5;font-style:italic}
+.rev-linha .resposta.lacuna{color:#7a5200}
+.rev-linha button.alterar{flex:0 0 auto;background:none;border:0;padding:2px 4px;color:var(--acento);
+  font-size:var(--t-meta);font-weight:500;cursor:pointer;text-decoration:underline}
+.rev-linha button.alterar:hover{color:var(--escuro)}
+.rev-linha .decide{display:inline-block;margin-left:7px;padding:1px 7px;border-radius:10px;
+  font-size:10.5px;font-weight:400;background:#eef3f6;color:var(--cinza);vertical-align:1px}
+.rev-aviso{background:#fdf4e3;border:1px solid #f0dcb4;border-radius:8px;padding:14px 16px;
+  font-size:var(--t-corpo);line-height:1.6;margin:0 0 24px;max-width:74ch}
+.campo.destacado{animation:pisca 1.8s ease-out}
+@keyframes pisca{0%,100%{background:transparent}18%{background:#eef8fb}}
+.rev-aviso ul{margin:9px 0 0;padding-left:20px}
+.rev-aviso li{margin-bottom:3px}
+.bloco-envio{border-left:3px solid var(--escuro)}
+.bloco-envio h2{font-family:inherit;letter-spacing:.5px}
+.envio{font-size:var(--t-corpo);line-height:1.6;max-width:70ch;color:var(--cinza);margin:0 0 16px}
+.envio b{font-weight:500;color:var(--tinta)}
+.envio.ok{color:var(--baixo)}
+.envio.ok b{color:var(--baixo)}
+.envio.erro{color:var(--alto)}
+.envio.erro b{color:var(--alto)}
+.privacidade{border:1px solid var(--borda);border-radius:8px;padding:14px 16px;margin:0 0 12px;
+  background:#fafcfd;font-size:var(--t-meta);line-height:1.6;color:var(--cinza);max-width:76ch}
+.privacidade p{margin:0 0 7px}
+.privacidade p:last-child{margin-bottom:0}
+.privacidade b{font-weight:500;color:var(--tinta)}
+.privacidade a{color:var(--acento)}
+.opcao.aceite{align-items:flex-start}
+.opcao.aceite input{margin-top:2px;accent-color:var(--acento);width:17px;height:17px}
+.opcao.aceite .texto-opcao b{font-weight:400;line-height:1.5}
+.retomar{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  background:#fff;border:1px solid var(--acento);border-left:4px solid var(--acento);
+  border-radius:9px;padding:15px 18px;margin-bottom:18px;box-shadow:var(--sombra);
+  font-size:var(--t-corpo);line-height:1.55}
+.retomar b{font-weight:500;display:block}
+.retomar span{color:var(--cinza);font-size:var(--t-meta)}
+.retomar .botoes{display:flex;gap:9px;flex-wrap:wrap}
+.retomar button{padding:9px 18px;font-size:var(--t-meta)}
+.escopo{background:#eef8fb;border:1px solid var(--acento);border-radius:8px;padding:12px 14px;
+  font-size:var(--t-corpo);line-height:1.55;color:var(--tinta);margin:0 0 22px;max-width:74ch}
+/* Encaminhamento: quem nao e optante nao preenche 5 blocos para ouvir "nao e pra voce". */
+.encaminha{background:#fff;border:1px solid var(--borda);border-top:7px solid var(--claro);
+  border-radius:12px;padding:34px 36px;box-shadow:var(--sombra)}
+.encaminha h1{margin:0 0 12px;font-size:var(--t-tela);font-weight:300;color:var(--escuro)}
+.encaminha p{font-size:var(--t-destaque);line-height:1.6;max-width:68ch;color:var(--tinta);margin:0 0 14px}
+.encaminha p.menor{font-size:var(--t-corpo);color:var(--cinza)}
+.encaminha .botoes{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;align-items:center}
+.encaminha a.cta{display:inline-block;background:var(--escuro);color:#fff;text-decoration:none;
+  font-size:var(--t-corpo);font-weight:500;padding:13px 26px;border-radius:8px;
+  border:1px solid var(--escuro);transition:background .12s}
+.encaminha a.cta:hover{background:#0a3d5f}
+.encaixe{margin-top:22px;padding-top:20px;border-top:1px solid var(--acento)}
+.encaixe .t{font-size:var(--t-destaque);font-weight:500;color:var(--escuro)}
+.encaixe p{font-size:var(--t-corpo);color:var(--cinza);line-height:1.6;max-width:70ch;margin:8px 0 16px}
+.encaixe a.cta{display:inline-block;background:var(--escuro);color:#fff;text-decoration:none;
+  font-size:var(--t-corpo);font-weight:500;padding:12px 24px;border-radius:8px;
+  border:1px solid var(--escuro);transition:background .12s}
+.encaixe a.cta:hover{background:#0a3d5f}
+.grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.mini{background:#fff;border:1px solid var(--borda);border-radius:9px;padding:17px;box-shadow:var(--sombra)}
+.mini .rot{font-size:var(--t-meta);color:var(--cinza);text-transform:uppercase;letter-spacing:.6px}
+.mini .val{font-size:17px;font-weight:500;margin-top:5px}
+.mini .nota-mini{font-size:11.5px;color:var(--cinza);line-height:1.5;margin-top:7px}
+.mini .nota-mini b{font-weight:500;color:var(--tinta)}
+.mini.destaque{border-color:var(--acento);border-left:4px solid var(--acento);background:#f7fcfd}
+.mini .val.grande{font-size:21px;font-weight:400;color:var(--escuro)}
+.eixo{margin-bottom:13px}
+.eixo .topo{display:flex;justify-content:space-between;font-size:var(--t-corpo);margin-bottom:6px}
+.barra{height:8px;background:#e8eef2;border-radius:5px;overflow:hidden}
+.barra i{display:block;height:100%;border-radius:5px;background:var(--claro)}
+.barra i.f-forte{background:#2f7d52}.barra i.f-atenção{background:#c8860d}
+.barra i.f-prioritária{background:#c2453b}
+.acao{border:1px solid var(--borda);border-left:3px solid var(--acento);border-radius:9px;
+  padding:16px 18px;margin-bottom:12px;background:#fff;box-shadow:var(--sombra)}
+.acao .t{font-weight:500;font-size:var(--t-corpo)}
+.acao .p{font-size:var(--t-corpo);color:var(--cinza);margin-top:7px;line-height:1.55}
+.acao .meta{font-size:var(--t-meta);color:var(--cinza);margin-top:11px;display:flex;gap:16px;flex-wrap:wrap}
+.acao .meta b{font-weight:500;color:var(--escuro)}
+.acao .meta .base{color:#8496a5;font-style:italic}
+.cartao.significa{margin-bottom:20px;border-left:3px solid var(--acento)}
+.cartao.significa p{margin:0;font-size:var(--t-destaque);line-height:1.65;max-width:70ch}
+.bloco-auster{background:#f7fcfd;border-color:var(--acento)}
+.bloco-auster .intro{font-size:var(--t-corpo);color:var(--cinza);margin:0 0 18px;max-width:66ch}
+.acao.auster{border-left:3px solid var(--escuro);background:#fff}
+.aviso{background:#fdf4e3;border:1px solid #f0dcb4;border-radius:8px;padding:13px;font-size:13px;margin-bottom:18px}
+.ressalva{font-size:var(--t-meta);color:var(--cinza);border-top:1px solid var(--borda);margin-top:26px;padding-top:16px;line-height:1.6}
+
+/* ------------------------------------------------------- relatório para papel
+ * Vista de documento: o mesmo conteúdo do resultado, montado para o A4. Cada
+ * `.folha` é uma seção que começa em página nova na impressão, e nada que
+ * forme um enquadramento — ação, linha de resumo, tabela de prazos — pode ser
+ * cortado ao meio. Na tela, as folhas aparecem como páginas empilhadas, para a
+ * pessoa ver antes de imprimir o que vai sair.
+ */
+.barra-doc{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:18px}
+.doc{background:#fff}
+.folha{background:#fff;border:1px solid var(--borda);border-radius:10px;
+  padding:42px 50px;margin:0 auto 16px;box-shadow:var(--sombra);max-width:190mm}
+.folha h1{font-size:26px;font-weight:300;line-height:1.25;letter-spacing:-.3px;
+  color:var(--escuro);margin:14px 0 24px}
+.folha h2{font-size:var(--t-titulo);font-weight:400;color:var(--escuro);margin:0 0 14px}
+.folha h3{font-size:var(--t-corpo);font-weight:500;color:var(--escuro);margin:26px 0 10px;
+  text-transform:uppercase;letter-spacing:.9px}
+.folha h3:first-of-type{margin-top:18px}
+.folha .corrido{font-size:var(--t-destaque);line-height:1.65;max-width:70ch;margin:0 0 6px}
+.selo-doc{display:inline-block;font-size:11.5px;text-transform:uppercase;letter-spacing:1.4px;
+  color:var(--acento);border:1px solid var(--acento);border-radius:20px;padding:4px 12px}
+
+.cabecalho-doc{border-collapse:collapse;margin:0 0 26px;width:100%;max-width:520px}
+.cabecalho-doc td{font-size:var(--t-meta);color:var(--cinza);padding:6px 14px 6px 0;
+  white-space:nowrap;vertical-align:baseline;width:1%}
+.cabecalho-doc th{font-size:var(--t-corpo);font-weight:500;text-align:left;padding:6px 0;
+  border-bottom:1px solid var(--borda)}
+
+.doc-decisao{border:1px solid var(--borda-forte);border-left:6px solid var(--escuro);
+  border-radius:9px;padding:24px 26px;margin:0 0 20px}
+.doc-decisao.fechada{border-left-color:#2f7d52}
+.doc-decisao.aberta{border-left-color:#c8860d}
+.doc-decisao .rot{font-size:11.5px;text-transform:uppercase;letter-spacing:1.3px;color:var(--cinza)}
+.doc-decisao .nome{font-size:28px;font-weight:300;letter-spacing:-.4px;color:var(--escuro);
+  margin:6px 0 0;line-height:1.15}
+.doc-decisao .qual{font-size:var(--t-meta);color:var(--cinza);margin-top:6px}
+.doc-decisao p{font-size:var(--t-destaque);line-height:1.55;margin:14px 0 0;max-width:66ch}
+
+.doc-abertos{border:1px solid #f0dcb4;background:#fdf9f0;border-radius:8px;padding:14px 17px;
+  margin:0 0 18px}
+.doc-abertos b{font-size:11.5px;text-transform:uppercase;letter-spacing:1px;color:#7a5200}
+.doc-abertos ul{margin:8px 0 0;padding-left:19px;font-size:var(--t-corpo);line-height:1.6;
+  color:var(--tinta);max-width:70ch}
+.doc-abertos li{margin-bottom:3px}
+
+.doc-acao{display:flex;gap:14px;align-items:flex-start;border:1px solid var(--borda);
+  border-radius:9px;padding:15px 17px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid}
+.doc-acao .n{flex:0 0 24px;height:24px;border-radius:50%;background:var(--escuro);color:#fff;
+  font-size:12.5px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.doc-acao .t{font-size:var(--t-destaque);font-weight:500;line-height:1.45;color:var(--escuro)}
+.doc-acao .p{font-size:var(--t-corpo);color:var(--cinza);line-height:1.6;margin-top:6px;max-width:70ch}
+.doc-acao .m{font-size:var(--t-meta);color:var(--cinza);margin-top:9px}
+.doc-acao .m b{font-weight:500;color:var(--escuro)}
+.doc-acao .f{font-size:11.5px;color:#8496a5;font-style:italic;margin-top:5px}
+
+.prazos{border-collapse:collapse;width:100%;margin:0 0 10px}
+.prazos td{font-size:var(--t-corpo);font-weight:500;color:var(--escuro);padding:11px 16px 11px 0;
+  white-space:nowrap;vertical-align:baseline;border-top:1px solid var(--borda);width:1%}
+.prazos th{font-size:var(--t-corpo);font-weight:300;text-align:left;line-height:1.6;
+  padding:11px 0;border-top:1px solid var(--borda);color:var(--cinza)}
+.prazos tr{break-inside:avoid;page-break-inside:avoid}
+.prazos b{font-weight:500;color:var(--tinta)}
+
+.resumo{border-collapse:collapse;width:100%;margin:0 0 4px}
+.resumo td{padding:8px 10px 8px 0;border-top:1px solid var(--borda);vertical-align:baseline;
+  font-size:var(--t-meta);line-height:1.55}
+.resumo tr{break-inside:avoid;page-break-inside:avoid}
+.resumo .p{color:var(--cinza);width:58%}
+.resumo .r{font-weight:500;color:var(--tinta)}
+.resumo .r.lacuna{color:#7a5200}
+.resumo .r .linha-matriz{display:block;font-weight:300;color:var(--cinza)}
+.resumo .r .linha-matriz b{font-weight:500;color:var(--tinta)}
+
+.doc-livre{border-left:3px solid var(--borda-forte);padding:2px 0 2px 14px;margin:0 0 12px}
+.doc-livre b{font-size:11.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--cinza)}
+.doc-livre p{margin:5px 0 0;font-size:var(--t-corpo);line-height:1.6;max-width:70ch}
+
+.doc-ressalvas{margin:0;padding-left:22px}
+.doc-ressalvas li{font-size:var(--t-corpo);line-height:1.65;margin-bottom:13px;max-width:72ch;
+  break-inside:avoid;page-break-inside:avoid}
+.doc-ressalvas b{font-weight:500}
+
+.doc-nota{font-size:11.5px;color:var(--cinza);line-height:1.6;max-width:76ch;
+  margin:22px 0 0;padding-top:14px;border-top:1px solid var(--borda)}
+.doc-fonte{font-size:11.5px;color:#8496a5;font-style:italic;line-height:1.55;margin:4px 0 0;
+  max-width:76ch}
+.doc-rodape{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  font-size:11px;color:var(--cinza);margin-top:26px;padding-top:12px;
+  border-top:1px solid var(--borda)}
+
+@media (max-width: 560px){
+  .folha{padding:22px 18px}
+  .folha h1{font-size:21px}
+  .doc-decisao{padding:18px 16px}
+  .doc-decisao .nome{font-size:22px}
+  .resumo .p{width:50%}
+}
+
+@media print {
+  .barra-doc{display:none !important}
+  .folha{border:0;border-radius:0;box-shadow:none;margin:0;max-width:none;
+    padding:8mm 10mm;break-before:page;page-break-before:always}
+  .folha:first-child{break-before:auto;page-break-before:auto}
+  .folha h1{font-size:21pt}
+  .folha h2{font-size:15pt;break-after:avoid;page-break-after:avoid}
+  .folha h3{break-after:avoid;page-break-after:avoid}
+  .doc-decisao{border:1px solid #666;border-left:5px solid #000}
+  .doc-abertos{border:1px solid #999;background:#f6f6f6}
+  .doc-acao{border:1px solid #bbb}
+  .doc-acao .n{background:#000}
+  .doc-rodape{position:static}
+}
+
+/* Impressão. O botão "Imprimir" existe desde a primeira versão e sai com trilha
+   de etapas, botões e sombras — o cliente imprime ou salva em PDF para levar à
+   conversa, e o que interessa é o conteúdo. */
+@media print {
+  /* Margem de documento, não de página web: 12 mm deixava a caixa de cada ação
+     encostando na borda do papel. 20 mm nas laterais dá 170 mm de largura útil
+     no A4, que é medida de leitura, e sobra bastante para grampo ou encadernação. */
+  @page { margin: 10mm; }
+  body{background:#fff;font-size:11pt}
+  header{box-shadow:none;padding:0 0 10mm;background:#fff}
+  header .logo.tela{display:none}
+  header .logo.papel{display:block;margin:0 auto}
+  header .sub{color:var(--escuro)}
+  main{max-width:none;padding:0}
+  .passos,.rodape-nav,.retomar,.precisa-numeros button,.bloco-envio button,
+  .encaixe a.cta,.debug{display:none !important}
+  .cartao,.regime,.mini,.acao,.atencao,.precisa-numeros,.bloco-envio{
+    box-shadow:none;border:1px solid #bbb;break-inside:avoid;page-break-inside:avoid}
+  .regime{background:#fff;color:var(--escuro);border:2px solid var(--escuro)}
+  .regime .nome,.regime .faca,.regime .porque b,.regime .prelim b{color:var(--escuro)}
+  .regime .rot,.regime .qual{color:var(--escuro);background:none;border-color:var(--escuro)}
+  .regime .porque,.regime .det,.regime .prelim{color:#333}
+  .regime .trava{background:#f4f4f4;color:#000;border:1px solid #999}
+  .regime .abertos{background:#f4f4f4;border:1px solid #999}
+  .regime .abertos .t,.regime .abertos ul{color:#000}
+  .grade{grid-template-columns:repeat(4,1fr)}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  a{color:var(--escuro);text-decoration:none}
+  .ressalva,.notas-pe{border-top:1px solid #bbb}
+}
+
+/* Tela de telefone. O arquivo nao tinha nenhuma consulta de midia: em 400 px,
+   24 px de main + 40 px do cartao deixavam 272 px de texto. */
+@media (max-width: 560px) {
+  main{padding:20px 16px 40px}
+  .cartao{padding:22px 18px}
+  .regime{padding:26px 20px 24px}
+  .regime .faca{font-size:17px}
+  .precisa-numeros{padding:15px 16px;gap:11px}
+  .atencao{padding:15px 16px;gap:12px}
+  .grade{grid-template-columns:1fr}
+}
+/* Tres pontos de atencao em evidencia; o resto vira nota de pe. */
+.atencao{border:1px solid var(--borda-forte);border-radius:9px;padding:18px 20px;margin-bottom:12px;
+  background:#fff;display:flex;gap:15px;align-items:flex-start}
+.atencao:last-of-type{margin-bottom:0}
+.atencao .num{flex:0 0 26px;height:26px;border-radius:50%;background:var(--escuro);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.atencao .t{font-size:var(--t-destaque);font-weight:500;line-height:1.45;color:var(--escuro)}
+.atencao .c{font-size:var(--t-corpo);color:var(--cinza);line-height:1.6;margin-top:7px;max-width:70ch}
+.atencao .fonte{display:block;margin-top:6px;font-size:11.5px;color:#8496a5;font-style:italic}
+.atencao.forte{border-color:var(--acento);border-left:4px solid var(--acento);background:#f7fcfd}
+.atencao.forte .num{background:var(--acento)}
+.notas-pe{font-size:var(--t-meta);color:var(--cinza);line-height:1.6;margin:18px 0 0;
+  padding-top:15px;border-top:1px solid var(--borda)}
+.notas-pe li{margin-bottom:5px}
+.ressalva li{margin-bottom:5px}
+.debug{margin-top:18px;font-size:var(--t-meta);color:var(--cinza);background:#fafcfd;
+  border:1px dashed var(--borda-forte);border-radius:8px;padding:14px;line-height:1.6}
+.debug code{font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <div class="cabecalho">
+    <!-- Logo oficial: espelho local do Drive de marca >
+         Auster\Inteligencia Contabil\Logo_Negativa_Compl_sf.png (tela)
+         Auster\Inteligencia Contabil\Logo_Positiva_Compl.png (papel)
+         Recortado pelo canal ALFA (o RGB sob o alfa é preto) e reduzido a 84 px de
+         altura, embutido em data URI para o arquivo seguir único.
+         É a marca da Inteligencia CONTABIL: a decisão de setembro é obrigação
+         recorrente da carteira. As frentes de consultoria no relatório são
+         atribuídas à Inteligencia Tributaria, no próprio texto. -->
+    <!-- Duas versoes da mesma marca, porque o fundo muda de suporte:
+         .tela   = negativa, sobre o cabecalho azul escuro;
+         .papel  = positiva, sobre o branco da folha.
+         Antes havia so a negativa e a impressao a invertia por filtro CSS.
+         invert(1) leva o branco a preto, mas leva tambem o azul-claro
+         #70CEEC da marca a #8F3113, um marrom que nao esta na paleta.
+         O base64 das duas mora em ativos/ e entra no build pelo marcador. -->
+    <img class="logo tela" alt="auster Inteligência Contábil"
+         src="data:image/png;base64,/*__LOGO_TELA__*/">
+    <img class="logo papel" alt="auster Inteligência Contábil"
+         src="data:image/png;base64,/*__LOGO_PAPEL__*/">
+  </div>
+  <div class="sub">Diagnóstico — Simples padrão ou regime regular de IBS e CBS</div>
+</header>
+<main id="app"></main>
+
+<script type="module">
+/*__MODULOS__*/
+
+// ---------------------------------------------------------------- estado
+const R = {};
+/* ====================================================================
+ * CONFIGURAÇÃO DE PUBLICAÇÃO — tudo o que muda ao pôr no ar fica aqui.
+ * Campo vazio DESLIGA o recurso em vez de inventar destino.
+ * ==================================================================== */
+const CONFIG = {
+  // Para onde as respostas são enviadas (POST JSON). Vazio = nada é enviado.
+  endpointEnvio: '',
+  // Alternativa sem servidor: número de WhatsApp da casa, só dígitos com país.
+  whatsapp: '',
+  // Canal de privacidade exigido pela LGPD, art. 18.
+  emailPrivacidade: 'contato@austercontabil.com.br',
+  // Quem controla os dados, para o aviso de privacidade.
+  controlador: 'Auster Inteligência Contábil',
+  // Meses de guarda declarados ao respondente.
+  guardaMeses: 24,
+};
+
+/* O servidor injeta aqui o endpoint de envio, o convite e o pré-preenchimento.
+ * Aberto por duplo clique, nada é injetado e o arquivo segue funcionando com os
+ * campos vazios — um HTML só, sem servidor, continua sendo um modo de uso. */
+/*__PUBLICACAO__*/
+
+const CONVITE = typeof window !== 'undefined' ? (window.__CONVITE__ || null) : null;
+
+let etapa = 1;
+const TOTAL = BLOCOS.length;
+// Entre o formulário e o resultado entra uma tela de conferência. Vale sobretudo
+// pela matriz e pelos "não sei": um clique errado ali muda a recomendação, e
+// depois do resultado ninguém volta procurar o que foi.
+const REVISAO = TOTAL + 1;
+const RESULTADO = TOTAL + 2;
+// Visão de documento: o mesmo conteúdo do resultado, montado para o papel e
+// para o PDF, com quebras de página onde elas não cortam um enquadramento.
+const RELATORIO = TOTAL + 3;
+const app = document.getElementById('app');
+const erros = {};
+
+/** Painel de depuração do motor. NUNCA aparece para quem preenche: só com
+ *  ?motor=1 na URL, para conferência interna da Auster. */
+const MOSTRAR_PAINEL_DO_MOTOR = (() => {
+  try { return new URLSearchParams(location.search).get('motor') === '1'; }
+  catch { return false; }
+})();
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/** Devolve {chave: mensagem} dos problemas da etapa. Vazio = pode avançar. */
+function problemasNaEtapa(numeroBloco) {
+  const problemas = {};
+  for (const p of perguntasVisiveis(R)) {
+    if (p.bloco !== numeroBloco || p.obrigatoria === 'nunca') continue;
+    const v = R[p.chave];
+    if (p.tipo === 'matriz') {
+      const m = v || {};
+      if (p.linhas.some(l => !m[l.chave])) problemas[p.chave] = 'Responda todas as linhas.';
+      continue;
+    }
+    if (!v || !String(v).trim()) { problemas[p.chave] = 'Obrigatório'; continue; }
+    if (p.validador && !p.validador.valida(v)) problemas[p.chave] = p.validador.erro;
+  }
+  return problemas;
+}
+
+/** Soma dos pontos médios das linhas respondidas com faixa, e quantas linhas
+ *  ficaram em "não sei". A lacuna não entra na soma como 0% — entra como lacuna,
+ *  senão o aviso de "revise, deveria dar 100%" acusaria de erro quem foi honesto. */
+function somaMatriz(chave) {
+  const m = R[chave] || {};
+  let soma = 0, semDado = 0;
+  for (const v of Object.values(m)) {
+    const pm = pontoMedioFaixa(v);
+    if (pm === null) semDado++; else soma += pm;
+  }
+  return { soma, semDado };
+}
+
+/** Texto e classe do rodapé da matriz. Uma função só, usada no desenho e na
+ *  atualização ao clicar — para as duas nunca divergirem. */
+function rodapeMatriz(chave) {
+  const { soma, semDado } = somaMatriz(chave);
+  if (semDado) {
+    return { classe: '', texto: `Soma das linhas respondidas: ${soma}%` +
+      ` — ${semDado === 1 ? 'uma linha ficou' : semDado + ' linhas ficaram'} em "não sei".` };
+  }
+  const fora = soma > 0 && (soma < 80 || soma > 120);
+  return { classe: fora ? 'alerta' : '',
+           texto: `Soma aproximada: ${soma}%` +
+             (fora ? ' — revise, o total deveria ficar perto de 100%.' : '') };
+}
+
+// ---------------------------------------------------------------- render
+function campo(p) {
+  const err = erros[p.chave] ? `<div class="erro">${esc(erros[p.chave])}</div>` : '';
+  const marca = p.obrigatoria !== 'nunca' ? ' <span class="obr">*</span>' : '';
+  const textoDica = typeof p.dica === 'function' ? p.dica(R) : p.dica;
+  const dica = textoDica ? `<div class="dica">${esc(textoDica)}</div>` : '';
+
+  if (p.tipo === 'matriz') {
+    const cols = p.colunas.map(c => `<th class="${c.valor === p.naoSei ? 'na' : ''}">${esc(c.rotulo)}</th>`).join('');
+    const rows = p.linhas.map(l => `<tr><td>${esc(l.rotulo)}</td>` + p.colunas.map(c => {
+      const sel = (R[p.chave] || {})[l.chave] === c.valor ? 'checked' : '';
+      return `<td class="${c.valor === p.naoSei ? 'na' : ''}"><input type="radio" name="${p.chave}__${l.chave}" value="${c.valor}" ${sel}
+        onchange="window.setMatriz('${p.chave}','${l.chave}',this.value)"></td>`;
+    }).join('') + '</tr>').join('');
+    const rod = rodapeMatriz(p.chave);
+    return `<div class="campo" data-campo="${p.chave}"><label>${esc(p.enunciado)}${marca}</label>${dica}
+      <div class="matriz-rolo"><table class="matriz"><thead><tr><th></th>${cols}</tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="soma ${rod.classe}">${esc(rod.texto)}</div>
+      ${err}</div>`;
+  }
+
+  if (p.tipo === 'consentimento') {
+    const marcado = R[p.chave] === 'sim';
+    return `<div class="campo" data-campo="${p.chave}"><label>${esc(p.enunciado)}${marca}</label>
+      <div class="privacidade">
+        <p><b>Para que servem:</b> montar este diagnóstico e permitir que a equipe da
+        ${esc(CONFIG.controlador)} fale com você sobre ele. Não usamos para mais nada e não
+        compartilhamos com terceiros.</p>
+        <p><b>O que é coletado:</b> CNPJ, nome da empresa, nome de quem responde, e-mail,
+        telefone e as respostas do formulário. O CNPJ é consultado na base pública da Receita
+        para poupar digitação.</p>
+        <p><b>Por quanto tempo:</b> ${CONFIG.guardaMeses} meses, contados do envio.</p>
+        <p><b>Seus direitos:</b> pedir acesso, correção ou exclusão a qualquer momento, em
+        <a href="mailto:${esc(CONFIG.emailPrivacidade)}">${esc(CONFIG.emailPrivacidade)}</a>
+        (LGPD, art. 18).</p>
+      </div>
+      <label class="opcao aceite ${marcado ? 'marcada' : ''}">
+        <input type="checkbox" ${marcado ? 'checked' : ''}
+          onchange="window.set('${p.chave}', this.checked ? 'sim' : '')">
+        <span class="texto-opcao"><b>${esc(p.rotuloAceite)}</b></span>
+      </label>${err}</div>`;
+  }
+
+  if (p.tipo === 'textarea') {
+    return `<div class="campo" data-campo="${p.chave}"><label>${esc(p.enunciado)}${marca}</label>${dica}
+      <textarea rows="3" oninput="window.setTexto('${p.chave}',this)"
+        placeholder="Opcional">${esc(R[p.chave] || '')}</textarea>${err}</div>`;
+  }
+
+  if (['texto', 'email', 'cnpj', 'telefone'].includes(p.tipo)) {
+    // Texto NUNCA redesenha durante a digitação: o innerHTML recria o campo e
+    // o foco se perde a cada tecla. Nenhuma condicional depende de texto.
+    const modo = p.tipo === 'email' ? 'email' : p.tipo === 'telefone' ? 'tel' : 'text';
+    const selo = p.chave === 'cnpj' ? seloCadastro() : '';
+    return `<div class="campo" data-campo="${p.chave}"><label>${esc(p.enunciado)}${marca}</label>${dica}
+      <input type="${modo}" inputmode="${p.tipo === 'telefone' ? 'numeric' : 'text'}"
+        value="${esc(R[p.chave] || '')}"
+        oninput="window.setTexto('${p.chave}',this)"
+        onblur="window.conferirCampo('${p.chave}')">${err}${selo}</div>`;
+  }
+
+  if (p.tipo === 'select') {
+    const ops = p.opcoes.map(o2 => `<option value="${o2.valor}" ${R[p.chave] === o2.valor ? 'selected' : ''}>${esc(o2.rotulo)}</option>`).join('');
+    return `<div class="campo" data-campo="${p.chave}"><label>${esc(p.enunciado)}${marca}</label>${dica}
+      <select onchange="window.set('${p.chave}',this.value)"><option value="">Selecione…</option>${ops}</select>${err}</div>`;
+  }
+
+  const ops = p.opcoes.map(o2 => `
+    <label class="opcao ${R[p.chave] === o2.valor ? 'marcada' : ''} ${o2.descricao ? 'com-desc' : ''}">
+      <input type="radio" name="${p.chave}" value="${o2.valor}" ${R[p.chave] === o2.valor ? 'checked' : ''}
+        onchange="window.set('${p.chave}',this.value)">
+      <span class="texto-opcao"><b>${esc(o2.rotulo)}</b>${o2.descricao ? `<span class="desc">${esc(o2.descricao)}</span>` : ''}</span>
+    </label>`).join('');
+  // Opção curta e sem descrição vira grade: uma barra de 800 px escrita "Sim"
+  // é ruído visual, não escolha.
+  const curtas = p.opcoes.every(x => !x.descricao && x.rotulo.length <= 26);
+  return `<div class="campo" data-campo="${p.chave}"><label>${esc(p.enunciado)}${marca}</label>${dica}<div class="opcoes ${curtas ? 'curtas' : ''}">${ops}</div>${err}</div>`;
+}
+
+/** A trilha do topo, com a conferência como último passo. */
+function trilhaDePassos() {
+  const etapas = [...BLOCOS.map(b => ({ numero: b.numero, titulo: b.titulo })),
+                  { numero: REVISAO, titulo: 'Conferência' }];
+  return `<div class="passos">` + etapas.map((e, i) =>
+    `<div class="passo ${e.numero === etapa ? 'ativo' : e.numero < etapa ? 'feito' : ''}"
+      onclick="window.irPara(${e.numero})">${i + 1}. ${esc(e.titulo)}</div>`).join('') + `</div>`;
+}
+
+/** Oferece retomar o rascunho. Aparece só na etapa 1 e só enquanto a pessoa não
+ *  decidiu — depois de retomar ou recomeçar, sai da tela. */
+function faixaDeRetomada() {
+  const d = R._retomavel;
+  if (!d || etapa !== 1) return '';
+  const quando = new Date(d.salvoEm);
+  const data = isNaN(quando) ? '' :
+    ` de ${quando.toLocaleDateString('pt-BR')} às ${quando.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  const nome = d.respostas && d.respostas.nomeEmpresa;
+  return `<div class="retomar">
+    <div>
+      <b>Você tem um preenchimento começado${data}${nome ? `, de ${esc(nome)}` : ''}.</b>
+      <span>Fica guardado só neste navegador — nada foi enviado.</span>
+    </div>
+    <div class="botoes">
+      <button class="principal" onclick="window.retomarRascunho()">Retomar</button>
+      <button class="secundario" onclick="window.comecarDeNovo()">Começar de novo</button>
+    </div>
+  </div>`;
+}
+
+function renderFormulario() {
+  const bloco = BLOCOS[etapa - 1];
+  const perguntas = perguntasVisiveis(R).filter(p => p.bloco === bloco.numero);
+  const passos = trilhaDePassos();
+
+  app.innerHTML = `${faixaDeRetomada()}${passos}
+    <div class="cartao">
+      <h1>${esc(bloco.titulo)}</h1>
+      <p class="etapa-conta">Etapa ${etapa} de ${TOTAL}</p>
+      ${bloco.aviso ? `<div class="escopo">${esc(bloco.aviso)}</div>` : ''}
+      ${perguntas.map(campo).join('')}
+      <div class="rodape-nav">
+        <button class="secundario" ${etapa === 1 ? 'disabled' : ''} onclick="window.voltar()">Voltar</button>
+        <button class="principal" onclick="window.avancar()">${etapa === TOTAL ? 'Conferir respostas' : 'Próximo'}</button>
+      </div>
+    </div>`;
+}
+
+/** A resposta de uma pergunta, escrita como o respondente a leria.
+ *  Devolve null quando ficou em branco (só acontece em campo facultativo). */
+function respostaLegivel(p) {
+  const v = R[p.chave];
+  if (p.tipo === 'matriz') {
+    const m = v || {};
+    const linhas = (p.linhas || []).map(l => {
+      const col = (p.colunas || []).find(c => c.valor === m[l.chave]);
+      const vazio = m[l.chave] === undefined;
+      return `<span class="linha-matriz ${m[l.chave] === p.naoSei ? 'na' : ''}">${esc(l.rotulo)}:
+        <b>${esc(vazio ? 'não respondido' : col ? col.rotulo : m[l.chave])}</b></span>`;
+    });
+    return { html: linhas.join(''), lacuna: (p.linhas || []).some(l => m[l.chave] === p.naoSei) };
+  }
+  if (!v || !String(v).trim()) return null;
+  if (p.tipo === 'consentimento') {
+    return { html: 'Concordou com o uso das informações', lacuna: false };
+  }
+  if (p.opcoes) {
+    const o2 = p.opcoes.find(x => x.valor === v);
+    return { html: esc(o2 ? o2.rotulo : v), lacuna: v === p.naoSei };
+  }
+  return { html: esc(v), lacuna: false };
+}
+
+function renderRevisao() {
+  const visiveis = perguntasVisiveis(R);
+  const decide = p => p.alimenta.includes('modalidade') || p.alimenta.includes('elegibilidade');
+  const conf = confianca(R);
+
+  const linha = p => {
+    const r = respostaLegivel(p);
+    const classe = r === null ? 'vazia' : r.lacuna ? 'lacuna' : '';
+    const texto = r === null ? 'não respondido' : r.html;
+    return `<div class="rev-linha">
+      <div class="pergunta">${esc(p.enunciado)}${decide(p) ? '<span class="decide">decide</span>' : ''}</div>
+      <div class="resposta ${classe}">${texto}</div>
+      <button class="alterar" onclick="window.irParaCampo(${p.bloco}, '${p.chave}')">alterar</button>
+    </div>`;
+  };
+
+  const blocos = BLOCOS.map((b, i) => {
+    const doBloco = visiveis.filter(p => p.bloco === b.numero);
+    if (!doBloco.length) return '';
+    return `<div class="rev-bloco">
+      <h3>${esc(b.titulo)}</h3>
+      <p class="conta">Etapa ${i + 1} · ${doBloco.length} ${doBloco.length === 1 ? 'resposta' : 'respostas'}</p>
+      ${doBloco.map(linha).join('')}
+    </div>`;
+  }).join('');
+
+  app.innerHTML = `${trilhaDePassos()}
+    <div class="cartao">
+      <h1>Confira antes de ver o resultado</h1>
+      <p class="etapa-conta">Último passo · ${visiveis.length} respostas</p>
+      <p style="font-size:var(--t-corpo);color:var(--cinza);line-height:1.6;max-width:74ch;margin:0 0 22px">
+        As marcadas <span class="decide">decide</span> são as que mudam a recomendação. Vale um
+        olhar nelas — depois do resultado ninguém volta procurar o que ficou errado.</p>
+
+      ${conf.lacunasLegiveis.length ? `<div class="rev-aviso">
+        <b>${conf.lacunasLegiveis.length === 1 ? 'Um ponto ficou' : `${conf.lacunasLegiveis.length} pontos ficaram`} em "não sei"</b>,
+        e ${conf.lacunasLegiveis.length === 1 ? 'ele pesa' : 'eles pesam'} na decisão:
+        <ul>${conf.lacunasLegiveis.map(l => `<li>${esc(l)}</li>`).join('')}</ul>
+        Se algum desses dados estiver a um telefonema de distância, vale buscar agora. Se não,
+        siga: o resultado sai marcado como indicativo e o plano de ação inclui levantar
+        ${conf.lacunasLegiveis.length === 1 ? 'esse ponto' : 'esses pontos'}.</div>` : ''}
+
+      ${blocos}
+
+      <div class="rodape-nav">
+        <button class="secundario" onclick="window.voltar()">Voltar</button>
+        <button class="principal" onclick="window.avancar()">Ver diagnóstico</button>
+      </div>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ protocolo
+ * Sem protocolo, uma resposta que chega à casa não se liga à pessoa que a mandou
+ * nem à tela que ela viu. Gerado uma vez, guardado no rascunho. */
+function protocolo() {
+  if (!R._protocolo) {
+    const d = new Date();
+    const dia = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    const sorteio = Math.random().toString(36).slice(2, 6).toUpperCase();
+    R._protocolo = `DS-${dia}-${sorteio}`;
+    salvarRascunho();
+  }
+  return R._protocolo;
+}
+
+/* --------------------------------------------------------------------- envio
+ * Enquanto não houver canal configurado, o portal NÃO finge que enviou: diz que
+ * as respostas ficaram no navegador. Meio-caminho aqui viraria lead perdido em
+ * silêncio, que é pior que ausência declarada de envio. */
+const temCanalDeEnvio = () => !!(CONFIG.endpointEnvio || CONFIG.whatsapp);
+
+function pacoteDeEnvio(d) {
+  const respostas = {};
+  for (const [k, v] of Object.entries(R)) if (!k.startsWith('_')) respostas[k] = v;
+  return {
+    protocolo: protocolo(),
+    convite: CONVITE,
+    enviadoEm: new Date().toISOString(),
+    versaoFormulario: R.versaoFormulario,
+    diagnostico: {
+      saida: d.saida.codigo,
+      posicao: d.posicao.rotulo,
+      certeza: d.posicao.certeza,
+      urgencia: d.urgencia,
+      confianca: d.confianca.nivel,
+      lacunas: d.confianca.lacunas,
+      gatilhos: d.gatilhos,
+      pontosEmAberto: d.posicao.pontosEmAberto || [],
+    },
+    respostas,
+    // Conferência interna: o nome de quem responde consta do quadro de sócios?
+    solicitanteNoQsa: R._solicitanteNoQsa,
+  };
+}
+
+window.verRelatorio = () => { etapa = RELATORIO; desenharDoTopo(); };
+window.voltarDoRelatorio = () => { etapa = RESULTADO; desenharDoTopo(); };
+window.imprimirRelatorio = () => {
+  if (etapa !== RELATORIO) { etapa = RELATORIO; desenhar(); }
+  setTimeout(() => window.print(), 120);
+};
+
+window.enviarRespostas = async () => {
+  const d = diagnosticar(R, new Date());
+  const pacote = pacoteDeEnvio(d);
+
+  if (CONFIG.endpointEnvio) {
+    R._envio = 'enviando';
+    desenhar();
+    try {
+      const resp = await fetch(CONFIG.endpointEnvio, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pacote),
+      });
+      R._envio = resp.ok ? 'enviado' : 'falhou';
+      if (!resp.ok) R._envioMotivo = `HTTP ${resp.status}`;
+    } catch (e) {
+      R._envio = 'falhou';
+      R._envioMotivo = (e && e.message) || 'sem conexão';
+    }
+    salvarRascunho();
+    desenhar();
+    return;
+  }
+
+  if (CONFIG.whatsapp) {
+    const texto = [
+      `Diagnóstico Simples padrão x híbrido — protocolo ${pacote.protocolo}`,
+      `Empresa: ${R.nomeEmpresa || '-'} (${R.cnpj || '-'})`,
+      `Respondente: ${R.solicitante || '-'} · ${R.email || '-'} · ${R.telefone || '-'}`,
+      `Resultado: ${d.posicao.rotulo} (${d.posicao.qualificador || ''})`,
+      'Quero falar com a equipe sobre este resultado.',
+    ].join(String.fromCharCode(10));
+    window.open(`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(texto)}`, '_blank');
+    R._envio = 'encaminhado';
+    salvarRascunho();
+    desenhar();
+  }
+};
+
+const DIAGNOSTICO_OFICIAL = 'https://consultoria.austercontabil.com.br/diagnostico-reforma';
+
+/** Este formulário decide UMA coisa: guia única ou por fora do DAS. Quem não é
+ *  optante do Simples não tem essa escolha — e não deve descobrir isso depois de
+ *  responder cinco blocos. O desvio acontece na etapa em que a resposta aparece. */
+function atalhoDeTriagem() {
+  if (R.ehSimei === 'sim') return 'mei';
+  if (R.regimeAtual && R.regimeAtual !== 'simples' && R.regimeAtual !== 'nao_sei') return 'fora';
+  return null;
+}
+
+function renderEncaminhamento(motivo) {
+  const mei = motivo === 'mei';
+  app.innerHTML = `
+    <div class="encaminha">
+      <h1>${mei ? 'Como MEI, essa escolha não se aplica a você.'
+                : 'Este diagnóstico é para quem já é optante do Simples.'}</h1>
+      <p>${mei
+        ? 'O MEI não pode apurar IBS e CBS por fora do DAS — e, nas compras, é tratado como consumidor final: não aproveita crédito. Se os seus clientes são empresas e o crédito virou assunto nas negociações, o caminho seria deixar de ser MEI, que é uma decisão de outro tamanho.'
+        : 'A escolha entre recolher IBS e CBS na guia única ou por fora existe só para o optante do Simples Nacional. No seu caso a pergunta é outra — e é maior: como a sua empresa se posiciona na Reforma como um todo.'}</p>
+      <p>A Auster tem um diagnóstico próprio para isso, que serve a qualquer regime:
+      a <b>Avaliação Prévia da Reforma Tributária</b>.</p>
+      <p class="menor">${mei
+        ? 'Se você acha que marcou MEI por engano, volte e corrija — a resposta vem do cadastro da Receita quando o CNPJ é consultado.'
+        : 'Se o regime informado estiver errado, volte e corrija. A resposta vem do cadastro da Receita quando o CNPJ é consultado.'}</p>
+      <div class="botoes">
+        <a class="cta" href="${DIAGNOSTICO_OFICIAL}" target="_blank" rel="noopener">Ir para a Avaliação Prévia da Reforma</a>
+        <button class="secundario" onclick="window.irPara(1)">Voltar e corrigir</button>
+      </div>
+    </div>`;
+}
+
+/** Resumo do preenchimento, por bloco. Existe por duas razões: o cliente leva
+ *  no papel o que declarou, e a equipe confere a leitura contra a resposta. */
+function resumoDoPreenchimento() {
+  const visiveis = perguntasVisiveis(R);
+  return BLOCOS.map(b => {
+    const doBloco = visiveis.filter(p => p.bloco === b.numero
+      && p.tipo !== 'consentimento' && p.tipo !== 'textarea');
+    if (!doBloco.length) return '';
+    const linhas = doBloco.map(p => {
+      const resp = respostaLegivel(p);
+      return `<tr><td class="p">${esc(p.enunciado)}</td>
+        <td class="r ${resp && resp.lacuna ? 'lacuna' : ''}">${resp ? resp.html : '—'}</td></tr>`;
+    }).join('');
+    return `<h3>${esc(b.titulo)}</h3>
+      <table class="resumo"><tbody>${linhas}</tbody></table>`;
+  }).join('');
+}
+
+function renderRelatorio() {
+  const d = diagnosticar(R, new Date());
+  const plano = planoDeAcao(R, d);
+  const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const acao = (i, n) => `<div class="doc-acao">
+    <div class="n">${n}</div>
+    <div>
+      <div class="t">${esc(i.acao)}</div>
+      <div class="p">${esc(i.porque)}</div>
+      ${i.precisa ? `<div class="m"><b>Você precisa:</b> ${esc(i.precisa)}</div>` : ''}
+      ${i.fundamento ? `<div class="f">${esc(i.fundamento)}</div>` : ''}
+    </div></div>`;
+
+  const abertos = d.posicao.pontosEmAberto || [];
+  const texto = [
+    { rotulo: 'O que você esperava descobrir', valor: R.expectativa },
+    { rotulo: 'O que mudou na sua percepção', valor: R.percepcaoFinal },
+  ].filter(x => x.valor && String(x.valor).trim());
+
+  app.innerHTML = `
+    <div class="barra-doc">
+      <button class="secundario" onclick="window.voltarDoRelatorio()">Voltar ao diagnóstico</button>
+      <button class="principal" onclick="window.imprimirRelatorio()">Imprimir ou salvar em PDF</button>
+    </div>
+
+    <div class="doc">
+      <section class="folha capa">
+        <div class="selo-doc">Diagnóstico preliminar</div>
+        <h1>Simples padrão ou híbrido:<br>o que a sua empresa deve fazer até 30 de setembro</h1>
+        <table class="cabecalho-doc"><tbody>
+          <tr><td>Empresa</td><th>${esc(R.nomeEmpresa || '—')}</th></tr>
+          <tr><td>CNPJ</td><th>${esc(R.cnpj || '—')}</th></tr>
+          <tr><td>Quem respondeu</td><th>${esc(R.solicitante || '—')}</th></tr>
+          <tr><td>Protocolo</td><th>${esc(protocolo())}</th></tr>
+          <tr><td>Emitido em</td><th>${hoje}</th></tr>
+          <tr><td>Versão respondida</td><th>${R.versaoFormulario === 'sintetico' ? 'caminho curto' : 'completa'}</th></tr>
+        </tbody></table>
+
+        <div class="doc-decisao ${d.posicao.certeza}">
+          <div class="rot">A decisão</div>
+          <div class="nome">${esc(d.posicao.rotulo)}</div>
+          ${d.posicao.qualificador ? `<div class="qual">${esc(d.posicao.qualificador)}</div>` : ''}
+          <p>${esc(d.posicao.acaoUnica)}</p>
+        </div>
+
+        ${abertos.length ? `<div class="doc-abertos">
+          <b>O que ficou em aberto</b>
+          <ul>${abertos.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+
+        <p class="doc-nota">Leitura de perfil, sem valor jurídico, baseada exclusivamente nas
+        respostas registradas neste documento. Conclusão definitiva exige simulação individual
+        com dados contábeis e de negócios reais.</p>
+      </section>
+
+      <section class="folha">
+        <h2>O que isso significa para a sua empresa</h2>
+        <p class="corrido">${esc(d.saida.significa)}</p>
+        ${d.posicao.familia === 'hibrido' || d.posicao.familia === 'a_definir' ? `
+          <h3>Os prazos, em ordem</h3>
+          <table class="prazos"><tbody>
+            <tr><td>30 de setembro de 2026</td><th>Último dia para protocolar a opção. Não se
+              recupera: a janela seguinte é março de 2027, com efeito só no 2º semestre.</th></tr>
+            <tr><td>30 de novembro de 2026</td><th>Último dia para <b>cancelar</b> a solicitação,
+              sem efeito nenhum — como se nunca tivesse sido feita.</th></tr>
+            <tr><td>1º de janeiro de 2027</td><th>A opção começa a valer, para todo o primeiro
+              semestre. Dali em diante, só cabe <b>renunciar</b>, nas janelas de março e setembro.</th></tr>
+          </tbody></table>
+          <p class="doc-fonte">LC 123/2006, art. 13, §§ 9º e 10, com a redação da LC 227/2026;
+          Manual da Opção pelo Regime Regular do IBS e da CBS, item 4.2 (CGSN, 01/09/2026);
+          LC 214/2025, art. 41, § 5º.</p>` : ''}
+      </section>
+
+      <section class="folha">
+        <h2>O que fazer na sua empresa</h2>
+        ${plano.clienteAgora.length ? `<h3>Antes de 30 de setembro</h3>
+          ${plano.clienteAgora.map((i, n) => acao(i, n + 1)).join('')}` : ''}
+        ${plano.clienteDepois.length ? `<h3>Nos próximos meses</h3>
+          ${plano.clienteDepois.map((i, n) => acao(i, plano.clienteAgora.length + n + 1)).join('')}` : ''}
+        ${!plano.clienteAgora.length && !plano.clienteDepois.length
+          ? '<p class="corrido">Nada a fazer de imediato do seu lado.</p>' : ''}
+      </section>
+
+      ${plano.auster.length ? `<section class="folha">
+        <h2>Como a Auster pode ajudar</h2>
+        <p class="corrido">Frentes da Auster Inteligência Tributária. Nenhuma depende de você
+        fazer antes.</p>
+        ${plano.auster.map((i, n) => acao(i, n + 1)).join('')}
+      </section>` : ''}
+
+      <section class="folha">
+        <h2>Resumo do que foi preenchido</h2>
+        <p class="corrido">O diagnóstico acima decorre destas respostas. Em âmbar, o que ficou
+        em "não sei" — é por onde a conversa começa.</p>
+        ${resumoDoPreenchimento()}
+        ${texto.length ? `<h3>Em suas palavras</h3>
+          ${texto.map(x => `<div class="doc-livre"><b>${esc(x.rotulo)}</b>
+            <p>${esc(x.valor)}</p></div>`).join('')}` : ''}
+      </section>
+
+      <section class="folha">
+        <h2>Três coisas para não errar</h2>
+        <ol class="doc-ressalvas">
+          <li><b>A opção do híbrido pode ser cancelada até 30 de novembro de 2026.</b>
+            Pedida em setembro, produz efeito a partir de 1º de janeiro de 2027. Até 30 de
+            novembro a solicitação pode ser cancelada, sem consequência nenhuma. Depois, só cabe
+            renunciar, nas janelas semestrais de março e setembro. Quem receber ressarcimento de
+            crédito fica impedido de voltar ao recolhimento unificado no ano corrente e no
+            seguinte.</li>
+          <li><b>O MEI não pode optar pelo regime regular</b> — e não aproveita nem transfere
+            crédito. Nas compras é tratado como consumo final. Há duas exceções de crédito
+            presumido para quem compra do MEI: transporte autônomo de carga e bem móvel usado
+            para revenda.</li>
+          <li><b>Conclusão definitiva exige simulação individual</b> com dados contábeis e de
+            negócios reais. Este documento organiza o cenário e aponta onde olhar; a decisão se
+            fecha com os números do seu negócio na mesa.</li>
+        </ol>
+        <p class="doc-nota">Os cortes percentuais usados na leitura são parâmetros de triagem da
+        Auster, não constantes legais. Quando este documento compara o Simples com o Lucro
+        Presumido, usa números de hoje dos dois lados — inclusive PIS e COFINS, que deixam de
+        existir em 1º de janeiro de 2027 — e serve para apontar onde olhar, não para concluir
+        qual regime sai mais barato em 2027.</p>
+        <div class="doc-rodape">
+          <div>${esc(protocolo())} · ${esc(R.nomeEmpresa || '')} · emitido em ${hoje}</div>
+          <div>auster Inteligência Contábil</div>
+        </div>
+      </section>
+    </div>`;
+}
+
+function renderResultado() {
+  const d = diagnosticar(R, new Date());
+  const plano = planoDeAcao(R, d);
+
+  const eixos = d.radar.map(e => {
+    const cls = e.faixa === 'forte' ? 'f-forte' : e.faixa === 'atenção moderada' ? 'f-atenção'
+      : e.faixa === 'evolução prioritária' ? 'f-prioritária' : '';
+    return `<div class="eixo"><div class="topo"><span>${esc(e.titulo)}</span>
+      <span>${e.score === null ? '—' : e.score + '%'} · ${esc(e.faixa)}</span></div>
+      <div class="barra"><i class="${cls}" style="width:${e.score || 0}%"></i></div></div>`;
+  }).join('');
+
+  const item = i => `<div class="acao"><div class="t">${esc(i.acao)}</div>
+    <div class="p">${esc(i.porque)}</div>
+    <div class="meta">${i.precisa ? `<span><b>Você precisa:</b> ${esc(i.precisa)}</span>` : ''}
+      ${i.fundamento ? `<span class="base">${esc(i.fundamento)}</span>` : ''}</div></div>`;
+  const itemAuster = i => `<div class="acao auster"><div class="t">${esc(i.acao)}</div>
+    <div class="p">${esc(i.porque)}</div>
+    ${i.precisa ? `<div class="meta"><span><b>Precisamos de:</b> ${esc(i.precisa)}</span></div>` : ''}</div>`;
+
+
+
+  app.innerHTML = `
+    ${d.preliminar ? `<div class="aviso"><b>Confiança reduzida.</b> Você respondeu "não sei" em
+      ${d.confianca.lacunas.length === 1 ? 'um ponto que decide' : `${d.confianca.lacunas.length} pontos que decidem`}
+      o resultado: ${d.confianca.lacunasLegiveis.map(esc).join('; ')}. O resultado abaixo é
+      indicativo, e a urgência subiu um nível por causa disso.</div>` : ''}
+    <div class="regime ${d.posicao.certeza} f-${d.posicao.familia}">
+      <div class="rot">A decisão</div>
+      <div class="nome">${esc(d.posicao.rotulo)}</div>
+      ${d.posicao.qualificador ? `<span class="qual">${esc(d.posicao.qualificador)}</span>` : ''}
+      <p class="faca">${esc(d.posicao.acaoUnica)}</p>
+      ${(d.posicao.pontosEmAberto || []).length ? `<div class="abertos">
+        <div class="t">${d.posicao.pontosEmAberto.length === 1 ? 'O que ficou em aberto' : `O que ficou em aberto (${d.posicao.pontosEmAberto.length})`}</div>
+        <ul>${d.posicao.pontosEmAberto.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+      ${d.leituraPreliminar ? `<p class="porque"><b>O que ainda trava:</b> esta leitura
+        ${esc(d.leituraPreliminar.condicao || 'depende de um ponto que as respostas não fecham')}.
+        O perfil que você descreveu aponta para o
+        <b>${esc(d.leituraPreliminar.modalidade.rotulo)}</b> — não como recomendação fechada, mas
+        como o lado para o qual a conta caminha se essa condição se confirmar.</p>`
+        : `<p class="porque">${d.posicao.qualificador === 'decisão fechada' ? '' :
+            '<span class="prefixo">Indicação preliminar —</span> '}<b>${esc(d.saida.titulo)}</b>
+            ${esc(d.saida.resumo)}</p>`}
+      ${d.posicao.detalhe && !d.leituraPreliminar ? `<p class="det">${esc(d.posicao.detalhe)}</p>` : ''}
+      ${['hibrido', 'a_definir'].includes(d.posicao.familia) ? `<p class="trava"><b>Setembro não volta; novembro ainda dá.</b>
+        São duas coisas diferentes, e o sistema as chama por nomes diferentes:
+        <b>cancelar</b> é desfazer a solicitação até <b>30 de novembro de 2026</b>, antes de
+        qualquer efeito, como se nunca tivesse sido feita; <b>renunciar</b> é sair depois que
+        ela já vale, e isso só acontece nas janelas semestrais de março e setembro.
+        Já o prazo para pedir encerra em 30 de setembro e não se recupera — a janela
+        seguinte tem efeito só no 2º semestre de 2027.
+        <span class="fonte">LC 123/2006, art. 13, §§ 9º e 10 (LC 227/2026); Manual da Opção pelo
+        Regime Regular do IBS e da CBS, item 4.2 (CGSN, 01/09/2026).</span></p>` : ''}
+    </div>
+
+    <div class="precisa-numeros"><span class="marca">⌗</span>
+      <p><b>Isto é uma leitura de perfil, não um diagnóstico.</b> O que decide de verdade são os
+      números do seu negócio: alíquota efetiva do DAS mês a mês, crédito que cada cliente
+      consegue aproveitar, composição real das compras e a margem por linha de produto ou
+      serviço. É isso que a simulação individual olha — e é ela que confirma ou derruba o que
+      está escrito acima.</p>
+      <p style="margin-top:10px"><b>E uma ressalva de método:</b> quando este relatório compara o
+      Simples com o Lucro Presumido, ele usa números de <b>hoje</b> dos dois lados — inclusive
+      PIS e COFINS, que deixam de existir em 1º de janeiro de 2027, quando entra a CBS. Serve
+      para apontar onde olhar; não serve para concluir qual regime sai mais barato em 2027.</p></div>
+
+    ${d.saida.significa ? `<div class="cartao significa">
+      <h2>O que isso significa para a sua empresa</h2>
+      <p>${esc(d.saida.significa)}</p></div>` : ''}
+
+    <div class="grade">
+      <div class="mini destaque"><div class="rot">Janela legal</div>
+        <div class="val grande">${
+          !d.janelaAberta ? 'encerrada'
+          : d.diasCorridosAteFimDaJanela === 0 ? 'hoje é o último dia'
+          : d.diasCorridosAteFimDaJanela === 1 ? 'termina amanhã'
+          : d.diasCorridosAteFimDaJanela + ' dias'}</div>
+        <div class="nota-mini">Até <b>30 de setembro de 2026</b>, em dias de calendário. É o único
+        prazo que a lei fixa aqui — e o único que não volta.</div></div>
+      <div class="mini"><div class="rot">Protocolar até</div>
+        <div class="val" style="font-size:16px">${d.dentroDaAntecedencia ? esc(d.dataLimiteProtocolo) : 'o quanto antes'}</div>
+        <div class="nota-mini">${d.dentroDaAntecedencia
+          ? `Antecedência nossa de ${d.antecedenciaOperacionalDias} dias úteis para representação, análise prévia e eventual pendência de Estado ou Município. Não é prazo legal.`
+          : `A antecedência de ${d.antecedenciaOperacionalDias} dias úteis que pedimos já não cabe. Dá para fazer, mas passa a ser prioridade da semana.`}</div></div>
+      <div class="mini"><div class="rot">Urgência</div><div class="val"><span class="selo ${d.urgencia}">${d.urgencia}</span></div></div>
+      <div class="mini"><div class="rot">Confiança</div><div class="val" style="font-size:15px">${d.confianca.nivel}</div>
+        ${d.derivadas.origemDoDas === 'estimado pela tabela do anexo' ? `<div class="nota-mini">A alíquota
+        do DAS usada aqui foi estimada pela tabela do seu anexo, não lida da sua apuração.</div>` : ''}</div>
+    </div>
+
+    <div class="cartao" style="margin-bottom:20px"><h2>Radar de maturidade</h2>${eixos}
+      <p style="font-size:12px;color:var(--cinza);margin:14px 0 0">O radar não influencia a recomendação. Sustenta o acompanhamento consultivo.</p></div>
+
+    <div class="cartao" style="margin-bottom:20px">
+      <h2>O que fazer na sua empresa</h2>
+      ${plano.clienteAgora.length ? `<h3>Antes de 30 de setembro</h3>${plano.clienteAgora.map(item).join('')}` : ''}
+      ${plano.clienteDepois.length ? `<h3>Nos próximos meses</h3>${plano.clienteDepois.map(item).join('')}` : ''}
+      ${!plano.clienteAgora.length && !plano.clienteDepois.length
+        ? '<p style="font-size:var(--t-corpo);color:var(--cinza)">Nada a fazer de imediato do seu lado.</p>' : ''}
+    </div>
+
+    ${plano.auster.length ? `<div class="cartao bloco-auster" style="margin-bottom:20px">
+      <h2>Como a Auster pode ajudar</h2>
+      <p class="intro">A Reforma Tributária é cuidada por uma <b>equipe dedicada da Auster
+      Inteligência Tributária</b>, que acompanha a legislação desde a promulgação e já vem
+      rodando esse trabalho na carteira. É ela que faz as simulações, sustenta as premissas e
+      senta nas conversas com clientes e fornecedores. Estas são as frentes em que ela entra
+      com você — nenhuma depende de você fazer antes.</p>
+      ${plano.auster.map(itemAuster).join('')}
+      <div class="encaixe">
+        <div class="t">Quer tratar a Reforma além da escolha de setembro?</div>
+        <p>A decisão do Simples é uma peça. A Avaliação Prévia da Reforma Tributária olha a empresa
+        inteira — cadeia, preço, margem, estrutura societária — e é a partir dela que marcamos a
+        reunião com a consultoria.</p>
+        <a class="cta" href="${DIAGNOSTICO_OFICIAL}" target="_blank" rel="noopener">Preencher a Avaliação Prévia e agendar a reunião</a>
+      </div>
+    </div>` : ''}
+
+    <div class="cartao bloco-envio" style="margin-bottom:20px">
+      <h2 style="margin-top:0">Protocolo ${esc(protocolo())}</h2>
+      ${temCanalDeEnvio() ? `
+        ${R._envio === 'enviado' ? `<p class="envio ok"><b>Respostas enviadas.</b> A equipe recebe
+          com este protocolo e retoma o contato pelo e-mail que você informou.</p>`
+        : R._envio === 'encaminhado' ? `<p class="envio ok"><b>Conversa aberta no WhatsApp.</b>
+          Se a janela não abriu, use o botão outra vez.</p>`
+        : R._envio === 'enviando' ? `<p class="envio">Enviando…</p>`
+        : `<p class="envio">Guarde este número: é por ele que a equipe encontra as suas
+          respostas. Enviar não compromete você a nada.</p>`}
+        ${R._envio === 'falhou' ? `<p class="envio erro"><b>Não deu para enviar agora</b>
+          (${esc(R._envioMotivo || 'sem detalhe')}). Tente outra vez — suas respostas não foram
+          perdidas.</p>` : ''}
+        ${['enviado', 'enviando', 'encaminhado'].includes(R._envio) ? '' :
+          `<button class="principal" onclick="window.enviarRespostas()">
+            ${CONFIG.whatsapp && !CONFIG.endpointEnvio ? 'Falar com a equipe pelo WhatsApp' : 'Enviar minhas respostas para a Auster'}
+          </button>`}
+      ` : `<p class="envio"><b>Suas respostas ficaram só neste navegador.</b> Nada foi enviado —
+        este relatório é seu. Para tratar com a equipe, guarde o protocolo acima ou imprima
+        esta página e leve para a conversa.</p>`}
+    </div>
+
+    <div class="cartao">
+      <h2 style="margin-top:0">Três coisas para não errar</h2>
+
+      <div class="atencao forte"><div class="num">1</div><div>
+        <div class="t">A opção do híbrido pode ser cancelada até 30 de novembro de 2026.</div>
+        <div class="c">Pedida em setembro, ela produz efeito a partir de 1º de janeiro de 2027.
+        Até 30 de novembro a solicitação pode ser <b>cancelada</b>, sem consequência nenhuma,
+        porque nada começou a valer. Depois dessa data só cabe <b>renunciar</b> ao regime
+        regular, e a renúncia só acontece nas janelas semestrais de março e setembro.
+        Quem chegar a receber ressarcimento de crédito fica impedido de voltar ao
+        recolhimento unificado no ano corrente e no seguinte.
+        <span class="fonte">LC 123/2006, art. 13, §§ 9º e 10 (LC 227/2026); Manual da Opção pelo
+        Regime Regular do IBS e da CBS, item 4.2 (CGSN, 01/09/2026); LC 214/2025, art. 41, § 5º.</span></div></div></div>
+
+      <div class="atencao"><div class="num">2</div><div>
+        <div class="t">O MEI não pode optar pelo regime regular — não aproveita nem transfere crédito.</div>
+        <div class="c">Nas compras, o MEI é tratado como consumo final: não apropria crédito de
+        IBS e CBS. Nas vendas, em regra não transfere crédito ao cliente. Há duas exceções de
+        crédito presumido para quem compra do MEI: transporte autônomo de carga e bem móvel
+        usado para revenda.
+        <span class="fonte">LC 214/2025, art. 41, § 2º, art. 47, § 9º, arts. 169 e 171;
+        LC 227/2026, art. 106, § 5º.</span></div></div></div>
+
+      <div class="atencao"><div class="num">3</div><div>
+        <div class="t">Conclusão definitiva exige simulação individual com dados contábeis e de negócios reais.</div>
+        <div class="c">Nada aqui substitui a apuração. Este relatório organiza o cenário e
+        aponta onde olhar; a decisão se fecha com os números do seu negócio na mesa.</div></div></div>
+
+      <ul class="notas-pe">
+        <li>Análise preliminar, sem valor jurídico, baseada exclusivamente nas respostas fornecidas.</li>
+        <li>Os cortes percentuais são parâmetros de triagem da Auster, não constantes legais.</li>
+      </ul>
+      ${MOSTRAR_PAINEL_DO_MOTOR ? `<div class="debug"><b>Protótipo — dados do motor.</b>
+        receitaCreditável <code>${d.derivadas.receitaCreditavel.toFixed(1)}%</code> ·
+        densidade de crédito <code>${d.derivadas.densidadeCredito === null ? 'indefinida' : d.derivadas.densidadeCredito.toFixed(1) + '%'}</code> ·
+        margem suporta <code>${d.derivadas.margemSuporta}</code> ·
+        próximo do teto <code>${d.derivadas.proximoDoTeto}</code><br>
+        gatilhos: <code>${d.gatilhos.map(esc).join(', ')}</code>
+      </div>` : ''}
+            <div class="rodape-nav">
+        <button class="secundario" onclick="window.irPara(${REVISAO})">Revisar respostas</button>
+        <button class="principal" onclick="window.verRelatorio()">Ver relatório para imprimir</button></div>
+    </div>`;
+}
+
+function desenhar() {
+  if (etapa > TOTAL && R._encaminhar) return renderEncaminhamento(R._encaminhar);
+  if (etapa === REVISAO) return renderRevisao();
+  if (etapa === RELATORIO) return renderRelatorio();
+  etapa > TOTAL ? renderResultado() : renderFormulario();
+}
+function desenharDoTopo() { desenhar(); window.scrollTo(0, 0); }
+
+const assinaturaVisivel = () => perguntasVisiveis(R).map(p => p.chave).join('|');
+
+/* ------------------------------------------------------------------ rascunho
+ * Dez minutos de preenchimento perdidos por um F5 acidental é defeito de
+ * produto, não descuido do respondente. Guarda local, no próprio navegador:
+ * nada sai da máquina, e por isso não depende de servidor nem de consentimento.
+ * Os campos internos (prefixo _) ficam fora — são derivados e o QSA nunca
+ * deve ser persistido. */
+const CHAVE_RASCUNHO = 'auster-decisao-simples-rascunho';
+let relogioRascunho = null;
+
+function salvarRascunho() {
+  clearTimeout(relogioRascunho);
+  relogioRascunho = setTimeout(() => {
+    try {
+      const limpo = {};
+      for (const [k, v] of Object.entries(R)) if (!k.startsWith('_')) limpo[k] = v;
+      if (R._protocolo) limpo._protocolo = R._protocolo;
+      localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify({
+        salvoEm: new Date().toISOString(), etapa, respostas: limpo,
+      }));
+    } catch { /* aba privada, cota cheia: seguir sem rascunho */ }
+  }, 600);
+}
+
+function lerRascunho() {
+  try {
+    const bruto = localStorage.getItem(CHAVE_RASCUNHO);
+    if (!bruto) return null;
+    const d = JSON.parse(bruto);
+    if (!d || !d.respostas || !Object.keys(d.respostas).length) return null;
+    return d;
+  } catch { return null; }
+}
+
+function apagarRascunho() {
+  try { localStorage.removeItem(CHAVE_RASCUNHO); } catch { }
+}
+
+window.retomarRascunho = () => {
+  const d = lerRascunho();
+  if (!d) return;
+  Object.assign(R, d.respostas);
+  etapa = Math.min(d.etapa || 1, TOTAL);
+  delete R._retomavel;
+  desenharDoTopo();
+};
+
+window.comecarDeNovo = () => {
+  apagarRascunho();
+  for (const k of Object.keys(R)) delete R[k];
+  etapa = 1;
+  desenharDoTopo();
+};
+
+/** Limpa o erro exibido de um campo sem redesenhar a etapa inteira. */
+function limparErro(chave) {
+  const el = document.querySelector(`[data-campo="${chave}"] .erro`);
+  if (el) el.remove();
+}
+
+/** Atualiza só a marcação visual das opções de um campo. */
+/** Repinta as opções de um campo. O `name` pode ser "chave" ou, na matriz,
+ *  "chave__linha" — e nesse caso o valor mora em R[chave][linha], não em R[name].
+ *
+ *  DEFEITO CORRIGIDO 15/09/2026: a versão anterior comparava `inp.value` com
+ *  `R[name]`. Para a matriz, R[name] é undefined (o valor está um nível abaixo),
+ *  então toda comparação dava falso e a função DESMARCAVA o radio que o
+ *  respondente acabara de clicar. O sintoma era "o não sei não marca" — o estado
+ *  guardava a resposta, a tela não mostrava. */
+function valorDoCampo(nome) {
+  const i = nome.indexOf('__');
+  if (i === -1) return R[nome];
+  const chave = nome.slice(0, i), linha = nome.slice(i + 2);
+  return (R[chave] || {})[linha];
+}
+
+function repintarOpcoes(nome) {
+  const atual = valorDoCampo(nome);
+  document.querySelectorAll(`input[name="${nome}"]`).forEach(inp => {
+    const marcado = inp.value === atual;
+    // `checked` também, e não só a classe: quando a resposta vem da consulta ao
+    // CNPJ (regime e MEI), nenhum clique aconteceu para marcar o radio.
+    if (inp.checked !== marcado) inp.checked = marcado;
+    const rotulo = inp.closest('.opcao');
+    if (rotulo) rotulo.classList.toggle('marcada', marcado);
+  });
+}
+
+/** Selo do cadastro, derivado do estado — nunca criado à mão, para não sumir
+ *  quando a etapa é redesenhada. */
+function seloCadastro() {
+  if (R._cadastroEstado === 'buscando')
+    return '<div class="cadastro buscando">Conferindo o cadastro na Receita…</div>';
+  // Falhar em silêncio foi um defeito real: o campo ficava vazio e não havia como
+  // distinguir "a consulta não funcionou" de "isso não foi implementado".
+  if (R._cadastroEstado === 'falhou') {
+    const local = R._cadastroMotivo === 'bloqueado por abrir o arquivo direto';
+    return `<div class="cadastro alerta">${local
+      ? 'A consulta automática do CNPJ não funciona com o arquivo aberto direto do computador — o navegador bloqueia a chamada. Ela passa a funcionar quando o portal estiver publicado. <b>Preencha o nome da empresa à mão.</b>'
+      : `Não deu para consultar o CNPJ agora (${esc(R._cadastroMotivo || 'indisponível')}). <b>Preencha o nome da empresa à mão</b> — o diagnóstico segue igual.`}</div>`;
+  }
+  const d = R._cadastro;
+  if (!d) return '';
+  const partes = [`<b>${esc(d.razaoSocial || '')}</b>`];
+  if (d.municipio) partes.push(`${esc(d.municipio)}/${esc(d.uf || '')}`);
+  partes.push(d.optanteSimples ? 'optante pelo Simples' : 'não optante pelo Simples');
+  if (d.optanteMei) partes.push('MEI');
+  const aviso = d.ativa ? ''
+    : `<br>Situação cadastral: <b>${esc(d.situacao || 'não ativa')}</b>. Confirme antes de seguir.`;
+  return `<div class="cadastro ${d.ativa ? 'achou' : 'alerta'}">${partes.join(' · ')}${aviso}</div>`;
+}
+
+// ------------------------------------------------- consulta cadastral
+let ultimoCnpjBuscado = null;
+
+/** Troca só o selo no DOM, sem tocar no resto da etapa. */
+function atualizarSelo() {
+  const campo = document.querySelector('[data-campo="cnpj"]');
+  if (!campo) return;
+  const atual = campo.querySelector('.cadastro');
+  if (atual) atual.remove();
+  const html = seloCadastro();
+  if (html) campo.insertAdjacentHTML('beforeend', html);
+}
+
+function conferirSolicitanteNoQsa() {
+  if (!R._qsa) return;
+  R._solicitanteNoQsa = nomeConstaNoQsa(R.solicitante, R._qsa);
+}
+
+/** Consulta cadastral. Silenciosa no erro: o formulário segue manual. */
+async function buscarCadastro(cnpj) {
+  const limpo = String(cnpj).replace(/[^0-9A-Za-z]/g, '');
+  // Só evita repetir a chamada se o resultado daquele CNPJ ainda está em mão.
+  // Sem a segunda condição, voltar a um CNPJ já consultado (depois de o selo ter
+  // sido limpo) não reconsultava e o campo ficava mudo.
+  // Repetir a consulta do MESMO CNPJ só se evita quando o resultado ainda está
+  // em mão. Depois de uma falha, sair e voltar ao campo tenta de novo.
+  if (limpo === ultimoCnpjBuscado && R._cadastro) return;
+  ultimoCnpjBuscado = limpo;
+
+  R._cadastroEstado = 'buscando';
+  atualizarSelo();
+
+  const r = await consultarCnpj(cnpj);
+
+  if (!r.ok) {
+    R._cadastro = null;
+    R._cadastroEstado = 'falhou';
+    R._cadastroMotivo = r.motivo || null;
+    // O detalhe técnico vai para o console, não para a tela.
+    console.warn('consulta de CNPJ falhou:', r.motivo, r.detalhe || '');
+    atualizarSelo();
+    return;
+  }
+
+  const d = r.dados;
+  R._cadastro = d;
+  R._qsa = r.qsa;            // guardado para conferência, NUNCA renderizado
+  R._solicitanteNoQsa = R.solicitante ? nomeConstaNoQsa(R.solicitante, r.qsa) : null;
+
+  // Pré-preenche só o que é da empresa e o respondente ainda não escreveu.
+  if (d.razaoSocial && !R.nomeEmpresa) {
+    R.nomeEmpresa = d.razaoSocial;
+    const campo = document.querySelector('[data-campo="nomeEmpresa"] input');
+    if (campo) campo.value = d.razaoSocial;
+  }
+  if (!R.ehSimei) R.ehSimei = d.optanteMei ? 'sim' : 'nao';
+  if (!R.regimeAtual && d.optanteSimples) R.regimeAtual = 'simples';
+  // Marca na tela o que veio do cadastro. Sem isto o estado dizia "Simples" e o
+  // formulario aparecia em branco, obrigando o respondente a responder de novo.
+  repintarOpcoes('ehSimei');
+  repintarOpcoes('regimeAtual');
+
+  R._cadastroEstado = 'pronto';
+  // Não redesenha a etapa: o respondente pode já estar digitando o campo
+  // seguinte, e o innerHTML tiraria o foco dele. Troca só o selo.
+  atualizarSelo();
+}
+
+// ---------------------------------------------------------------- ações
+/** Campos de texto: grava e sai. Redesenhar aqui destruiria o input e o foco.
+ *  A máscara é aplicada no próprio elemento, preservando a posição do cursor
+ *  quando o texto é digitado no fim (que é o caso normal). */
+window.setTexto = (chave, elemento) => {
+  const p = PERGUNTAS.find(x => x.chave === chave);
+  let valor = elemento.value;
+  if (p && p.validador && p.validador.mascara) {
+    // selectionStart lança em alguns tipos de input (email, number). Só campos
+    // com máscara chegam aqui — text e tel — mas o try protege contra regressão.
+    let noFim = true, cursor = null;
+    try { cursor = elemento.selectionStart; noFim = cursor === valor.length; } catch { }
+    const mascarado = p.validador.mascara(valor);
+    if (mascarado !== valor) {
+      elemento.value = mascarado;
+      if (!noFim && cursor !== null) {
+        try {
+          const pos = Math.min(cursor, mascarado.length);
+          elemento.setSelectionRange(pos, pos);
+        } catch { }
+      }
+    }
+    valor = mascarado;
+  }
+  R[chave] = valor;
+  salvarRascunho();
+  if (erros[chave]) { delete erros[chave]; limparErro(chave); }
+
+  // Mudou o CNPJ? O selo do cadastro anterior não vale mais. Sem isso, um CNPJ
+  // novo (ou inválido) fica exibindo a razão social do que foi consultado antes.
+  if (chave === 'cnpj') {
+    const limpo = String(valor).replace(/[^0-9A-Za-z]/g, '');
+    if (limpo !== ultimoCnpjBuscado && (R._cadastro || R._cadastroEstado)) {
+      R._cadastro = null; R._cadastroEstado = null; R._cadastroMotivo = null;
+      R._qsa = null; R._solicitanteNoQsa = null;
+      atualizarSelo();
+    }
+  }
+};
+
+/** Validação ao sair do campo, para o erro aparecer antes de clicar em avançar. */
+window.conferirCampo = chave => {
+  const p = PERGUNTAS.find(x => x.chave === chave);
+  const v = R[chave];
+  if (!p || !p.validador || !v || !String(v).trim()) return;
+  if (p.validador.valida(v)) {
+    delete erros[chave]; limparErro(chave);
+    if (chave === 'cnpj') buscarCadastro(v);
+    if (chave === 'solicitante') conferirSolicitanteNoQsa();
+    return;
+  }
+  erros[chave] = p.validador.erro;
+  const caixa = document.querySelector(`[data-campo="${chave}"]`);
+  if (caixa && !caixa.querySelector('.erro')) {
+    const el = document.createElement('div');
+    el.className = 'erro'; el.textContent = p.validador.erro;
+    caixa.appendChild(el);
+  }
+};
+
+window.set = (chave, valor) => {
+  salvarRascunho();
+  const antes = assinaturaVisivel();
+  R[chave] = valor;
+  salvarRascunho();
+  if (erros[chave]) { delete erros[chave]; limparErro(chave); }
+  const visiveis = new Set(perguntasVisiveis(R).map(p => p.chave));
+  for (const p of PERGUNTAS) if (!visiveis.has(p.chave)) delete R[p.chave];
+  // Só redesenha se a resposta mudou quais perguntas aparecem.
+  if (assinaturaVisivel() !== antes) desenhar(); else repintarOpcoes(chave);
+};
+
+window.setMatriz = (chave, linha, valor) => {
+  salvarRascunho();
+  const antes = assinaturaVisivel();
+  R[chave] = { ...(R[chave] || {}), [linha]: valor };
+  if (erros[chave]) { delete erros[chave]; limparErro(chave); }
+  // A matriz abre e fecha pergunta na MESMA etapa (o regime dos clientes so faz
+  // sentido se houver cliente pessoa juridica). Sem este guarda a pergunta so
+  // aparecia ao sair e voltar da etapa.
+  if (assinaturaVisivel() !== antes) { desenhar(); return; }
+  repintarOpcoes(`${chave}__${linha}`);
+  const el = document.querySelector(`[data-campo="${chave}"] .soma`);
+  if (el) {
+    const rod = rodapeMatriz(chave);
+    el.className = `soma ${rod.classe}`;
+    el.textContent = rod.texto;
+  }
+};
+window.avancar = () => {
+  if (etapa >= RESULTADO) return;
+  // Da conferência para o resultado não há o que validar: tudo já passou.
+  if (etapa === REVISAO) { etapa = RESULTADO; desenharDoTopo(); return; }
+  const problemas = problemasNaEtapa(BLOCOS[etapa - 1].numero);
+  Object.keys(erros).forEach(k => delete erros[k]);
+  if (Object.keys(problemas).length) {
+    Object.assign(erros, problemas);
+    desenhar();
+    const primeiro = document.querySelector('.campo .erro');
+    if (primeiro) primeiro.closest('.campo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  const motivo = atalhoDeTriagem();
+  if (motivo) {
+    R._etapaAntesDoDesvio = etapa;
+    etapa = TOTAL + 1; R._encaminhar = motivo; desenharDoTopo(); return;
+  }
+  etapa++; salvarRascunho(); desenharDoTopo();
+};
+// Sair do encaminhamento tem de apagar o desvio, senão a tela volta a ele.
+window.voltar = () => {
+  if (R._encaminhar) {
+    delete R._encaminhar;
+    etapa = R._etapaAntesDoDesvio || 1;
+    desenharDoTopo(); return;
+  }
+  if (etapa > 1) { etapa--; desenharDoTopo(); }
+};
+window.irPara = n => {
+  if (R._encaminhar) { delete R._encaminhar; etapa = n; desenharDoTopo(); return; }
+  if (n < etapa) { etapa = n; desenharDoTopo(); }
+};
+
+/** Vai ao bloco da pergunta e põe o campo à vista. Usado pelo "alterar" da
+ *  conferência: mandar para o topo do bloco 4 e deixar a pessoa procurar a
+ *  pergunta seria transferir a ela um trabalho que a tela sabe fazer. */
+window.irParaCampo = (bloco, chave) => {
+  etapa = bloco;
+  desenhar();
+  window.scrollTo(0, 0);
+  const alvo = document.querySelector(`[data-campo="${chave}"]`);
+  if (alvo) {
+    alvo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    alvo.classList.add('destacado');
+    setTimeout(() => alvo.classList.remove('destacado'), 1800);
+  }
+};
+
+/* Arranque. Um rascunho encontrado NÃO é restaurado sozinho: a pessoa pode estar
+ * preenchendo para outra empresa. Oferece, e só retoma se ela pedir. */
+/* Convite: o que a casa já sabe entra pronto, e só o que está em branco — nunca
+ * sobrescreve resposta de quem está preenchendo. */
+if (typeof window !== 'undefined' && window.__PREVIO__) {
+  for (const [chave, valor] of Object.entries(window.__PREVIO__)) {
+    if (valor && !R[chave]) R[chave] = valor;
+  }
+}
+
+const rascunho = lerRascunho();
+if (rascunho) R._retomavel = rascunho;
+desenhar();
+</script>
+</body>
+</html>

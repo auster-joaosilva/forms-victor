@@ -1,16 +1,27 @@
-node_modules
-.DS_Store
-dist
-dist-ssr
-*.local
-.env
-.nitro
-.tanstack
-.wrangler
-.output
-.vinxi
-__unconfig*
-todos.json
+# O banco tem dado de cliente: nunca versionar.
+dados/
+*.db
+*.db-wal
+*.db-shm
 
-# Cliente Prisma gerado — recrie com `npm run db:generate`
-src/generated
+# Gerado pelo build.
+portal.html
+
+# Backups locais.
+09_Backups/
+
+node_modules/
+.env
+
+# Amostra de resposta da consulta cadastral, usada em conferencia manual.
+# Nao e fonte: e despejo de API.
+bapi.json
+
+# Registro interno de decisoes da casa: nomes, discussoes, revisao externa,
+# premissas em aberto. Fica na maquina, nao em repositorio publico. A
+# rastreabilidade exigida pela casa continua atendida pelo arquivo local.
+CHANGELOG_CLAUDE.md
+
+# Configuracao de sessao de ferramenta, nada a ver com a aplicacao.
+.claude/
+.claude-flow/

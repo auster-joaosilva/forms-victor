@@ -286,7 +286,7 @@ button:disabled{opacity:.35;cursor:default}
 .barra-doc{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:18px}
 .doc{background:#fff}
 .folha{background:#fff;border:1px solid var(--borda);border-radius:10px;
-  padding:34px 38px;margin:0 auto 16px;box-shadow:var(--sombra);max-width:190mm}
+  padding:42px 50px;margin:0 auto 16px;box-shadow:var(--sombra);max-width:190mm}
 .folha h1{font-size:26px;font-weight:300;line-height:1.25;letter-spacing:-.3px;
   color:var(--escuro);margin:14px 0 24px}
 .folha h2{font-size:var(--t-titulo);font-weight:400;color:var(--escuro);margin:0 0 14px}
@@ -375,8 +375,8 @@ button:disabled{opacity:.35;cursor:default}
 
 @media print {
   .barra-doc{display:none !important}
-  .folha{border:0;border-radius:0;box-shadow:none;margin:0;padding:0;max-width:none;
-    break-before:page;page-break-before:always}
+  .folha{border:0;border-radius:0;box-shadow:none;margin:0;max-width:none;
+    padding:8mm 10mm;break-before:page;page-break-before:always}
   .folha:first-child{break-before:auto;page-break-before:auto}
   .folha h1{font-size:21pt}
   .folha h2{font-size:15pt;break-after:avoid;page-break-after:avoid}
@@ -395,7 +395,7 @@ button:disabled{opacity:.35;cursor:default}
   /* Margem de documento, não de página web: 12 mm deixava a caixa de cada ação
      encostando na borda do papel. 20 mm nas laterais dá 170 mm de largura útil
      no A4, que é medida de leitura, e sobra bastante para grampo ou encadernação. */
-  @page { margin: 18mm 20mm; }
+  @page { margin: 10mm; }
   body{background:#fff;font-size:11pt}
   header{box-shadow:none;padding:0 0 10mm;background:#fff}
   header .logo.tela{display:none}

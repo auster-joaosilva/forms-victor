@@ -100,3 +100,30 @@ export function estimarAliquotaDas(anexo, faixaRbt12) {
 export function daParaEstimarDas(r) {
   return estimarAliquotaDas(r.anexoSimples, r.faixaRbt12) !== null;
 }
+
+/** Intervalo de cada faixa de alíquota que o formulário oferece, em pontos
+ *  percentuais. A última é aberta: acima de 19% não há teto declarado. */
+export const FAIXA_DAS_DECLARADA = {
+  ate_6: [0, 6], de_6_9: [6, 9], de_9_12: [9, 12],
+  de_12_15: [12, 15], de_15_19: [15, 19], acima_19: [19, 40],
+};
+
+/** Porteira de coerência entre o que a pessoa declarou e o que a tabela diz.
+ *
+ *  Nunca descarta a declaração: devolve um veredito para quem consome decidir o
+ *  que dizer. Muita gente informa a alíquota NOMINAL da faixa achando que é a
+ *  efetiva — no Anexo III, 4ª faixa, a nominal é 16% e a efetiva vai de 11,1% a
+ *  14,0%. Esse erro precisa aparecer, não contaminar a conta em silêncio.
+ *
+ *  @returns {{situacao:'nao_declarada'|'sem_tabela_conferida'|'coerente'|'fora_do_intervalo',
+ *             declarada:number[]|null, estimativa:object|null}}
+ */
+export function conferirAliquotaDeclarada(r) {
+  const declarada = FAIXA_DAS_DECLARADA[r.aliquotaEfetivaDas] || null;
+  const estimativa = estimarAliquotaDas(r.anexoSimples, r.faixaRbt12);
+  if (!declarada) return { situacao: 'nao_declarada', declarada: null, estimativa };
+  if (!estimativa) return { situacao: 'sem_tabela_conferida', declarada, estimativa: null };
+  // Sobreposição, não igualdade: os dois lados são intervalos.
+  const sobrepoe = declarada[0] <= estimativa.max && estimativa.min <= declarada[1];
+  return { situacao: sobrepoe ? 'coerente' : 'fora_do_intervalo', declarada, estimativa };
+}

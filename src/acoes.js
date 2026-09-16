@@ -21,6 +21,16 @@ const a = (id, quando, acao, extra) => ({ id, quando, acao, ...extra });
 export const REGRAS_ACAO = [
 
   // ================================================== O QUE O CLIENTE FAZ
+  // A alíquota declarada não bate com a faixa e o anexo. Vem primeiro de
+  // propósito: enquanto isso não fecha, toda comparação anda sobre número errado.
+  a('conferir_aliquota_no_pgdas',
+    (r, d) => d.derivadas.conferenciaDas === 'fora_do_intervalo',
+    'Confira no PGDAS-D qual é a sua alíquota efetiva de verdade.',
+    { porque: 'A alíquota que você informou não bate com a faixa de receita e o anexo declarados. O erro mais comum é informar a alíquota da tabela — a nominal — em vez da efetiva, que é sempre menor. Enquanto isso não fecha, qualquer comparação de carga anda sobre número errado.',
+      executor: 'cliente', trilha: 1,
+      precisa: 'A última apuração do PGDAS-D, na linha da alíquota efetiva',
+      fundamento: 'LC 123/2006, art. 18, § 1º-A (alíquota efetiva = (RBT12 × Aliq − PD) / RBT12)' }),
+
   a('separar_vendas_por_tipo_de_cliente',
     (r, d) => ['C', 'E'].includes(d.saida.codigo),
     'Separe suas vendas do último ano entre empresas e consumidor final.',

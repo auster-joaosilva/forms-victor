@@ -274,6 +274,13 @@ button:disabled{opacity:.35;cursor:default}
 .bloco-auster .intro{font-size:var(--t-corpo);color:var(--cinza);margin:0 0 18px;max-width:66ch}
 .acao.auster{border-left:3px solid var(--escuro);background:#fff}
 .aviso{background:#fdf4e3;border:1px solid #f0dcb4;border-radius:8px;padding:13px;font-size:13px;margin-bottom:18px}
+/* Os tres nomes que o publico das palestras usa. Ficam no comeco porque o
+   formulario inteiro depende de a pessoa saber qual deles e qual. */
+.glossario{margin:0 0 22px;padding:14px 16px;border-left:3px solid var(--claro);
+  background:#f7fbfd;border-radius:0 8px 8px 0}
+.glossario dt{font-weight:500;font-size:var(--t-corpo);color:var(--escuro);margin-top:9px}
+.glossario dt:first-child{margin-top:0}
+.glossario dd{margin:2px 0 0;font-size:var(--t-meta);color:var(--cinza);line-height:1.55}
 .ressalva{font-size:var(--t-meta);color:var(--cinza);border-top:1px solid var(--borda);margin-top:26px;padding-top:16px;line-height:1.6}
 
 /* ------------------------------------------------------- relatório para papel
@@ -506,6 +513,21 @@ const CONFIG = {
 
 const CONVITE = typeof window !== 'undefined' ? (window.__CONVITE__ || null) : null;
 
+/** Data de referencia do diagnostico.
+ *
+ *  Vem do SERVIDOR quando a pagina e servida. Relogio errado no computador de
+ *  quem responde mudaria a contagem de uma janela legal — e computador com data
+ *  errada nao e raro. Sem servidor (arquivo aberto por duplo clique), cai no
+ *  relogio local, que e o unico que existe ali. */
+function agora() {
+  const doServidor = typeof window !== 'undefined' ? window.__HOJE__ : null;
+  if (doServidor) {
+    const d = new Date(doServidor);
+    if (!isNaN(d)) return d;
+  }
+  return new Date();
+}
+
 let etapa = 1;
 const TOTAL = BLOCOS.length;
 // Entre o formulário e o resultado entra uma tela de conferência. Vale sobretudo
@@ -696,6 +718,8 @@ function renderFormulario() {
       <h1>${esc(bloco.titulo)}</h1>
       <p class="etapa-conta">Etapa ${etapa} de ${TOTAL}</p>
       ${bloco.aviso ? `<div class="escopo">${esc(bloco.aviso)}</div>` : ''}
+      ${bloco.glossario ? `<dl class="glossario">${bloco.glossario.map(([termo, oQue]) =>
+        `<dt>${esc(termo)}</dt><dd>${esc(oQue)}</dd>`).join('')}</dl>` : ''}
       ${perguntas.map(campo).join('')}
       <div class="rodape-nav">
         <button class="secundario" ${etapa === 1 ? 'disabled' : ''} onclick="window.voltar()">Voltar</button>
@@ -880,7 +904,7 @@ function enviarAoConcluir() {
 }
 
 window.enviarRespostas = async () => {
-  const d = diagnosticar(R, new Date());
+  const d = diagnosticar(R, agora());
   const pacote = pacoteDeEnvio(d);
 
   if (CONFIG.endpointEnvio) {
@@ -969,7 +993,7 @@ function resumoDoPreenchimento() {
 }
 
 function renderRelatorio() {
-  const d = diagnosticar(R, new Date());
+  const d = diagnosticar(R, agora());
   const plano = planoDeAcao(R, d);
   const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 
@@ -1026,6 +1050,17 @@ function renderRelatorio() {
       <section class="folha">
         <h2>O que isso significa para a sua empresa</h2>
         <p class="corrido">${esc(d.saida.significa)}</p>
+
+        <h3>Os três nomes, para não confundir</h3>
+        <table class="prazos"><tbody>
+          <tr><td>Simples Original</td><th>o que você tem hoje, e que vale até o fim de
+            2026.</th></tr>
+          <tr><td>Simples Padrão</td><th>a partir de 2027, com IBS e CBS continuando dentro do
+            DAS.</th></tr>
+          <tr><td>Simples Híbrido</td><th>a partir de 2027, com IBS e CBS saindo da guia e
+            apurados pelo regime regular — é o que as palestras chamaram de
+            <b>tirar o imposto da guia</b>.</th></tr>
+        </tbody></table>
         ${d.posicao.familia === 'hibrido' || d.posicao.familia === 'a_definir' ? `
           <h3>Os prazos, em ordem</h3>
           <table class="prazos"><tbody>
@@ -1099,7 +1134,7 @@ function renderRelatorio() {
 }
 
 function renderResultado() {
-  const d = diagnosticar(R, new Date());
+  const d = diagnosticar(R, agora());
   const plano = planoDeAcao(R, d);
   enviarAoConcluir();
 

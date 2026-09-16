@@ -137,6 +137,8 @@ function portalConfigurado(convite) {
   };
   const trechos = [
     `Object.assign(CONFIG, ${jsonParaScript(config)});`,
+    // A data de referencia vem daqui, nao do relogio de quem responde.
+    `window.__HOJE__ = ${jsonParaScript(new Date().toISOString())};`,
   ];
   if (convite) {
     // Pré-preenchimento do convite: só o que a casa já sabe da empresa.
@@ -256,6 +258,7 @@ function relatorioDaResposta(r) {
   if (!html) return null;
   const pacote = r.pacote || {};
   return html.replace('/*__PUBLICACAO__*/', [
+    `window.__HOJE__ = ${jsonParaScript(new Date().toISOString())};`,
     `window.__SO_RELATORIO__ = ${jsonParaScript(pacote.respostas || {})};`,
     `window.__PROTOCOLO__ = ${jsonParaScript(r.protocolo || '')};`,
   ].join('\n'));

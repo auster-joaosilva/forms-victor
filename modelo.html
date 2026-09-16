@@ -600,6 +600,8 @@ function campo(p) {
         <p><b>Para que servem:</b> montar este diagnóstico e permitir que a equipe da
         ${esc(CONFIG.controlador)} fale com você sobre ele. Não usamos para mais nada e não
         compartilhamos com terceiros.</p>
+        <p><b>Quando são enviadas:</b> ao terminar o preenchimento, automaticamente. Você recebe
+        um número de protocolo na tela e pode baixar o plano de ação em PDF.</p>
         <p><b>O que é coletado:</b> CNPJ, nome da empresa, nome de quem responde, e-mail,
         telefone e as respostas do formulário. O CNPJ é consultado na base pública da Receita
         para poupar digitação.</p>
@@ -819,12 +821,60 @@ function pacoteDeEnvio(d) {
   };
 }
 
-window.verRelatorio = () => { etapa = RELATORIO; desenharDoTopo(); };
-window.voltarDoRelatorio = () => { etapa = RESULTADO; desenharDoTopo(); };
+/** Nome do arquivo do plano de ação.
+ *
+ *  O navegador NÃO deixa uma página salvar arquivo sozinha — seria porta aberta
+ *  para qualquer site escrever no computador de quem visita. O que dá para
+ *  fazer, e é o que se faz aqui: o Chrome usa o TÍTULO do documento como nome
+ *  sugerido ao salvar em PDF. Então o título vira o nome do arquivo, e a pessoa
+ *  só confirma. */
+const TITULO_DA_ABA = document.title;
+function nomeDoArquivo() {
+  const semAcento = (R.nomeEmpresa || 'Empresa')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const limpo = semAcento.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  return 'Plano-De-Acao-SN-' + (limpo || 'Empresa');
+}
+
+window.voltarDoRelatorio = () => {
+  document.title = TITULO_DA_ABA;
+  etapa = RESULTADO; desenharDoTopo();
+};
 window.imprimirRelatorio = () => {
   if (etapa !== RELATORIO) { etapa = RELATORIO; desenhar(); }
+  document.title = nomeDoArquivo();
   setTimeout(() => window.print(), 120);
 };
+
+/** Leva ao relatório e já abre a janela de salvar. É o mais próximo de
+ *  "download automático" que existe sem instalar nada no computador de quem
+ *  responde. */
+window.baixarPlano = () => {
+  etapa = RELATORIO;
+  desenharDoTopo();
+  document.title = nomeDoArquivo();
+  setTimeout(() => window.print(), 400);
+};
+
+/* Dispara uma vez por preenchimento. Sem esta trava, `desenhar()` chamado pelo
+   próprio envio reentraria aqui e mandaria o pacote de novo. */
+let envioAutomaticoFeito = false;
+
+/** Envia sozinho ao chegar no resultado.
+ *
+ *  Por que deixou de ser botão: em produção os clientes preenchiam até o fim e
+ *  não clicavam em enviar. O diagnóstico não chegava à Auster e não era emitido
+ *  — o trabalho da pessoa se perdia, e o dela era o trabalho todo.
+ *
+ *  Duas condições, e as duas são de princípio: só com endpoint configurado —
+ *  nunca abre WhatsApp sozinho, que é ação com efeito externo — e só com o
+ *  aceite de privacidade dado, que é a base legal para guardar. */
+function enviarAoConcluir() {
+  if (envioAutomaticoFeito || R._envio) return;
+  if (!CONFIG.endpointEnvio || R.aceiteLgpd !== 'sim') return;
+  envioAutomaticoFeito = true;
+  setTimeout(() => window.enviarRespostas(), 60);
+}
 
 window.enviarRespostas = async () => {
   const d = diagnosticar(R, new Date());
@@ -1048,6 +1098,7 @@ function renderRelatorio() {
 function renderResultado() {
   const d = diagnosticar(R, new Date());
   const plano = planoDeAcao(R, d);
+  enviarAoConcluir();
 
   const eixos = d.radar.map(e => {
     const cls = e.faixa === 'forte' ? 'f-forte' : e.faixa === 'atenção moderada' ? 'f-atenção'
@@ -1166,19 +1217,19 @@ function renderResultado() {
     <div class="cartao bloco-envio" style="margin-bottom:20px">
       <h2 style="margin-top:0">Protocolo ${esc(protocolo())}</h2>
       ${temCanalDeEnvio() ? `
-        ${R._envio === 'enviado' ? `<p class="envio ok"><b>Respostas enviadas.</b> A equipe recebe
+        ${R._envio === 'enviado' ? `<p class="envio ok"><b>Respostas enviadas automaticamente.</b> A equipe recebe
           com este protocolo e retoma o contato pelo e-mail que você informou.</p>`
         : R._envio === 'encaminhado' ? `<p class="envio ok"><b>Conversa aberta no WhatsApp.</b>
           Se a janela não abriu, use o botão outra vez.</p>`
         : R._envio === 'enviando' ? `<p class="envio">Enviando…</p>`
         : `<p class="envio">Guarde este número: é por ele que a equipe encontra as suas
-          respostas. Enviar não compromete você a nada.</p>`}
+          respostas.</p>`}
         ${R._envio === 'falhou' ? `<p class="envio erro"><b>Não deu para enviar agora</b>
           (${esc(R._envioMotivo || 'sem detalhe')}). Tente outra vez — suas respostas não foram
           perdidas.</p>` : ''}
         ${['enviado', 'enviando', 'encaminhado'].includes(R._envio) ? '' :
           `<button class="principal" onclick="window.enviarRespostas()">
-            ${CONFIG.whatsapp && !CONFIG.endpointEnvio ? 'Falar com a equipe pelo WhatsApp' : 'Enviar minhas respostas para a Auster'}
+            ${CONFIG.whatsapp && !CONFIG.endpointEnvio ? 'Falar com a equipe pelo WhatsApp' : 'Enviar minhas respostas agora'}
           </button>`}
       ` : `<p class="envio"><b>Suas respostas ficaram só neste navegador.</b> Nada foi enviado —
         este relatório é seu. Para tratar com a equipe, guarde o protocolo acima ou imprima
@@ -1226,7 +1277,7 @@ function renderResultado() {
       </div>` : ''}
             <div class="rodape-nav">
         <button class="secundario" onclick="window.irPara(${REVISAO})">Revisar respostas</button>
-        <button class="principal" onclick="window.verRelatorio()">Ver relatório para imprimir</button></div>
+        <button class="principal" onclick="window.baixarPlano()">Baixar o plano de ação em PDF</button></div>
     </div>`;
 }
 

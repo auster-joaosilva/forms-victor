@@ -20,7 +20,8 @@
 import { createServer } from 'node:http';
 import { createHmac, scryptSync, timingSafeEqual } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
-import { abrirBanco, senhaConfere, MINIMO_SENHA } from './src/banco.mjs';
+import { abrirBanco, senhaConfere, MINIMO_SENHA,
+         VERSAO_DO_ESQUEMA } from './src/banco.mjs';
 import { PERGUNTAS, BLOCOS } from './src/perguntas.js';
 
 const HORAS_DE_SESSAO = 12;
@@ -589,7 +590,12 @@ const servidor = createServer(async (req, res) => {
 
     // ------------------------------------------------------------- saúde
     if (req.method === 'GET' && rota === '/saude') {
-      return json(res, 200, { ok: true, agora: new Date().toISOString() });
+      // A versao do esquema entra aqui porque e o que se confere DEPOIS de um
+      // deploy, sem precisar abrir o backoffice.
+      return json(res, 200, {
+        ok: true, agora: new Date().toISOString(),
+        esquema: banco.versaoDoEsquema(), esquemaEsperado: VERSAO_DO_ESQUEMA,
+      });
     }
 
     return responder(res, 404, 'Não encontrado.', 'text/plain; charset=utf-8');

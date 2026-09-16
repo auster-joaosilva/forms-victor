@@ -270,6 +270,33 @@ try {
   conferir('o relatorio sem sessao nao abre',
     r.status === 401 || r.status === 302, 'status ' + r.status);
 
+  // ------------------------------------------------- versao do esquema (C6)
+  r = await fetch(BASE + '/saude');
+  const saude = await r.json();
+  conferir('saude informa a versao do esquema',
+    saude.esquema >= 1 && saude.esquema === saude.esquemaEsperado,
+    `no banco=${saude.esquema} esperada=${saude.esquemaEsperado}`);
+
+  // Reabrir o mesmo arquivo nao pode aplicar a migracao de novo: aplicar duas
+  // vezes e o que corrompe esquema em deploy repetido.
+  const { abrirBanco, VERSAO_DO_ESQUEMA } = await import('./src/banco.mjs');
+  const arquivo = join(pasta, 'migracao.db');
+  const um = abrirBanco(arquivo);
+  const versaoPrimeira = um.versaoDoEsquema();
+  const linhasPrimeira = um.migracoesAplicadas().length;
+  um.db.close();
+  const dois = abrirBanco(arquivo);
+  conferir('reabrir o banco nao reaplica migracao',
+    dois.versaoDoEsquema() === versaoPrimeira
+    && dois.migracoesAplicadas().length === linhasPrimeira,
+    `${versaoPrimeira}/${linhasPrimeira} -> ${dois.versaoDoEsquema()}/${dois.migracoesAplicadas().length}`);
+  conferir('a versao gravada bate com a que o codigo conhece',
+    dois.versaoDoEsquema() === VERSAO_DO_ESQUEMA,
+    `banco=${dois.versaoDoEsquema()} codigo=${VERSAO_DO_ESQUEMA}`);
+  conferir('cada migracao registra data de aplicacao',
+    dois.migracoesAplicadas().every(m => !!m.aplicado_em && !!m.descricao));
+  dois.db.close();
+
   // ------------------------------------------------- injecao em campo aberto
   // Defeito real, encontrado em 16/09/2026: `JSON.stringify` nao escapa
   // `</script>`, e a rota do relatorio injetava as respostas dentro de um bloco

@@ -17,7 +17,7 @@ Uma aplicação Node que serve três coisas na mesma porta:
 | `GET /entrar` | tela de entrada: usuário e senha na própria página |
 | `GET /sair` | encerra a sessão |
 | `GET /backoffice` | conferência interna; sem sessão, manda para `/entrar` |
-| `GET /saude` | verificação de saúde para o orquestrador |
+| `GET /saude` | saúde para o orquestrador, e a **versão do esquema** do banco |
 
 **Zero dependência de terceiro.** Não há `npm install`, `package-lock.json` nem
 `node_modules`. O servidor usa só o que vem no Node: `node:http`, `node:sqlite`
@@ -141,7 +141,9 @@ cliente: fora do repositório, com acesso restrito, dentro da política da casa.
 
 ## Depois de subir, conferir nesta ordem
 
-1. `GET /saude` responde `{"ok":true}`.
+1. `GET /saude` responde `{"ok":true}` — e confira que `esquema` e
+   `esquemaEsperado` são **iguais**. Diferentes significam imagem antiga
+   servindo banco novo, ou o contrário.
 2. Abrir `/` e preencher o caminho curto até o fim. O cartão do protocolo
    aparece com o botão de enviar — se disser "suas respostas ficaram só neste
    navegador", o endpoint não foi injetado e o `portal.html` precisa ser

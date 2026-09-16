@@ -9,8 +9,8 @@
  */
 
 import { PERGUNTAS, EIXOS_RADAR, perguntasVisiveis, pontoMedioFaixa,
-         linhasMatrizSemResposta } from './perguntas.js';
-import { estimarAliquotaDas } from './simples.js';
+         linhasMatrizSemResposta, rotuloDaOpcao, rotuloDaLinhaMatriz } from './perguntas.js';
+import { estimarAliquotaDas, conferirAliquotaDeclarada } from './simples.js';
 
 // --------------------------------------------------------------------------
 // Parâmetros de calibragem — §12 do manual, todos marcados [CALIBRAR]
@@ -18,7 +18,7 @@ import { estimarAliquotaDas } from './simples.js';
 
 export const CORTES = {
   receitaCreditavelBaixa: 20,      // [CALIBRAR] abaixo disto → SAÍDA A
-  receitaCreditavelAlta: 60,       // [CALIBRAR] acima disto → ramo B2B
+  receitaCreditavelAlta: 60,       // [CALIBRAR] acima disto → ramo de venda entre empresas
   densidadeCreditoMinima: 40,      // [CALIBRAR] piso para recomendar optar
   margemMinimaSuporta: 'de_10_20', // [CALIBRAR] deveria ser setorial (§12.3)
   fatorFolha: {                    // [CALIBRAR] ajuste de densidade por folha
@@ -228,8 +228,16 @@ export function derivadas(r) {
   const dasEstimado = dasInformado !== null ? dasInformado
     : estimativa ? estimativa.medio + (estimativa.issIcmsForaDoDas ? ISS_ICMS_ESTIMADO[natureza] : 0)
     : null;
-  const origemDoDas = dasInformado !== null ? 'informado'
-    : estimativa ? 'estimado pela tabela do anexo' : 'indisponível';
+  /* Porteira de coerencia (B5): a declaracao continua valendo, mas quando ela
+     nao sobrepoe o intervalo da tabela, uma das informacoes esta errada — a
+     faixa de receita, o anexo ou a propria aliquota. Isso tem de aparecer em
+     vez de contaminar a conta em silencio. */
+  const conferenciaDas = conferirAliquotaDeclarada(r);
+  const origemDoDas = dasInformado === null
+    ? (estimativa ? 'estimado pela tabela do anexo' : 'indisponível')
+    : conferenciaDas.situacao === 'coerente' ? 'informado, dentro do estimado'
+    : conferenciaDas.situacao === 'fora_do_intervalo' ? 'informado, FORA do estimado'
+    : 'informado, sem tabela conferida para comparar';
   const cppEstimada = (PONTO_MEDIO_FOLHA[r.pesoFolha] ?? 0) * CPP_SOBRE_FOLHA;
   // No Anexo IV a CPP já está fora do DAS, então não se soma de novo ao Presumido.
   const cppQueSomaAoPresumido = r.anexoSimples === 'iv' ? 0 : cppEstimada;
@@ -263,7 +271,7 @@ export function derivadas(r) {
   /** CORRIGIDO 15/09/2026, art. 273, § 2º conferido no texto: o regime
    *  específico de bares e restaurantes NÃO alcança alimentação para pessoa
    *  jurídica sob contrato, revenda de produto de terceiro sem preparo nem bebida
-   *  alcoólica. Quem vive de refeição coletiva B2B está FORA do regime e cai na
+   *  alcoólica. Quem vive de refeição coletiva para empresa está FORA do regime e cai na
    *  regra geral — o cliente dele APROVEITA crédito. Antes, o marcador de setor
    *  bastava para acionar o gate, e esses casos recebiam recomendação errada por
    *  enquadramento. Hotelaria segue sem exclusão análoga (art. 283 é geral). */
@@ -283,6 +291,7 @@ export function derivadas(r) {
            receitaMistaNoRegimeEspecifico,
            natureza, dasEstimado,
            origemDoDas, intervaloDas: estimativa,
+           conferenciaDas: conferenciaDas.situacao,
            cargaPresumidoEstimada: +cargaPresumidoEstimada.toFixed(1),
            cargaFederalPresumido: presumido.pct, fontePresuncao: presumido.fonte,
            presuncaoIrpjPct,
@@ -380,6 +389,7 @@ export const POSICOES = {
  *  recomendação virar "a confirmar": na varredura com pesos, "decisão fechada"
  *  aparecia em 0,0% dos casos. */
 const ABRE_PONTO_EM_ABERTO = [
+  'aliquota_fora_do_estimado',
   'setor_com_tratamento_diferenciado',
   'credito_reduzido_por_uso_pessoal',
   'opera_com_substituicao_tributaria',
@@ -390,6 +400,8 @@ const ABRE_PONTO_EM_ABERTO = [
  *  ponto aberto" sem nomear qual transfere ao respondente a tarefa de adivinhar
  *  o que o motor viu. */
 const PONTO_EM_ABERTO_LEGIVEL = {
+  aliquota_fora_do_estimado: 'a alíquota efetiva que você informou não bate com a faixa de '
+    + 'receita e o anexo declarados — uma das três precisa ser revista antes de fechar a conta',
   setor_com_tratamento_diferenciado:
     'sua atividade está em setor com alíquota reduzida ou regime próprio, e o tamanho dessa redução muda a conta',
   credito_reduzido_por_uso_pessoal:
@@ -413,8 +425,19 @@ const LACUNA_QUE_TRAVA_A_DECISAO = [
  *  Recebe a leitura preliminar para nomear um lado também quando um gate
  *  suspendeu a decisão. */
 export function posicaoDeRegime(saida, conf, gatilhos, leitura) {
-  if (saida.codigo === 'ESPECIAL-SETOR-SEM-CREDITO') return POSICOES.setor_sem_credito;
-  if (saida.modalidade === 'nao_se_aplica') return POSICOES.nao_se_aplica;
+  /* Divergencia de INFORMACAO vale em qualquer posicao, inclusive nas que a
+     arvore fecha por outro motivo: a conclusao "seu setor tem regime proprio"
+     nao depende da aliquota do DAS, mas a aliquota inconsistente continua sendo
+     algo a corrigir, e some da tela se nao for carregada aqui. Furo encontrado
+     por invariante em 16/09/2026, em 170 de 20.000 casos. */
+  const INCONSISTENCIA = ['aliquota_fora_do_estimado'];
+  const inconsistencias = gatilhos.filter(g => INCONSISTENCIA.includes(g))
+    .map(g => PONTO_EM_ABERTO_LEGIVEL[g]).filter(Boolean);
+
+  if (saida.codigo === 'ESPECIAL-SETOR-SEM-CREDITO')
+    return { ...POSICOES.setor_sem_credito, pontosEmAberto: inconsistencias };
+  if (saida.modalidade === 'nao_se_aplica')
+    return { ...POSICOES.nao_se_aplica, pontosEmAberto: inconsistencias };
 
   const emAberto = gatilhos.filter(g => ABRE_PONTO_EM_ABERTO.includes(g));
   // As lacunas críticas já têm rótulo legível; `lacunas` e `lacunasLegiveis` são
@@ -543,13 +566,13 @@ function avaliarArvore(r, d) {
     return { saida: SAIDAS.E, gatilhos };
   }
 
-  gatilhos.push('cadeia_b2b');
+  gatilhos.push('cadeia_entre_empresas');
   if (proximoDoTeto) { gatilhos.push('proximo_do_teto'); return { saida: SAIDAS.D, gatilhos }; }
 
   if (APLICAR_TESTE_DENSIDADE_NO_RAMO_ALTO) {
     if (dc === null) { gatilhos.push('densidade_indefinida'); return { saida: SAIDAS.E_SEM_DADO, gatilhos }; }
     if (dc < CORTES.densidadeCreditoMinima) {
-      gatilhos.push('densidade_insuficiente_b2b');
+      gatilhos.push('densidade_insuficiente_entre_empresas');
       return { saida: SAIDAS.E, gatilhos };
     }
   }
@@ -656,6 +679,127 @@ export function faixaRadar(s) {
 // --------------------------------------------------------------------------
 
 /** Motivo, em linguagem do respondente, pelo qual a decisão ficou suspensa. */
+
+// --------------------------------------------------------------------------
+// A assimetria do prazo — vale em TODA saída, inclusive em "fique no Padrão".
+//
+// Os dois erros não custam igual, e isso não é opinião: optar e se arrepender
+// tem remédio dentro do próprio regulamento; não optar não tem. Quem recebe
+// "fique no Padrão" precisa ficar por ESCOLHA, não por omissão.
+//
+// Premissa validada pela direção em 16/09/2026: o cancelamento até 30/11 anula
+// a opção sem prejuízo do que veio antes. A Resolução CGSN 186/2026 traz o
+// prazo (art. 2º, parágrafo único) e é silente sobre o efeito — a leitura de
+// que a anulação é plena é da casa, e a Auster não é escritório jurídico:
+// [CONFERIR JURÍDICO] antes de tratar como definitiva com cliente.
+// --------------------------------------------------------------------------
+
+export const ASSIMETRIA = {
+  titulo: 'Os dois erros não custam igual',
+  texto: 'Optar em setembro e concluir depois que era melhor ficar tem remédio: '
+    + 'a solicitação pode ser cancelada até 30 de novembro de 2026 e a opção é anulada, '
+    + 'sem efeito nenhum sobre o que veio antes. Deixar setembro passar não tem remédio: '
+    + 'a próxima janela é março de 2027 e só produz efeito no segundo semestre, então o '
+    + 'primeiro semestre inteiro fica decidido por omissão.',
+  paraQuemFica: 'Se a leitura for ficar no Simples Padrão, que seja por escolha: '
+    + 'não fazer nada produz o mesmo resultado, mas sem ninguém ter decidido.',
+  fonte: 'Resolução CGSN 186/2026, art. 2º e parágrafo único; janela seguinte de '
+    + '1º a 31 de março de 2027, com efeito no 2º semestre.',
+};
+
+/** O conflito da saída E, em três partes: o que está em conflito, o que decide
+ *  entre os dois lados, e o que precisa ser levantado.
+ *
+ *  Tudo vem de dado que o motor já tem. Os percentuais saem da FAIXA que a
+ *  pessoa marcou, não do ponto médio que o motor usa por dentro. */
+function conflitoDaSaidaE(r, d, gatilhos, leitura) {
+  /* Rótulo no meio da frase começa em minúscula: a opção é escrita para ficar
+     sozinha ("Até 20%"), e emendada no texto virava "são Até 20%". */
+  const minusculo = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+  const paraEmpresa = minusculo(rotuloDaLinhaMatriz('receitaPorCliente', 'regime_regular', r));
+  const compras = minusculo(rotuloDaOpcao('aquisicoesRegimeRegular', r.aquisicoesRegimeRegular));
+  const margem = minusculo(rotuloDaOpcao('margemLiquida', r.margemLiquida));
+  const ladoDaLeitura = leitura && leitura.chaveModalidade === 'hibrido' ? 'tirar o imposto da guia'
+    : leitura && leitura.chaveModalidade === 'padrao' ? 'ficar no Simples Padrão' : null;
+
+  if (gatilhos.includes('gate_margem_critica')) {
+    return {
+      conflito: 'A sua margem declarada está na faixa mais apertada' + (margem ? ` (${margem})` : '')
+        + '. Com margem assim, a diferença entre os dois caminhos cabe dentro do erro de '
+        + 'qualquer estimativa — e leitura de perfil deixa de ser suficiente'
+        + (ladoDaLeitura ? `, mesmo apontando para ${ladoDaLeitura}` : '') + '.',
+      decide: 'a margem real apurada, e não a faixa informada. Uma margem verdadeira acima '
+        + 'da faixa declarada muda o lado da conta.',
+      levantar: 'a margem real dos últimos doze meses, com a apuração na mão',
+    };
+  }
+
+  if (gatilhos.includes('gate_investimento_relevante')) {
+    return {
+      conflito: 'Você tem investimento relevante previsto. Bem de capital gera crédito, e um '
+        + 'investimento grande sozinho pode virar o lado da conta — para quem apura por fora. '
+        + 'A leitura do seu perfil' + (ladoDaLeitura ? ` aponta para ${ladoDaLeitura}` : ' existe')
+        + ', mas ela não considera esse investimento.',
+      decide: 'quando o investimento acontece, quanto dele gera crédito e em qual semestre '
+        + 'ele cai.',
+      levantar: 'o valor, a data prevista e o regime de quem vai vender o bem',
+    };
+  }
+
+  if (gatilhos.includes('densidade_insuficiente_entre_empresas')) {
+    return {
+      conflito: 'Quase tudo o que você fatura vai para empresas que aproveitam crédito'
+        + (paraEmpresa ? ` (${paraEmpresa} do faturamento)` : '')
+        + ' — elas vão pedir desconto por um crédito que hoje você não entrega, e isso puxa '
+        + 'forte para tirar o imposto da guia. Só que as suas compras que geram crédito são '
+        + (compras ? `${compras} da receita` : 'pouco relevantes')
+        + ', e quem sai da guia única sem crédito próprio passa a recolher sobre quase toda a '
+        + 'receita. Os dois lados da mesma conta apontam em direções opostas.',
+      decide: 'quanto do desconto que os seus clientes vão pedir você consegue não dar, '
+        + 'contra o crédito que passaria a tomar nas suas compras.',
+      levantar: 'as compras do último ano por fornecedor, com o CNPJ de cada um, e a margem real',
+    };
+  }
+
+  if (gatilhos.includes('densidade_insuficiente')) {
+    return {
+      conflito: 'Parte da sua receita vai para empresas que aproveitam crédito'
+        + (paraEmpresa ? ` (${paraEmpresa} do faturamento)` : '')
+        + ', e essa parte puxa para tirar o imposto da guia. Mas a sua margem'
+        + (margem ? ` (${margem})` : '')
+        + ' não dá espaço para absorver o desconto que esses clientes vão pedir, e as suas '
+        + 'compras que geram crédito são '
+        + (compras ? `${compras} da receita` : 'pouco relevantes') + '.',
+      decide: 'se o desconto negociado cabe na margem, ou se o crédito das suas compras paga '
+        + 'a diferença. Nenhum dos dois se resolve por estimativa.',
+      levantar: 'a margem real por linha de receita e as compras do último ano por fornecedor',
+    };
+  }
+
+  return {
+    conflito: 'Há motivo para mudar e motivo para ficar nas mesmas informações.',
+    decide: 'a simulação com os seus números, e não a leitura de perfil.',
+    levantar: 'faturamento por tipo de cliente, compras por fornecedor e margem real',
+  };
+}
+
+/** As três partes do conflito da saída E, já com as lacunas do caso.
+ *
+ *  Devolve estrutura, não parágrafo: a tela e a folha desenham em blocos, e o
+ *  texto corrido é montado a partir daqui para quem consome um campo só —
+ *  planilha e ficha do backoffice. */
+function conflitoDoCaso(r, d, gatilhos, leitura, conf) {
+  const c = conflitoDaSaidaE(r, d, gatilhos, leitura);
+  const lacunas = (conf && conf.lacunasLegiveis || []).filter(Boolean);
+  return {
+    conflito: c.conflito,
+    decide: c.decide,
+    levantar: lacunas.length
+      ? lacunas.slice(0, 3).join(', ') + ', e ' + c.levantar
+      : c.levantar,
+  };
+}
+
 const CONDICAO_DO_GATE = {
   gate_acima_do_teto: 'depende de a empresa continuar no Simples em 2027',
   gate_margem_critica: 'depende de conferir a margem real, hoje abaixo de 5%',
@@ -695,6 +839,11 @@ export function diagnosticar(respostas, hoje = new Date()) {
   const porArvore = avaliarArvore(r, d);
   const { saida, gatilhos } = porGate || porArvore;
   const leitura = leituraPreliminar(porGate, porArvore);
+  /* B5 — a aliquota declarada nao sobrepoe o intervalo da tabela do anexo: uma
+     das tres informacoes esta errada. Vai AQUI, e nao dentro da arvore, porque
+     caso resolvido por gate nunca passa por ela — e era assim que o aviso
+     desaparecia em 283 de 20.000 casos. */
+  if (d.conferenciaDas === 'fora_do_intervalo') gatilhos.push('aliquota_fora_do_estimado');
   if (d.setorComTratamentoProprio) gatilhos.push('setor_com_tratamento_diferenciado');
   if (d.simplesParecelMaisCaro) gatilhos.push('simples_pode_estar_mais_caro');
   if (d.margemAbaixoDaPresuncao) gatilhos.push('margem_abaixo_da_presuncao');
@@ -706,9 +855,25 @@ export function diagnosticar(respostas, hoje = new Date()) {
   if (r.aquisicoesUsoPessoal === 'relevante') gatilhos.push('credito_reduzido_por_uso_pessoal');
   const up = urgenciaEPrazo(saida, r, conf, hoje);
   const posicao = posicaoDeRegime(saida, conf, gatilhos, leitura);
+  /* A saída E deixa de ter um texto só para todo mundo: passa a dizer qual
+     variável está em conflito NESTE caso, o que vira a resposta para cada lado
+     e o que precisa ser levantado. `saida` é constante compartilhada, então
+     devolvo uma cópia — nunca altero o catálogo. */
+  const conflito = saida.codigo === 'E'
+    ? conflitoDoCaso(r, d, gatilhos, leitura, conf) : null;
+  /* O `significa` da saida E vira CHAMADA, nao conteudo: o conflito inteiro e
+     desenhado em tres blocos logo abaixo, na tela e na folha. Repetir o mesmo
+     texto duas vezes na mesma pagina foi defeito encontrado na leitura do PDF
+     de exemplo, antes de qualquer coisa ir ao ar. */
+  const saidaDoCaso = conflito
+    ? { ...saida, significa: 'As suas respostas apontam para lados opostos, e o conflito no '
+        + 'seu caso é específico. Abaixo está qual é ele, o que decide entre os dois lados e '
+        + 'o que precisamos levantar para fechar a conta.' }
+    : saida;
 
   return {
-    saida, gatilhos, posicao, modalidade: MODALIDADES[saida.modalidade],
+    saida: saidaDoCaso, gatilhos, posicao, modalidade: MODALIDADES[saida.modalidade],
+    conflito, assimetria: ASSIMETRIA,
     leituraPreliminar: leitura,
     derivadas: d, confianca: conf,
     urgencia: up.nivel,

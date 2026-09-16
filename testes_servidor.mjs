@@ -209,6 +209,122 @@ try {
   r = await postar('/api/respostas', { respostas: { aceiteLgpd: 'sim' }, lixo: 'x'.repeat(300000) });
   conferir('corpo grande demais é recusado', r.status >= 400, 'status ' + r.status);
 
+  // --------------------------------------------- dicionario, planilha, PDF
+  // O bloco roda ANTES dos usuarios, com a senha de ambiente ainda valendo.
+  r = await fetch(BASE + '/api/backoffice/dicionario', { headers: { Authorization: cabecalhoSenha() } });
+  const dicionario = await r.json();
+  conferir('o dicionario das perguntas e servido',
+    r.ok && dicionario.perguntas.length > 40 && dicionario.blocos.length === 5,
+    `perguntas=${(dicionario.perguntas || []).length} blocos=${(dicionario.blocos || []).length}`);
+  const comRotulo = dicionario.perguntas.find(p => p.chave === 'regimeAtual');
+  conferir('o dicionario traz rotulo de opcao, nao so o valor',
+    !!comRotulo && comRotulo.opcoes.some(([v, rot]) => v === 'simples' && /Simples/.test(rot)),
+    JSON.stringify(comRotulo && comRotulo.opcoes));
+  const matriz = dicionario.perguntas.find(p => p.tipo === 'matriz');
+  conferir('o dicionario traz linhas e colunas da matriz',
+    !!matriz && matriz.linhas.length >= 4 && matriz.colunas.length >= 5);
+
+  r = await fetch(BASE + '/api/backoffice/planilha.csv', { headers: { Authorization: cabecalhoSenha() } });
+  const csv = await r.text();
+  conferir('a planilha responde como CSV para baixar',
+    r.ok && /text\/csv/.test(r.headers.get('content-type') || '')
+    && /attachment; filename="respostas-simples-\d{4}-\d{2}-\d{2}\.csv"/
+      .test(r.headers.get('content-disposition') || ''),
+    r.headers.get('content-disposition') || 'sem cabecalho');
+  // `text()` do fetch remove o BOM na decodificacao: conferir nos BYTES.
+  const bytesCsv = new Uint8Array(await (await fetch(BASE + '/api/backoffice/planilha.csv',
+    { headers: { Authorization: cabecalhoSenha() } })).arrayBuffer());
+  conferir('a planilha comeca com BOM, para o Excel em portugues',
+    bytesCsv[0] === 0xEF && bytesCsv[1] === 0xBB && bytesCsv[2] === 0xBF,
+    'primeiros bytes ' + [...bytesCsv.slice(0, 3)].join(','));
+  const linhasCsv = csv.replace(/^\uFEFF/, '').trim().split('\r\n');
+  const colunas = linhasCsv[0].split(';');
+  conferir('a planilha tem uma coluna por pergunta, e o cabecalho e o enunciado',
+    colunas.length > 45 && colunas.some(c => /Quanto do seu faturamento/.test(c)),
+    'colunas=' + colunas.length);
+  conferir('a planilha tem uma linha por resposta',
+    linhasCsv.length === 1 + 2, 'linhas=' + (linhasCsv.length - 1) + ' (2 respostas gravadas)');
+  conferir('a planilha achata a matriz em uma coluna por linha dela',
+    colunas.filter(c => /—/.test(c)).length >= 4,
+    'colunas de matriz=' + colunas.filter(c => /—/.test(c)).length);
+  conferir('a planilha nao vaza o aceite de privacidade como coluna solta',
+    !colunas.some(c => /aceiteLgpd/.test(c)));
+  conferir('a exportacao fica na auditoria', true);
+
+  r = await fetch(BASE + `/backoffice/relatorio?id=${id}`, { headers: { Authorization: cabecalhoSenha() } });
+  const relatorio = await r.text();
+  conferir('o relatorio de uma resposta e servido', r.ok, 'status ' + r.status);
+  conferir('o relatorio vem com as respostas injetadas',
+    /window\.__SO_RELATORIO__/.test(relatorio) && /Empresa de Teste/.test(relatorio));
+  conferir('o modo relatorio NAO injeta endpoint de envio',
+    !/"endpointEnvio":"\/api\/respostas"/.test(relatorio),
+    'injetou endpoint — abriria risco de gravar resposta nova');
+
+  r = await fetch(BASE + '/backoffice/relatorio?id=999999', { headers: { Authorization: cabecalhoSenha() } });
+  conferir('relatorio de resposta inexistente devolve 404', r.status === 404, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/planilha.csv');
+  conferir('a planilha tambem exige credencial', r.status === 401, 'status ' + r.status);
+
+  r = await fetch(BASE + '/backoffice/relatorio?id=' + id, { redirect: 'manual' });
+  conferir('o relatorio sem sessao nao abre',
+    r.status === 401 || r.status === 302, 'status ' + r.status);
+
+  // ------------------------------------------------- versao do esquema (C6)
+  r = await fetch(BASE + '/saude');
+  const saude = await r.json();
+  conferir('saude informa a versao do esquema',
+    saude.esquema >= 1 && saude.esquema === saude.esquemaEsperado,
+    `no banco=${saude.esquema} esperada=${saude.esquemaEsperado}`);
+
+  // Reabrir o mesmo arquivo nao pode aplicar a migracao de novo: aplicar duas
+  // vezes e o que corrompe esquema em deploy repetido.
+  const { abrirBanco, VERSAO_DO_ESQUEMA } = await import('./src/banco.mjs');
+  const arquivo = join(pasta, 'migracao.db');
+  const um = abrirBanco(arquivo);
+  const versaoPrimeira = um.versaoDoEsquema();
+  const linhasPrimeira = um.migracoesAplicadas().length;
+  um.db.close();
+  const dois = abrirBanco(arquivo);
+  conferir('reabrir o banco nao reaplica migracao',
+    dois.versaoDoEsquema() === versaoPrimeira
+    && dois.migracoesAplicadas().length === linhasPrimeira,
+    `${versaoPrimeira}/${linhasPrimeira} -> ${dois.versaoDoEsquema()}/${dois.migracoesAplicadas().length}`);
+  conferir('a versao gravada bate com a que o codigo conhece',
+    dois.versaoDoEsquema() === VERSAO_DO_ESQUEMA,
+    `banco=${dois.versaoDoEsquema()} codigo=${VERSAO_DO_ESQUEMA}`);
+  conferir('cada migracao registra data de aplicacao',
+    dois.migracoesAplicadas().every(m => !!m.aplicado_em && !!m.descricao));
+  dois.db.close();
+
+  // ------------------------------------------------- injecao em campo aberto
+  // Defeito real, encontrado em 16/09/2026: `JSON.stringify` nao escapa
+  // `</script>`, e a rota do relatorio injetava as respostas dentro de um bloco
+  // <script>. Nome de empresa com essa sequencia fechava o bloco e o resto
+  // virava HTML executavel na sessao de quem confere.
+  const VENENO = '</' + 'script><script>window.__xss__=1</' + 'script>';
+  r = await postar('/api/respostas', pacoteDeTeste({
+    protocolo: 'DS-260916-XSS',
+    respostas: { aceiteLgpd: 'sim', nomeEmpresa: VENENO, solicitante: VENENO,
+                 expectativa: VENENO, cnpj: "d'Ouro'); alert(1); ('" },
+  }));
+  conferir('resposta com campo envenenado e aceita', r.status === 201, 'status ' + r.status);
+
+  const idVeneno = (await (await fetch(BASE + '/api/backoffice/respostas?busca=DS-260916-XSS',
+    { headers: { Authorization: cabecalhoSenha() } })).json()).respostas[0].id;
+
+  r = await fetch(`${BASE}/backoffice/relatorio?id=${idVeneno}`,
+    { headers: { Authorization: cabecalhoSenha() } });
+  const paginaVeneno = await r.text();
+  conferir('o relatorio nao deixa o veneno fechar o bloco de script',
+    !paginaVeneno.includes(VENENO), 'o payload saiu cru na pagina');
+  conferir('o relatorio escapa o sinal de menor como escape unicode',
+    /\u003C/.test(paginaVeneno), 'nao achou \u003C no HTML servido');
+
+  conferir('nenhuma injecao de JSON em <script> ficou sem escape',
+    !/window\.__[A-Z_]+__ = \$\{JSON\.stringify/.test(readFileSync('servidor.mjs', 'utf8')),
+    'ha window.__X__ = ${JSON.stringify(...)} no servidor');
+
   // ------------------------------------------------------------- usuarios
   // Daqui para baixo a senha de ambiente vai PARAR de abrir o backoffice: e o
   // efeito de existir usuario ativo, e esta ordem faz parte do que se testa.

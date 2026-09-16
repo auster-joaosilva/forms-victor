@@ -273,7 +273,20 @@ button:disabled{opacity:.35;cursor:default}
 .bloco-auster{background:#f7fcfd;border-color:var(--acento)}
 .bloco-auster .intro{font-size:var(--t-corpo);color:var(--cinza);margin:0 0 18px;max-width:66ch}
 .acao.auster{border-left:3px solid var(--escuro);background:#fff}
+.conflito .parte{margin-top:16px}
+.conflito .parte b{font-size:11.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--cinza)}
+.conflito .parte p{margin:5px 0 0;font-size:var(--t-destaque);line-height:1.6;max-width:70ch}
+.assimetria{border-left:4px solid var(--claro)}
+.assimetria p{font-size:var(--t-destaque);line-height:1.6;max-width:70ch;margin:10px 0 0}
+.fonte-legal{font-size:11.5px !important;color:#8496a5;font-style:italic;line-height:1.5}
 .aviso{background:#fdf4e3;border:1px solid #f0dcb4;border-radius:8px;padding:13px;font-size:13px;margin-bottom:18px}
+/* Os tres nomes que o publico das palestras usa. Ficam no comeco porque o
+   formulario inteiro depende de a pessoa saber qual deles e qual. */
+.glossario{margin:0 0 22px;padding:14px 16px;border-left:3px solid var(--claro);
+  background:#f7fbfd;border-radius:0 8px 8px 0}
+.glossario dt{font-weight:500;font-size:var(--t-corpo);color:var(--escuro);margin-top:9px}
+.glossario dt:first-child{margin-top:0}
+.glossario dd{margin:2px 0 0;font-size:var(--t-meta);color:var(--cinza);line-height:1.55}
 .ressalva{font-size:var(--t-meta);color:var(--cinza);border-top:1px solid var(--borda);margin-top:26px;padding-top:16px;line-height:1.6}
 
 /* ------------------------------------------------------- relatório para papel
@@ -506,6 +519,21 @@ const CONFIG = {
 
 const CONVITE = typeof window !== 'undefined' ? (window.__CONVITE__ || null) : null;
 
+/** Data de referencia do diagnostico.
+ *
+ *  Vem do SERVIDOR quando a pagina e servida. Relogio errado no computador de
+ *  quem responde mudaria a contagem de uma janela legal — e computador com data
+ *  errada nao e raro. Sem servidor (arquivo aberto por duplo clique), cai no
+ *  relogio local, que e o unico que existe ali. */
+function agora() {
+  const doServidor = typeof window !== 'undefined' ? window.__HOJE__ : null;
+  if (doServidor) {
+    const d = new Date(doServidor);
+    if (!isNaN(d)) return d;
+  }
+  return new Date();
+}
+
 let etapa = 1;
 const TOTAL = BLOCOS.length;
 // Entre o formulário e o resultado entra uma tela de conferência. Vale sobretudo
@@ -526,7 +554,10 @@ const MOSTRAR_PAINEL_DO_MOTOR = (() => {
   catch { return false; }
 })();
 
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Escapa tambem o apostrofo: atributo em aspas simples e lugar legitimo no
+   codigo, e sem isto um nome de empresa com ' escaparia do atributo. */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /** Devolve {chave: mensagem} dos problemas da etapa. Vazio = pode avançar. */
 function problemasNaEtapa(numeroBloco) {
@@ -693,6 +724,8 @@ function renderFormulario() {
       <h1>${esc(bloco.titulo)}</h1>
       <p class="etapa-conta">Etapa ${etapa} de ${TOTAL}</p>
       ${bloco.aviso ? `<div class="escopo">${esc(bloco.aviso)}</div>` : ''}
+      ${bloco.glossario ? `<dl class="glossario">${bloco.glossario.map(([termo, oQue]) =>
+        `<dt>${esc(termo)}</dt><dd>${esc(oQue)}</dd>`).join('')}</dl>` : ''}
       ${perguntas.map(campo).join('')}
       <div class="rodape-nav">
         <button class="secundario" ${etapa === 1 ? 'disabled' : ''} onclick="window.voltar()">Voltar</button>
@@ -877,7 +910,7 @@ function enviarAoConcluir() {
 }
 
 window.enviarRespostas = async () => {
-  const d = diagnosticar(R, new Date());
+  const d = diagnosticar(R, agora());
   const pacote = pacoteDeEnvio(d);
 
   if (CONFIG.endpointEnvio) {
@@ -966,7 +999,7 @@ function resumoDoPreenchimento() {
 }
 
 function renderRelatorio() {
-  const d = diagnosticar(R, new Date());
+  const d = diagnosticar(R, agora());
   const plano = planoDeAcao(R, d);
   const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 
@@ -1023,6 +1056,28 @@ function renderRelatorio() {
       <section class="folha">
         <h2>O que isso significa para a sua empresa</h2>
         <p class="corrido">${esc(d.saida.significa)}</p>
+
+        ${d.conflito ? `<h3>Por que a sua conta não fecha sozinha</h3>
+          <p class="corrido"><b>O que está em conflito:</b> ${esc(d.conflito.conflito)}</p>
+          <p class="corrido"><b>O que decide entre os dois lados:</b> ${esc(d.conflito.decide)}</p>
+          <p class="corrido"><b>O que precisamos levantar:</b> ${esc(d.conflito.levantar)}.</p>` : ''}
+
+        <h3>${esc(d.assimetria.titulo)}</h3>
+        <p class="corrido">${esc(d.assimetria.texto)}</p>
+        ${d.posicao.familia === 'padrao'
+          ? `<p class="corrido"><b>${esc(d.assimetria.paraQuemFica)}</b></p>` : ''}
+        <p class="doc-fonte">${esc(d.assimetria.fonte)}</p>
+
+        <h3>Os três nomes, para não confundir</h3>
+        <table class="prazos"><tbody>
+          <tr><td>Simples Original</td><th>o que você tem hoje, e que vale até o fim de
+            2026.</th></tr>
+          <tr><td>Simples Padrão</td><th>a partir de 2027, com IBS e CBS continuando dentro do
+            DAS.</th></tr>
+          <tr><td>Simples Híbrido</td><th>a partir de 2027, com IBS e CBS saindo da guia e
+            apurados pelo regime regular — é o que as palestras chamaram de
+            <b>tirar o imposto da guia</b>.</th></tr>
+        </tbody></table>
         ${d.posicao.familia === 'hibrido' || d.posicao.familia === 'a_definir' ? `
           <h3>Os prazos, em ordem</h3>
           <table class="prazos"><tbody>
@@ -1096,7 +1151,7 @@ function renderRelatorio() {
 }
 
 function renderResultado() {
-  const d = diagnosticar(R, new Date());
+  const d = diagnosticar(R, agora());
   const plano = planoDeAcao(R, d);
   enviarAoConcluir();
 
@@ -1263,6 +1318,20 @@ function renderResultado() {
         <div class="t">Conclusão definitiva exige simulação individual com dados contábeis e de negócios reais.</div>
         <div class="c">Nada aqui substitui a apuração. Este relatório organiza o cenário e
         aponta onde olhar; a decisão se fecha com os números do seu negócio na mesa.</div></div></div>
+
+      ${d.conflito ? `<div class="cartao conflito">
+        <h2 style="margin-top:0">Por que a sua conta não fecha sozinha</h2>
+        <div class="parte"><b>O que está em conflito</b><p>${esc(d.conflito.conflito)}</p></div>
+        <div class="parte"><b>O que decide entre os dois lados</b><p>${esc(d.conflito.decide)}</p></div>
+        <div class="parte"><b>O que precisamos levantar</b><p>${esc(d.conflito.levantar)}.</p></div>
+      </div>` : ''}
+
+      <div class="cartao assimetria">
+        <h2 style="margin-top:0">${esc(d.assimetria.titulo)}</h2>
+        <p>${esc(d.assimetria.texto)}</p>
+        ${d.posicao.familia === 'padrao' ? `<p><b>${esc(d.assimetria.paraQuemFica)}</b></p>` : ''}
+        <p class="fonte-legal">${esc(d.assimetria.fonte)}</p>
+      </div>
 
       <ul class="notas-pe">
         <li>Análise preliminar, sem valor jurídico, baseada exclusivamente nas respostas fornecidas.</li>
@@ -1618,9 +1687,25 @@ if (typeof window !== 'undefined' && window.__PREVIO__) {
   }
 }
 
-const rascunho = lerRascunho();
-if (rascunho) R._retomavel = rascunho;
-desenhar();
+/* Modo relatório: o backoffice abre esta mesma página com as respostas de uma
+ * resposta já recebida, para imprimir o plano de ação em PDF. Reaproveita o
+ * desenho que o portal já faz — sem segunda implementação para divergir.
+ *
+ * Aqui NÃO se salva rascunho e NÃO se envia nada: é leitura de algo que já foi
+ * respondido e gravado. Sem esta guarda, abrir a ficha de um cliente no
+ * backoffice criaria uma resposta nova em nome dele. */
+if (typeof window !== 'undefined' && window.__SO_RELATORIO__) {
+  for (const [chave, valor] of Object.entries(window.__SO_RELATORIO__)) R[chave] = valor;
+  if (window.__PROTOCOLO__) R._protocolo = window.__PROTOCOLO__;
+  R._envio = 'enviado';          // veio do banco: já está recebido
+  etapa = RELATORIO;
+  desenharDoTopo();
+  document.title = nomeDoArquivo();
+} else {
+  const rascunho = lerRascunho();
+  if (rascunho) R._retomavel = rascunho;
+  desenhar();
+}
 </script>
 </body>
 </html>

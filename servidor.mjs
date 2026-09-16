@@ -20,7 +20,9 @@
 import { createServer } from 'node:http';
 import { createHmac, scryptSync, timingSafeEqual } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
-import { abrirBanco, senhaConfere, MINIMO_SENHA } from './src/banco.mjs';
+import { abrirBanco, senhaConfere, MINIMO_SENHA,
+         VERSAO_DO_ESQUEMA } from './src/banco.mjs';
+import { PERGUNTAS, BLOCOS } from './src/perguntas.js';
 
 const HORAS_DE_SESSAO = 12;
 
@@ -103,6 +105,27 @@ function pagina(arquivo) {
   return texto;
 }
 
+/** JSON para dentro de um bloco <script>.
+ *
+ *  `JSON.stringify` escapa aspas, mas NAO escapa `</script>`: um nome de empresa
+ *  com essa sequencia fecha o bloco e o resto do valor passa a ser HTML
+ *  executavel, na sessao de quem esta conferindo — que tem acesso a todos os
+ *  dados de cliente e ao painel de usuarios. Defeito encontrado por teste de
+ *  injecao em 16/09/2026, na propria rota do relatorio.
+ *
+ *  Escapa `<`, `>` e `&` como escape unicode, que e valido dentro de string
+ *  JavaScript e nao muda o valor lido pelo `JSON.parse` implicito do literal.
+ *  U+2028 e U+2029 entram porque sao quebra de linha para o parser de JS. */
+function jsonParaScript(valor) {
+  return JSON.stringify(valor)
+    .replace(/</g, '\\u003C')
+    .replace(/>/g, '\\u003E')
+    .replace(/&/g, '\\u0026')
+    // U+2028 e U+2029 sao quebra de linha para o interpretador de JS.
+    .replace(new RegExp(String.fromCharCode(0x2028), 'g'), '\\u2028')
+    .replace(new RegExp(String.fromCharCode(0x2029), 'g'), '\\u2029');
+}
+
 /** Injeta a configuração de publicação no HTML servido. O arquivo em disco
  *  continua funcionando por duplo clique, com os campos vazios; quem decide o
  *  endpoint é o servidor, não o arquivo. */
@@ -114,7 +137,9 @@ function portalConfigurado(convite) {
     emailPrivacidade: 'contato@austercontabil.com.br',
   };
   const trechos = [
-    `Object.assign(CONFIG, ${JSON.stringify(config)});`,
+    `Object.assign(CONFIG, ${jsonParaScript(config)});`,
+    // A data de referencia vem daqui, nao do relogio de quem responde.
+    `window.__HOJE__ = ${jsonParaScript(new Date().toISOString())};`,
   ];
   if (convite) {
     // Pré-preenchimento do convite: só o que a casa já sabe da empresa.
@@ -122,11 +147,122 @@ function portalConfigurado(convite) {
     if (convite.nome_empresa) previo.nomeEmpresa = convite.nome_empresa;
     if (convite.cnpj) previo.cnpj = convite.cnpj;
     trechos.push(
-      `window.__CONVITE__ = ${JSON.stringify(convite.token)};`,
-      `window.__PREVIO__ = ${JSON.stringify(previo)};`,
+      `window.__CONVITE__ = ${jsonParaScript(convite.token)};`,
+      `window.__PREVIO__ = ${jsonParaScript(previo)};`,
     );
   }
   return html.replace('/*__PUBLICACAO__*/', trechos.join('\n'));
+}
+
+// --------------------------------------------------------------------------
+// Dicionário do formulário
+//
+// O backoffice é servido como arquivo estático e não conhece o esquema das
+// perguntas. Sem isto a ficha mostrava `pesoMercadorias: de_20_40` — chave e
+// valor crus —, o que faz uma resposta completa parecer incompleta. O
+// dicionário é a mesma fonte que gera o formulário, sem duplicar nada.
+// --------------------------------------------------------------------------
+
+const DICIONARIO = {
+  blocos: BLOCOS.map(b => ({ numero: b.numero, titulo: b.titulo })),
+  perguntas: PERGUNTAS.map(p => ({
+    chave: p.chave,
+    bloco: p.bloco,
+    tipo: p.tipo,
+    enunciado: p.enunciado,
+    opcoes: (p.opcoes || []).map(o => [o.valor, o.rotulo]),
+    linhas: (p.linhas || []).map(l => [l.chave, l.rotulo]),
+    colunas: (p.colunas || []).map(c => [c.valor, c.rotulo]),
+  })),
+};
+
+const PERGUNTA_POR_CHAVE = new Map(DICIONARIO.perguntas.map(p => [p.chave, p]));
+
+/** Rótulo legível de um valor. Valor desconhecido volta como está: inventar
+ *  rótulo esconderia divergência entre formulário e resposta antiga. */
+function rotuloDe(chave, valor) {
+  const p = PERGUNTA_POR_CHAVE.get(chave);
+  if (!p || valor === undefined || valor === null || valor === '') return '';
+  if (p.tipo === 'matriz' && typeof valor === 'object') {
+    return p.linhas.map(([lc, lr]) => {
+      const v = valor[lc];
+      const rot = (p.colunas.find(([cv]) => cv === v) || [null, v])[1];
+      return v ? `${lr}: ${rot}` : null;
+    }).filter(Boolean).join(' · ');
+  }
+  const achado = p.opcoes.find(([v]) => v === valor);
+  return achado ? achado[1] : String(valor);
+}
+
+/** Planilha agrupada: uma linha por resposta, uma coluna por pergunta.
+ *
+ *  Ponto e vírgula e BOM porque o destino é Excel em português: vírgula quebra
+ *  a coluna e, sem BOM, acento vira caractere estranho. A matriz é achatada em
+ *  uma coluna por linha dela — planilha não aceita valor dentro de valor. */
+function planilhaDeRespostas(linhas) {
+  const colunasMatriz = [];
+  for (const p of DICIONARIO.perguntas) {
+    if (p.tipo === 'matriz') for (const [lc, lr] of p.linhas) colunasMatriz.push([p.chave, lc, lr]);
+  }
+  const perguntasSimples = DICIONARIO.perguntas.filter(p => p.tipo !== 'matriz');
+
+  const cabecalho = [
+    'protocolo', 'recebido em', 'situacao', 'tratado por', 'tratado em',
+    'origem', 'empresa', 'CNPJ', 'quem respondeu', 'e-mail', 'telefone',
+    'versao', 'saida', 'posicao', 'certeza', 'urgencia', 'confianca',
+    'pontos em aberto', 'campos em nao sei', 'gatilhos', 'quem respondeu no QSA',
+    ...perguntasSimples.map(p => `${p.bloco}. ${p.enunciado}`),
+    ...colunasMatriz.map(([chave, , lr]) => {
+      const p = PERGUNTA_POR_CHAVE.get(chave);
+      return `${p.bloco}. ${p.enunciado} — ${lr}`;
+    }),
+  ];
+
+  const celula = v => {
+    const texto = v === undefined || v === null ? '' : String(v);
+    return /[";\n]/.test(texto) ? '"' + texto.replace(/"/g, '""') + '"' : texto;
+  };
+
+  const corpo = linhas.map(l => {
+    const pacote = l.pacote || {};
+    const d = pacote.diagnostico || {};
+    const r = pacote.respostas || {};
+    return [
+      l.protocolo, l.recebido_em, l.situacao, l.tratado_por || '', l.tratado_em || '',
+      l.token_convite ? 'convite ' + l.token_convite : 'link aberto',
+      r.nomeEmpresa || '', r.cnpj || '', r.solicitante || '', r.email || '', r.telefone || '',
+      pacote.versaoFormulario || '', d.saida || '', d.posicao || '', d.certeza || '',
+      d.urgencia || '', d.confianca || '',
+      (d.pontosEmAberto || []).join(' | '),
+      (d.lacunas || []).join(' | '),
+      (d.gatilhos || []).join(' | '),
+      pacote.solicitanteNoQsa === true ? 'sim' : pacote.solicitanteNoQsa === false ? 'nao' : '',
+      ...perguntasSimples.map(p => p.tipo === 'textarea' || p.tipo === 'texto'
+        || p.tipo === 'email' || p.tipo === 'telefone' || p.tipo === 'cnpj'
+        ? (r[p.chave] ?? '') : rotuloDe(p.chave, r[p.chave])),
+      ...colunasMatriz.map(([chave, lc]) => {
+        const valor = (r[chave] || {})[lc];
+        const p = PERGUNTA_POR_CHAVE.get(chave);
+        return valor ? (p.colunas.find(([cv]) => cv === valor) || [null, valor])[1] : '';
+      }),
+    ].map(celula).join(';');
+  });
+
+  return '\uFEFF' + [cabecalho.map(celula).join(';'), ...corpo].join('\r\n') + '\r\n';
+}
+
+/** Serve o portal com as respostas de UMA resposta já carregadas e a tela do
+ *  relatório aberta. Reaproveita o desenho que o portal já faz — o backoffice
+ *  não precisa aprender a montar as seis folhas de novo. */
+function relatorioDaResposta(r) {
+  const html = pagina('./portal.html');
+  if (!html) return null;
+  const pacote = r.pacote || {};
+  return html.replace('/*__PUBLICACAO__*/', [
+    `window.__HOJE__ = ${jsonParaScript(new Date().toISOString())};`,
+    `window.__SO_RELATORIO__ = ${jsonParaScript(pacote.respostas || {})};`,
+    `window.__PROTOCOLO__ = ${jsonParaScript(r.protocolo || '')};`,
+  ].join('\n'));
 }
 
 // --------------------------------------------------------------------------
@@ -318,13 +454,13 @@ const servidor = createServer(async (req, res) => {
     }
 
     // --------------------------------------------------------- backoffice
-    if (rota === '/backoffice' || rota.startsWith('/api/backoffice')) {
+    if (rota.startsWith('/backoffice') || rota.startsWith('/api/backoffice')) {
       const sessao = autenticado(req);
       if (!sessao) {
         // Pessoa vai para a tela de entrada; script continua recebendo 401 com
         // o desafio HTTP. Sem isso o navegador abriria a caixa que causou toda
         // a confusão, ou o `fetch` do painel abriria caixa no meio da tela.
-        return req.method === 'GET' && rota === '/backoffice'
+        return req.method === 'GET' && rota.startsWith('/backoffice')
           ? responder(res, 302, '', 'text/plain', { Location: '/entrar' })
           : pedirSenha(res);
       }
@@ -335,8 +471,8 @@ const servidor = createServer(async (req, res) => {
         const html = pagina('./backoffice.html');
         if (!html) return responder(res, 500, 'backoffice.html não encontrado.');
         return responder(res, 200, html.replace('/*__QUEM__*/',
-          `window.__QUEM__ = ${JSON.stringify(quem)};\n`
-          + `window.__PAPEL__ = ${JSON.stringify(sessao.papel)};\n`
+          `window.__QUEM__ = ${jsonParaScript(quem)};\n`
+          + `window.__PAPEL__ = ${jsonParaScript(sessao.papel)};\n`
           + `window.__IMPLANTACAO__ = ${sessao.implantacao === true};`),
           'text/html; charset=utf-8', { 'Cache-Control': 'no-store' });
       }
@@ -419,6 +555,32 @@ const servidor = createServer(async (req, res) => {
         return json(res, r.ok ? 200 : 409, r);
       }
 
+      if (req.method === 'GET' && rota === '/api/backoffice/dicionario') {
+        return json(res, 200, { ok: true, ...DICIONARIO });
+      }
+
+      if (req.method === 'GET' && rota === '/api/backoffice/planilha.csv') {
+        const linhas = banco.respostas({
+          situacao: url.searchParams.get('situacao') || undefined,
+          busca: url.searchParams.get('busca') || undefined,
+          limite: 5000,
+        }).map(l => banco.resposta(l.id));
+        banco.registrar(quem, 'planilha_exportada', String(linhas.length));
+        const hoje = new Date().toISOString().slice(0, 10);
+        return responder(res, 200, planilhaDeRespostas(linhas),
+          'text/csv; charset=utf-8',
+          { 'Content-Disposition': `attachment; filename="respostas-simples-${hoje}.csv"` });
+      }
+
+      if (req.method === 'GET' && rota === '/backoffice/relatorio') {
+        const r = banco.resposta(Number(url.searchParams.get('id')));
+        if (!r) return responder(res, 404, 'Resposta não encontrada.', 'text/plain; charset=utf-8');
+        const html = relatorioDaResposta(r);
+        return html
+          ? responder(res, 200, html, 'text/html; charset=utf-8', { 'Cache-Control': 'no-store' })
+          : responder(res, 500, 'portal.html não encontrado. Rode node construir.mjs.');
+      }
+
       if (req.method === 'GET' && rota === '/api/backoffice/eventos') {
         return json(res, 200, { ok: true, eventos: banco.eventos() });
       }
@@ -428,7 +590,12 @@ const servidor = createServer(async (req, res) => {
 
     // ------------------------------------------------------------- saúde
     if (req.method === 'GET' && rota === '/saude') {
-      return json(res, 200, { ok: true, agora: new Date().toISOString() });
+      // A versao do esquema entra aqui porque e o que se confere DEPOIS de um
+      // deploy, sem precisar abrir o backoffice.
+      return json(res, 200, {
+        ok: true, agora: new Date().toISOString(),
+        esquema: banco.versaoDoEsquema(), esquemaEsperado: VERSAO_DO_ESQUEMA,
+      });
     }
 
     return responder(res, 404, 'Não encontrado.', 'text/plain; charset=utf-8');

@@ -97,12 +97,65 @@ export const PAPEIS = ['admin', 'equipe'];
 export const REGRA_USUARIO = /^[a-z][a-z0-9._-]{2,31}$/;
 export const MINIMO_SENHA = 12;
 
+/* ------------------------------------------------------------------------
+ * Migrações do esquema.
+ *
+ * Por que existir: `CREATE TABLE IF NOT EXISTS` sabe criar e não sabe mudar.
+ * Acrescentar uma coluna num banco que já tem resposta de cliente, sem
+ * versionamento, viraria alteração manual no servidor — sem rastro, sem volta e
+ * sem como saber em que estado cada ambiente está.
+ *
+ * Regras: migração nunca se edita depois de publicada, só se acrescenta outra
+ * adiante; cada uma roda uma vez, dentro de transação; e a versão fica gravada
+ * com a data. Banco criado antes deste controle é ADOTADO na versão 1, porque o
+ * esquema inicial é idempotente — aplicar a 1 sobre ele não faz nada.
+ * --------------------------------------------------------------------------- */
+
+const MIGRACOES = [
+  { versao: 1,
+    descricao: 'esquema inicial: convites, respostas, eventos, usuarios',
+    aplicar: db => db.exec(ESQUEMA) },
+];
+
+/** Versão máxima que este código conhece. */
+export const VERSAO_DO_ESQUEMA = MIGRACOES[MIGRACOES.length - 1].versao;
+
+function migrar(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS esquema (
+    versao      INTEGER PRIMARY KEY,
+    descricao   TEXT,
+    aplicado_em TEXT NOT NULL
+  )`);
+  const atual = db.prepare('SELECT MAX(versao) AS v FROM esquema').get().v || 0;
+  const pendentes = MIGRACOES.filter(m => m.versao > atual);
+
+  for (const m of pendentes) {
+    db.exec('BEGIN');
+    try {
+      m.aplicar(db);
+      db.prepare('INSERT INTO esquema (versao, descricao, aplicado_em) VALUES (?, ?, ?)')
+        .run(m.versao, m.descricao, new Date().toISOString());
+      db.exec('COMMIT');
+    } catch (erro) {
+      db.exec('ROLLBACK');
+      // Subir com esquema pela metade é pior que não subir: a aplicação
+      // atenderia cliente gravando no que sobrou.
+      throw new Error(`migração ${m.versao} falhou e foi desfeita: ${erro.message}`);
+    }
+  }
+  return { de: atual, para: VERSAO_DO_ESQUEMA, aplicadas: pendentes.length };
+}
+
 export function abrirBanco(caminho) {
   try { mkdirSync(dirname(caminho), { recursive: true }); } catch { }
   const db = new DatabaseSync(caminho);
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA foreign_keys = ON');
-  db.exec(ESQUEMA);
+  const passo = migrar(db);
+  if (passo.aplicadas) {
+    console.log(`esquema do banco: ${passo.de} -> ${passo.para} `
+      + `(${passo.aplicadas} migração${passo.aplicadas > 1 ? 'ões' : ''} aplicada)`);
+  }
   return criarApi(db);
 }
 
@@ -239,6 +292,18 @@ function criarApi(db) {
 
     eventos(limite = 200) {
       return db.prepare('SELECT * FROM eventos ORDER BY id DESC LIMIT ?').all(limite);
+    },
+
+    /** Versão do esquema gravada NO BANCO — não a que o código conhece. As duas
+     *  divergirem é o sintoma de imagem antiga servindo banco novo, ou o
+     *  contrário. */
+    versaoDoEsquema() {
+      const l = db.prepare('SELECT MAX(versao) AS v FROM esquema').get();
+      return l && l.v || 0;
+    },
+
+    migracoesAplicadas() {
+      return db.prepare('SELECT versao, descricao, aplicado_em FROM esquema ORDER BY versao').all();
     },
 
     // ------------------------------------------------------------- usuários

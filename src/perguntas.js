@@ -38,7 +38,12 @@ export const TIPOS_CLIENTE = [
 
 export const BLOCOS = [
   { numero: 1, titulo: 'Identificação',
-    aviso: 'Este diagnóstico é para quem já é optante do Simples Nacional. A escolha entre recolher IBS e CBS na guia única ou por fora só existe nesse caso.' },
+    aviso: 'Este diagnóstico é para quem já é optante do Simples Nacional. A escolha entre recolher IBS e CBS na guia única ou por fora só existe nesse caso.',
+    glossario: [
+      ['Simples Original', 'o que você tem hoje, e que vale até o fim de 2026'],
+      ['Simples Padrão', 'a partir de 2027, com IBS e CBS continuando dentro do DAS'],
+      ['Simples Híbrido', 'a partir de 2027, com IBS e CBS saindo da guia e apurados pelo regime regular — é o que as palestras chamaram de tirar o imposto da guia'],
+    ] },
   { numero: 2, titulo: 'Enquadramento atual' },
   { numero: 3, titulo: 'Perfil da receita' },
   { numero: 4, titulo: 'Estrutura de custos' },
@@ -289,7 +294,7 @@ export const PERGUNTAS = [  { chave: 'versaoFormulario', bloco: 1,
   // sob contrato (NBS 1.0301.31/32/39 ou CNAE 5620-1/01); II — produtos e bebidas
   // não alcoólicas adquiridos de terceiros sem preparo no estabelecimento;
   // III — bebidas alcoólicas, ainda que preparadas ali.
-  // Sem esta pergunta, uma empresa de refeições coletivas B2B caía no gate de
+  // Sem esta pergunta, uma empresa de refeições coletivas para empresa caía no gate de
   // "crédito vedado ao adquirente" — e a operação dela está FORA do regime.
   { chave: 'composicaoAlimentacao', essencial: true, bloco: 2,
     enunciado: 'Como se divide o que você vende?',
@@ -606,3 +611,22 @@ export function ehCaminhoCurto(r) {
 export const CAMPOS_DO_MOTOR = PERGUNTAS
   .filter(p => p.alimenta.includes('modalidade') || p.alimenta.includes('elegibilidade'))
   .map(p => p.chave);
+
+/** Rótulo da opção que a pessoa marcou. Serve para o texto falar na LINGUAGEM
+ *  da resposta ("acima de 80%") em vez do número interno que o motor deriva
+ *  dela (90) — dizer 90% a quem respondeu uma faixa é precisão falsa. */
+export function rotuloDaOpcao(chave, valor) {
+  const p = PERGUNTAS.find(x => x.chave === chave);
+  if (!p || valor === undefined || valor === null) return null;
+  const o = (p.opcoes || []).find(x => x.valor === valor);
+  return o ? o.rotulo : null;
+}
+
+/** Rótulo de uma linha da matriz de clientes ("acima de 80%"). */
+export function rotuloDaLinhaMatriz(chave, linha, respostas) {
+  const p = PERGUNTAS.find(x => x.chave === chave);
+  const valor = ((respostas || {})[chave] || {})[linha];
+  if (!p || !valor) return null;
+  const c = (p.colunas || []).find(x => x.valor === valor);
+  return c ? c.rotulo : null;
+}

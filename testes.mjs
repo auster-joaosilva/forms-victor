@@ -169,6 +169,20 @@ function afirmaMerito(texto) {
 const VAZAMENTO_DE_JARGAO = /\b(?:[a-z]+[A-Z][a-zA-Z]*|[a-z]{3,}_[a-z_]{3,})\b/;
 
 const INVARIANTES = [
+  { nome: 'aliquota fora do estimado nunca passa calada',
+    porque: 'informar a nominal achando que e a efetiva contamina a comparacao inteira; '
+      + 'se o motor detecta a divergencia, ela TEM de virar ponto em aberto na tela',
+    checar: ({ d }) => d.derivadas.conferenciaDas !== 'fora_do_intervalo'
+      || (d.posicao.pontosEmAberto || []).some(x => x.includes('alíquota efetiva')) },
+
+  { nome: 'aliquota fora do estimado nunca fecha a decisao de regime',
+    porque: 'decisao fechada sobre numero que o proprio motor sabe estar errado. '
+      + 'Setor com regime proprio e caso fora de escopo ficam de fora: a conclusao '
+      + 'deles nao depende da aliquota do DAS, so o aviso e que tem de aparecer',
+    checar: ({ d }) => d.derivadas.conferenciaDas !== 'fora_do_intervalo'
+      || !['padrao', 'hibrido', 'a_definir'].includes(d.posicao.familia)
+      || d.posicao.certeza !== 'fechada' },
+
   { nome: 'diagnostico nao lanca',
     porque: 'preenchimento valido travando o motor = tela branca para o respondente',
     checar: ({ d }) => !!d },

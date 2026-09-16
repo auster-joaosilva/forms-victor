@@ -273,6 +273,12 @@ button:disabled{opacity:.35;cursor:default}
 .bloco-auster{background:#f7fcfd;border-color:var(--acento)}
 .bloco-auster .intro{font-size:var(--t-corpo);color:var(--cinza);margin:0 0 18px;max-width:66ch}
 .acao.auster{border-left:3px solid var(--escuro);background:#fff}
+.conflito .parte{margin-top:16px}
+.conflito .parte b{font-size:11.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--cinza)}
+.conflito .parte p{margin:5px 0 0;font-size:var(--t-destaque);line-height:1.6;max-width:70ch}
+.assimetria{border-left:4px solid var(--claro)}
+.assimetria p{font-size:var(--t-destaque);line-height:1.6;max-width:70ch;margin:10px 0 0}
+.fonte-legal{font-size:11.5px !important;color:#8496a5;font-style:italic;line-height:1.5}
 .aviso{background:#fdf4e3;border:1px solid #f0dcb4;border-radius:8px;padding:13px;font-size:13px;margin-bottom:18px}
 /* Os tres nomes que o publico das palestras usa. Ficam no comeco porque o
    formulario inteiro depende de a pessoa saber qual deles e qual. */
@@ -1051,6 +1057,17 @@ function renderRelatorio() {
         <h2>O que isso significa para a sua empresa</h2>
         <p class="corrido">${esc(d.saida.significa)}</p>
 
+        ${d.conflito ? `<h3>Por que a sua conta não fecha sozinha</h3>
+          <p class="corrido"><b>O que está em conflito:</b> ${esc(d.conflito.conflito)}</p>
+          <p class="corrido"><b>O que decide entre os dois lados:</b> ${esc(d.conflito.decide)}</p>
+          <p class="corrido"><b>O que precisamos levantar:</b> ${esc(d.conflito.levantar)}.</p>` : ''}
+
+        <h3>${esc(d.assimetria.titulo)}</h3>
+        <p class="corrido">${esc(d.assimetria.texto)}</p>
+        ${d.posicao.familia === 'padrao'
+          ? `<p class="corrido"><b>${esc(d.assimetria.paraQuemFica)}</b></p>` : ''}
+        <p class="doc-fonte">${esc(d.assimetria.fonte)}</p>
+
         <h3>Os três nomes, para não confundir</h3>
         <table class="prazos"><tbody>
           <tr><td>Simples Original</td><th>o que você tem hoje, e que vale até o fim de
@@ -1301,6 +1318,20 @@ function renderResultado() {
         <div class="t">Conclusão definitiva exige simulação individual com dados contábeis e de negócios reais.</div>
         <div class="c">Nada aqui substitui a apuração. Este relatório organiza o cenário e
         aponta onde olhar; a decisão se fecha com os números do seu negócio na mesa.</div></div></div>
+
+      ${d.conflito ? `<div class="cartao conflito">
+        <h2 style="margin-top:0">Por que a sua conta não fecha sozinha</h2>
+        <div class="parte"><b>O que está em conflito</b><p>${esc(d.conflito.conflito)}</p></div>
+        <div class="parte"><b>O que decide entre os dois lados</b><p>${esc(d.conflito.decide)}</p></div>
+        <div class="parte"><b>O que precisamos levantar</b><p>${esc(d.conflito.levantar)}.</p></div>
+      </div>` : ''}
+
+      <div class="cartao assimetria">
+        <h2 style="margin-top:0">${esc(d.assimetria.titulo)}</h2>
+        <p>${esc(d.assimetria.texto)}</p>
+        ${d.posicao.familia === 'padrao' ? `<p><b>${esc(d.assimetria.paraQuemFica)}</b></p>` : ''}
+        <p class="fonte-legal">${esc(d.assimetria.fonte)}</p>
+      </div>
 
       <ul class="notas-pe">
         <li>Análise preliminar, sem valor jurídico, baseada exclusivamente nas respostas fornecidas.</li>

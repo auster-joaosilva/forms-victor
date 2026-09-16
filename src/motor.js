@@ -9,7 +9,7 @@
  */
 
 import { PERGUNTAS, EIXOS_RADAR, perguntasVisiveis, pontoMedioFaixa,
-         linhasMatrizSemResposta } from './perguntas.js';
+         linhasMatrizSemResposta, rotuloDaOpcao, rotuloDaLinhaMatriz } from './perguntas.js';
 import { estimarAliquotaDas, conferirAliquotaDeclarada } from './simples.js';
 
 // --------------------------------------------------------------------------
@@ -679,6 +679,127 @@ export function faixaRadar(s) {
 // --------------------------------------------------------------------------
 
 /** Motivo, em linguagem do respondente, pelo qual a decisão ficou suspensa. */
+
+// --------------------------------------------------------------------------
+// A assimetria do prazo — vale em TODA saída, inclusive em "fique no Padrão".
+//
+// Os dois erros não custam igual, e isso não é opinião: optar e se arrepender
+// tem remédio dentro do próprio regulamento; não optar não tem. Quem recebe
+// "fique no Padrão" precisa ficar por ESCOLHA, não por omissão.
+//
+// Premissa validada pela direção em 16/09/2026: o cancelamento até 30/11 anula
+// a opção sem prejuízo do que veio antes. A Resolução CGSN 186/2026 traz o
+// prazo (art. 2º, parágrafo único) e é silente sobre o efeito — a leitura de
+// que a anulação é plena é da casa, e a Auster não é escritório jurídico:
+// [CONFERIR JURÍDICO] antes de tratar como definitiva com cliente.
+// --------------------------------------------------------------------------
+
+export const ASSIMETRIA = {
+  titulo: 'Os dois erros não custam igual',
+  texto: 'Optar em setembro e concluir depois que era melhor ficar tem remédio: '
+    + 'a solicitação pode ser cancelada até 30 de novembro de 2026 e a opção é anulada, '
+    + 'sem efeito nenhum sobre o que veio antes. Deixar setembro passar não tem remédio: '
+    + 'a próxima janela é março de 2027 e só produz efeito no segundo semestre, então o '
+    + 'primeiro semestre inteiro fica decidido por omissão.',
+  paraQuemFica: 'Se a leitura for ficar no Simples Padrão, que seja por escolha: '
+    + 'não fazer nada produz o mesmo resultado, mas sem ninguém ter decidido.',
+  fonte: 'Resolução CGSN 186/2026, art. 2º e parágrafo único; janela seguinte de '
+    + '1º a 31 de março de 2027, com efeito no 2º semestre.',
+};
+
+/** O conflito da saída E, em três partes: o que está em conflito, o que decide
+ *  entre os dois lados, e o que precisa ser levantado.
+ *
+ *  Tudo vem de dado que o motor já tem. Os percentuais saem da FAIXA que a
+ *  pessoa marcou, não do ponto médio que o motor usa por dentro. */
+function conflitoDaSaidaE(r, d, gatilhos, leitura) {
+  /* Rótulo no meio da frase começa em minúscula: a opção é escrita para ficar
+     sozinha ("Até 20%"), e emendada no texto virava "são Até 20%". */
+  const minusculo = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+  const paraEmpresa = minusculo(rotuloDaLinhaMatriz('receitaPorCliente', 'regime_regular', r));
+  const compras = minusculo(rotuloDaOpcao('aquisicoesRegimeRegular', r.aquisicoesRegimeRegular));
+  const margem = minusculo(rotuloDaOpcao('margemLiquida', r.margemLiquida));
+  const ladoDaLeitura = leitura && leitura.chaveModalidade === 'hibrido' ? 'tirar o imposto da guia'
+    : leitura && leitura.chaveModalidade === 'padrao' ? 'ficar no Simples Padrão' : null;
+
+  if (gatilhos.includes('gate_margem_critica')) {
+    return {
+      conflito: 'A sua margem declarada está na faixa mais apertada' + (margem ? ` (${margem})` : '')
+        + '. Com margem assim, a diferença entre os dois caminhos cabe dentro do erro de '
+        + 'qualquer estimativa — e leitura de perfil deixa de ser suficiente'
+        + (ladoDaLeitura ? `, mesmo apontando para ${ladoDaLeitura}` : '') + '.',
+      decide: 'a margem real apurada, e não a faixa informada. Uma margem verdadeira acima '
+        + 'da faixa declarada muda o lado da conta.',
+      levantar: 'a margem real dos últimos doze meses, com a apuração na mão',
+    };
+  }
+
+  if (gatilhos.includes('gate_investimento_relevante')) {
+    return {
+      conflito: 'Você tem investimento relevante previsto. Bem de capital gera crédito, e um '
+        + 'investimento grande sozinho pode virar o lado da conta — para quem apura por fora. '
+        + 'A leitura do seu perfil' + (ladoDaLeitura ? ` aponta para ${ladoDaLeitura}` : ' existe')
+        + ', mas ela não considera esse investimento.',
+      decide: 'quando o investimento acontece, quanto dele gera crédito e em qual semestre '
+        + 'ele cai.',
+      levantar: 'o valor, a data prevista e o regime de quem vai vender o bem',
+    };
+  }
+
+  if (gatilhos.includes('densidade_insuficiente_entre_empresas')) {
+    return {
+      conflito: 'Quase tudo o que você fatura vai para empresas que aproveitam crédito'
+        + (paraEmpresa ? ` (${paraEmpresa} do faturamento)` : '')
+        + ' — elas vão pedir desconto por um crédito que hoje você não entrega, e isso puxa '
+        + 'forte para tirar o imposto da guia. Só que as suas compras que geram crédito são '
+        + (compras ? `${compras} da receita` : 'pouco relevantes')
+        + ', e quem sai da guia única sem crédito próprio passa a recolher sobre quase toda a '
+        + 'receita. Os dois lados da mesma conta apontam em direções opostas.',
+      decide: 'quanto do desconto que os seus clientes vão pedir você consegue não dar, '
+        + 'contra o crédito que passaria a tomar nas suas compras.',
+      levantar: 'as compras do último ano por fornecedor, com o CNPJ de cada um, e a margem real',
+    };
+  }
+
+  if (gatilhos.includes('densidade_insuficiente')) {
+    return {
+      conflito: 'Parte da sua receita vai para empresas que aproveitam crédito'
+        + (paraEmpresa ? ` (${paraEmpresa} do faturamento)` : '')
+        + ', e essa parte puxa para tirar o imposto da guia. Mas a sua margem'
+        + (margem ? ` (${margem})` : '')
+        + ' não dá espaço para absorver o desconto que esses clientes vão pedir, e as suas '
+        + 'compras que geram crédito são '
+        + (compras ? `${compras} da receita` : 'pouco relevantes') + '.',
+      decide: 'se o desconto negociado cabe na margem, ou se o crédito das suas compras paga '
+        + 'a diferença. Nenhum dos dois se resolve por estimativa.',
+      levantar: 'a margem real por linha de receita e as compras do último ano por fornecedor',
+    };
+  }
+
+  return {
+    conflito: 'Há motivo para mudar e motivo para ficar nas mesmas informações.',
+    decide: 'a simulação com os seus números, e não a leitura de perfil.',
+    levantar: 'faturamento por tipo de cliente, compras por fornecedor e margem real',
+  };
+}
+
+/** As três partes do conflito da saída E, já com as lacunas do caso.
+ *
+ *  Devolve estrutura, não parágrafo: a tela e a folha desenham em blocos, e o
+ *  texto corrido é montado a partir daqui para quem consome um campo só —
+ *  planilha e ficha do backoffice. */
+function conflitoDoCaso(r, d, gatilhos, leitura, conf) {
+  const c = conflitoDaSaidaE(r, d, gatilhos, leitura);
+  const lacunas = (conf && conf.lacunasLegiveis || []).filter(Boolean);
+  return {
+    conflito: c.conflito,
+    decide: c.decide,
+    levantar: lacunas.length
+      ? lacunas.slice(0, 3).join(', ') + ', e ' + c.levantar
+      : c.levantar,
+  };
+}
+
 const CONDICAO_DO_GATE = {
   gate_acima_do_teto: 'depende de a empresa continuar no Simples em 2027',
   gate_margem_critica: 'depende de conferir a margem real, hoje abaixo de 5%',
@@ -734,9 +855,25 @@ export function diagnosticar(respostas, hoje = new Date()) {
   if (r.aquisicoesUsoPessoal === 'relevante') gatilhos.push('credito_reduzido_por_uso_pessoal');
   const up = urgenciaEPrazo(saida, r, conf, hoje);
   const posicao = posicaoDeRegime(saida, conf, gatilhos, leitura);
+  /* A saída E deixa de ter um texto só para todo mundo: passa a dizer qual
+     variável está em conflito NESTE caso, o que vira a resposta para cada lado
+     e o que precisa ser levantado. `saida` é constante compartilhada, então
+     devolvo uma cópia — nunca altero o catálogo. */
+  const conflito = saida.codigo === 'E'
+    ? conflitoDoCaso(r, d, gatilhos, leitura, conf) : null;
+  /* O `significa` da saida E vira CHAMADA, nao conteudo: o conflito inteiro e
+     desenhado em tres blocos logo abaixo, na tela e na folha. Repetir o mesmo
+     texto duas vezes na mesma pagina foi defeito encontrado na leitura do PDF
+     de exemplo, antes de qualquer coisa ir ao ar. */
+  const saidaDoCaso = conflito
+    ? { ...saida, significa: 'As suas respostas apontam para lados opostos, e o conflito no '
+        + 'seu caso é específico. Abaixo está qual é ele, o que decide entre os dois lados e '
+        + 'o que precisamos levantar para fechar a conta.' }
+    : saida;
 
   return {
-    saida, gatilhos, posicao, modalidade: MODALIDADES[saida.modalidade],
+    saida: saidaDoCaso, gatilhos, posicao, modalidade: MODALIDADES[saida.modalidade],
+    conflito, assimetria: ASSIMETRIA,
     leituraPreliminar: leitura,
     derivadas: d, confianca: conf,
     urgencia: up.nivel,

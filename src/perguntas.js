@@ -611,3 +611,22 @@ export function ehCaminhoCurto(r) {
 export const CAMPOS_DO_MOTOR = PERGUNTAS
   .filter(p => p.alimenta.includes('modalidade') || p.alimenta.includes('elegibilidade'))
   .map(p => p.chave);
+
+/** Rótulo da opção que a pessoa marcou. Serve para o texto falar na LINGUAGEM
+ *  da resposta ("acima de 80%") em vez do número interno que o motor deriva
+ *  dela (90) — dizer 90% a quem respondeu uma faixa é precisão falsa. */
+export function rotuloDaOpcao(chave, valor) {
+  const p = PERGUNTAS.find(x => x.chave === chave);
+  if (!p || valor === undefined || valor === null) return null;
+  const o = (p.opcoes || []).find(x => x.valor === valor);
+  return o ? o.rotulo : null;
+}
+
+/** Rótulo de uma linha da matriz de clientes ("acima de 80%"). */
+export function rotuloDaLinhaMatriz(chave, linha, respostas) {
+  const p = PERGUNTAS.find(x => x.chave === chave);
+  const valor = ((respostas || {})[chave] || {})[linha];
+  if (!p || !valor) return null;
+  const c = (p.colunas || []).find(x => x.valor === valor);
+  return c ? c.rotulo : null;
+}

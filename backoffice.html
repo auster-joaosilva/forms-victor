@@ -133,7 +133,10 @@ const porImplantacao = window.__IMPLANTACAO__ === true;
 const ehAdmin = papel === 'admin';
 document.getElementById('quem').textContent = quem;
 
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Escapa tambem o apostrofo: atributo em aspas simples e lugar legitimo no
+   codigo, e sem isto um nome de empresa com ' escaparia do atributo. */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const conteudo = document.getElementById('conteudo');
 const ficha = document.getElementById('ficha');
 const corpoFicha = document.getElementById('corpoFicha');
@@ -147,6 +150,40 @@ const quando = iso => {
   const d = new Date(iso);
   return isNaN(d) ? '—' : d.toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
 };
+
+/* Dicionário do formulário: enunciado de cada pergunta e rótulo de cada opção.
+   Vem do servidor, que o monta da MESMA fonte que gera o formulário. Sem ele a
+   ficha mostrava `pesoMercadorias: de_20_40`, e resposta completa parecia
+   incompleta. */
+let DICIONARIO = null;
+
+async function carregarDicionario() {
+  if (DICIONARIO) return DICIONARIO;
+  try {
+    DICIONARIO = await pedir('/api/backoffice/dicionario');
+    DICIONARIO.porChave = new Map(DICIONARIO.perguntas.map(p => [p.chave, p]));
+  } catch (e) {
+    DICIONARIO = { perguntas: [], blocos: [], porChave: new Map() };
+  }
+  return DICIONARIO;
+}
+
+/** Valor legível. Valor fora do dicionário volta como está — inventar rótulo
+ *  esconderia divergência entre o formulário de hoje e uma resposta antiga. */
+function valorLegivel(pergunta, valor) {
+  if (valor === undefined || valor === null || valor === '') return '—';
+  if (pergunta && pergunta.tipo === 'matriz' && typeof valor === 'object') {
+    return pergunta.linhas.map(([lc, lr]) => {
+      const v = valor[lc];
+      if (!v) return null;
+      const col = pergunta.colunas.find(([cv]) => cv === v);
+      return `${esc(lr)}: <b>${esc(col ? col[1] : v)}</b>`;
+    }).filter(Boolean).join('<br>');
+  }
+  if (typeof valor === 'object') return esc(JSON.stringify(valor));
+  const achado = pergunta && pergunta.opcoes.find(([v]) => v === valor);
+  return esc(achado ? achado[1] : valor);
+}
 
 async function pedir(rota, opcoes) {
   const r = await fetch(rota, opcoes);
@@ -192,6 +229,7 @@ async function verRespostas() {
           `<option value="${k}" ${filtroSituacao === k ? 'selected' : ''}>${v}</option>`).join('')}
       </select>
       <button class="claro" onclick="aplicarFiltro()">Filtrar</button>
+      <button class="claro" onclick="baixarPlanilha()">Baixar planilha (CSV)</button>
     </div>
     ${respostas.length ? `<table><thead><tr>
       <th>Empresa</th><th>Quem respondeu</th><th>Posição</th><th>Urgência</th>
@@ -221,10 +259,32 @@ window.abrirFicha = async id => {
   const item = (rot, val) => `<div class="item"><div class="rot">${rot}</div>
     <div class="val">${esc(val ?? '—')}</div></div>`;
 
-  const respostasLista = Object.entries(r)
-    .filter(([k]) => k !== 'aceiteLgpd')
-    .map(([k, v]) => `<div><span class="k">${esc(k)}</span>
-      <span class="v">${esc(typeof v === 'object' ? JSON.stringify(v) : v)}</span></div>`).join('');
+  const dic = await carregarDicionario();
+  // Ordem do formulário, não ordem de chave: é assim que a pessoa respondeu, e
+  // é assim que a equipe confere.
+  const respondidas = new Set(Object.keys(r).filter(k => k !== 'aceiteLgpd'));
+  const porBloco = (dic.blocos || []).map(b => {
+    const linhas = (dic.perguntas || [])
+      .filter(p => p.bloco === b.numero && respondidas.has(p.chave))
+      .map(p => {
+        respondidas.delete(p.chave);
+        return `<div><span class="k">${esc(p.enunciado)}</span>
+          <span class="v">${valorLegivel(p, r[p.chave])}</span></div>`;
+      }).join('');
+    return linhas ? `<h4 style="margin:14px 0 6px;font-size:11.5px;text-transform:uppercase;
+      letter-spacing:.9px;color:var(--cinza)">${esc(b.numero + '. ' + b.titulo)}</h4>
+      <div class="respostas">${linhas}</div>` : '';
+  }).join('');
+  // Sobrou alguma chave que o formulário de hoje não conhece? Mostra do mesmo
+  // jeito: resposta antiga não pode desaparecer da ficha por mudança de esquema.
+  const orfas = [...respondidas].map(k => `<div><span class="k">${esc(k)}</span>
+    <span class="v">${valorLegivel(null, r[k])}</span></div>`).join('');
+  const respostasLista = porBloco
+    + (orfas ? `<h4 style="margin:14px 0 6px;font-size:11.5px;text-transform:uppercase;
+        letter-spacing:.9px;color:#7a5200">fora do formulário atual</h4>
+        <div class="respostas">${orfas}</div>` : '');
+
+  const total = Object.keys(r).filter(k => k !== 'aceiteLgpd').length;
 
   const qsa = resposta.solicitante_no_qsa;
   corpoFicha.innerHTML = `
@@ -259,8 +319,11 @@ window.abrirFicha = async id => {
     : qsa === 'sim' ? `<div class="alerta-qsa" style="background:#eaf5ee;border-color:#bfe0cc">
       Quem respondeu consta do quadro de sócios.</div>` : ''}
 
-    <h3>Todas as respostas</h3>
-    <div class="respostas">${respostasLista || '<div>(vazio)</div>'}</div>
+    <h3>Todas as respostas <span style="font-weight:300;color:var(--cinza);
+      font-size:var(--t-meta)">${total} campos respondidos</span></h3>
+    ${respostasLista || '<div class="respostas"><div>(vazio)</div></div>'}
+    <p class="nota" style="margin:10px 0 0">O formulário tem perguntas condicionais: o que não se
+    aplicava ao caso não foi perguntado, e por isso não aparece aqui.</p>
 
     <h3>Tratamento interno</h3>
     <textarea id="nota" placeholder="O que foi conferido, o que ficou pendente, o que combinar com o cliente">${esc(resposta.nota_interna || '')}</textarea>
@@ -271,10 +334,20 @@ window.abrirFicha = async id => {
       ${Object.entries(SITUACOES).map(([k, v]) =>
         `<button class="${resposta.situacao === k ? '' : 'claro'}"
           onclick="tratar(${resposta.id}, '${k}')">${v}</button>`).join('')}
+      <button class="claro" onclick="window.open('/backoffice/relatorio?id=${resposta.id}', '_blank')">Abrir plano de ação (PDF)</button>
       <button class="claro" onclick="tratar(${resposta.id}, null)">Só salvar a nota</button>
       <button class="claro" onclick="document.getElementById('ficha').close()">Fechar</button>
     </div>`;
   ficha.showModal();
+};
+
+/** A planilha sai com o MESMO filtro que está na tela: exportar tudo enquanto a
+ *  pessoa olha um recorte devolveria outra coisa do que ela vê. */
+window.baixarPlanilha = () => {
+  const q = new URLSearchParams();
+  if (filtroSituacao) q.set('situacao', filtroSituacao);
+  if (filtroBusca) q.set('busca', filtroBusca);
+  window.location = '/api/backoffice/planilha.csv' + (q.toString() ? '?' + q : '');
 };
 
 window.tratar = async (id, situacao) => {

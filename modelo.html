@@ -526,7 +526,10 @@ const MOSTRAR_PAINEL_DO_MOTOR = (() => {
   catch { return false; }
 })();
 
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Escapa tambem o apostrofo: atributo em aspas simples e lugar legitimo no
+   codigo, e sem isto um nome de empresa com ' escaparia do atributo. */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /** Devolve {chave: mensagem} dos problemas da etapa. Vazio = pode avançar. */
 function problemasNaEtapa(numeroBloco) {
@@ -1618,9 +1621,25 @@ if (typeof window !== 'undefined' && window.__PREVIO__) {
   }
 }
 
-const rascunho = lerRascunho();
-if (rascunho) R._retomavel = rascunho;
-desenhar();
+/* Modo relatório: o backoffice abre esta mesma página com as respostas de uma
+ * resposta já recebida, para imprimir o plano de ação em PDF. Reaproveita o
+ * desenho que o portal já faz — sem segunda implementação para divergir.
+ *
+ * Aqui NÃO se salva rascunho e NÃO se envia nada: é leitura de algo que já foi
+ * respondido e gravado. Sem esta guarda, abrir a ficha de um cliente no
+ * backoffice criaria uma resposta nova em nome dele. */
+if (typeof window !== 'undefined' && window.__SO_RELATORIO__) {
+  for (const [chave, valor] of Object.entries(window.__SO_RELATORIO__)) R[chave] = valor;
+  if (window.__PROTOCOLO__) R._protocolo = window.__PROTOCOLO__;
+  R._envio = 'enviado';          // veio do banco: já está recebido
+  etapa = RELATORIO;
+  desenharDoTopo();
+  document.title = nomeDoArquivo();
+} else {
+  const rascunho = lerRascunho();
+  if (rascunho) R._retomavel = rascunho;
+  desenhar();
+}
 </script>
 </body>
 </html>

@@ -11,9 +11,14 @@
  * ser devolvido assinado", aqui se lê "esta confirmação deve ser concluída" —
  * o meio mudou, o prazo não.
  *
- * Regra igual à das migrações: texto publicado não se edita. Mudou o texto,
- * sobe a versão — senão o resumo guardado deixa de casar com o que se exibe, e
- * a prova perde o sentido.
+ * Regra igual à das migrações, com um marco claro: **a versão congela quando o
+ * texto vai ao ar**. Enquanto a V4 só existe aqui e em revisão, pode mudar à
+ * vontade — ninguém aceitou nada. Publicada, não se edita mais: mudou o texto,
+ * sobe a versão, senão o resumo guardado deixa de casar com o que se exibe e
+ * quem aceitou a versão anterior apareceria aderindo a outro documento.
+ *
+ * A V3 é o termo em papel, que já circulou. Por isso ela não voltou a mudar: o
+ * que mudou virou V4.
  */
 
 export const TERMO = {
@@ -74,11 +79,14 @@ export const TERMO = {
         + 'com efeito em preço, margem e carga tributária;'],
       ['Assessoria em negociações', 'apoio nas tratativas com clientes e fornecedores '
         + 'sobre tomada e repasse de créditos de CBS.'],
-      // Acrescentado a pedido de Victor em 24/09/2026. A redação é proposta —
-      // é escopo comercial, e quem fecha o texto de escopo é a Auster.
-      ['Assessoria e acompanhamento contínuo', 'acompanhamento das obrigações e da '
-        + 'apuração decorrentes da modalidade escolhida, com reavaliação da decisão '
-        + 'nas janelas seguintes.'],
+      // Acrescentado a pedido de Victor em 24/09/2026, e corrigido por ele: a
+      // primeira redação prometia acompanhar "a apuração e as obrigações", que
+      // já são escopo do contrato de contabilidade. Dizer isso em voz alta
+      // evita o mal-entendido de estar cobrando de novo pelo que já se presta.
+      ['Assessoria e acompanhamento contínuo', 'os serviços acima reunidos em plano '
+        + 'personalizado, somando apoio para dúvidas do dia a dia e acompanhamento '
+        + 'das rotinas da empresa. A apuração e as obrigações acessórias seguem no '
+        + 'escopo do contrato de contabilidade.'],
     ],
     pergunta: 'A empresa tem interesse em receber proposta para esses serviços.',
   },

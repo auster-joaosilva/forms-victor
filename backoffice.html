@@ -21,10 +21,24 @@
 body{margin:0;background:var(--fundo);color:var(--tinta);
   font-family:Kanit,Montserrat,Raleway,Arial,sans-serif;font-weight:300;
   font-size:var(--t-corpo);line-height:1.55}
-header{background:var(--escuro);color:#fff;padding:18px 24px;display:flex;
-  justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px}
-header h1{margin:0;font-size:var(--t-titulo);font-weight:300}
+header{background:var(--escuro);color:#fff;padding:16px 24px;display:flex;
+  justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
+/* A marca vem da variante NEGATIVA: o cabeçalho é #052C47, e a positiva
+   sumiria no fundo. Inverter a negativa por filtro, não — leva #70CEEC a
+   marrom. */
+header .marca{display:flex;align-items:center;gap:16px}
+header .logo{height:38px;width:auto;display:block}
+header h1{margin:0;font-size:var(--t-titulo);font-weight:300;line-height:1.2}
+header .linha-fina{color:var(--claro);font-size:var(--t-meta);margin-top:2px}
+header .acoes-cabecalho{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 header .quem{color:var(--claro);font-size:var(--t-meta)}
+header .sair{padding:9px 16px;border:1px solid var(--borda-forte);border-radius:7px;
+  background:#fff;color:var(--escuro);text-decoration:none;font-size:var(--t-meta)}
+@media (max-width:640px){
+  header{padding:14px 16px}
+  header .logo{height:30px}
+  header .linha-fina{display:none}
+}
 main{max-width:1180px;margin:0 auto;padding:22px 20px 60px}
 .abas{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
 .aba{padding:9px 16px;border:1px solid var(--borda-forte);border-radius:7px;background:#fff;
@@ -101,13 +115,18 @@ dialog::backdrop{background:rgba(5,44,71,.45)}
 </head>
 <body>
 <header>
-  <h1>Conferência do Diagnóstico</h1>
-  <div class="quem" id="quem"></div>
-  <button class="claro" id="minhaSenha" onclick="window.trocarMinhaSenha()"
-          style="margin-top:8px">Trocar minha senha</button>
-  <a class="claro" href="/sair" style="margin-top:8px;display:inline-block;padding:9px 16px;
-     border:1px solid var(--borda-forte);border-radius:7px;background:#fff;color:var(--escuro);
-     text-decoration:none;font-size:var(--t-meta)">Sair</a>
+  <div class="marca">
+    <img class="logo" alt="auster" src="data:image/png;base64,/*__LOGO__*/">
+    <div>
+      <h1>Conferência</h1>
+      <div class="linha-fina">Diagnóstico e termos de opção — Simples Nacional 2027</div>
+    </div>
+  </div>
+  <div class="acoes-cabecalho">
+    <span class="quem" id="quem"></span>
+    <button class="claro" id="minhaSenha" onclick="window.trocarMinhaSenha()">Trocar minha senha</button>
+    <a class="sair" href="/sair">Sair</a>
+  </div>
 </header>
 <main>
   <div class="abas">
@@ -241,7 +260,7 @@ async function verRespostas() {
     ${respostas.length ? `<table><thead><tr>
       <th>Empresa</th><th>Quem respondeu</th><th>Posição</th><th>Urgência</th>
       <th>Recebido</th><th>Situação</th></tr></thead><tbody>${linhas}</tbody></table>`
-      : '<div class="vazio">Nenhuma resposta com esse filtro.</div>'}
+      : '<div class="vazio">Nenhuma resposta com esse filtro. Limpe a busca ou escolha outra situação.</div>'}
     <p class="nota">A conferência existe porque a resposta é autodeclarada. Antes de virar
     trabalho, alguém da casa precisa olhar o CNPJ, o anexo e a alíquota — e é nesta tela que
     isso fica registrado, com autor e data.</p>`;
@@ -437,7 +456,7 @@ async function verAdesoes() {
     ${adesoes.length ? `<table><thead><tr>
       <th>Empresa</th><th>Quem confirmou</th><th>Modalidade</th><th>Confirmado</th>
       <th>Situação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>`
-      : '<div class="vazio">Nenhuma adesão com esse filtro.</div>'}
+      : '<div class="vazio">Nenhuma adesão com esse filtro. Limpe a busca ou escolha outra modalidade.</div>'}
     <p class="nota">Confirmar aqui não protocola nada: a opção continua sendo feita à mão no
     Portal do Simples Nacional, empresa por empresa. Esta tela serve para ninguém ficar de fora
     e para registrar quem fez.</p>`;
@@ -473,7 +492,7 @@ window.marcarAdesao = async (id, situacao) => {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, situacao }),
   }).then(x => x.json());
-  if (!r.ok) { alert('Não deu: ' + (r.motivo || r.erro || 'erro')); return; }
+  if (!r.ok) { alert('Não consegui mudar a situação: ' + (r.motivo || r.erro || 'erro desconhecido') + '. Tente de novo.'); return; }
   verAdesoes();
 };
 
@@ -503,21 +522,21 @@ async function verConvites() {
 
   conteudo.innerHTML = `
     <h2 style="margin:0 0 4px;font-size:var(--t-titulo);font-weight:400">Um link por cliente</h2>
-    <p class="nota" style="margin:0 0 18px">O link de convite já chega com o nome e o CNPJ
-    preenchidos, e amarra a resposta ao cliente a quem foi enviado. Para divulgação aberta —
-    redes sociais, por exemplo — use o endereço sem <code>?c=</code>: a resposta entra como
-    "link aberto". O botão <b>Adesão</b> copia o link do <b>termo de opção</b>, para quem já
-    decidiu e só precisa formalizar.</p>
+    <p class="nota" style="margin:0 0 18px">Cada link chega com o nome e o CNPJ preenchidos e
+    amarra o que o cliente responder a quem você enviou. Depois de gerar, há dois botões:
+    <b>Diagnóstico</b> abre o formulário; <b>Adesão</b> abre o termo de opção, para quem já
+    decidiu e só precisa formalizar. Para divulgação aberta, use o endereço sem
+    <code>?c=</code> — aí a resposta entra como "link aberto".</p>
     <div class="filtros">
-      <input type="text" id="nomeEmpresa" placeholder="Nome da empresa">
+      <input type="text" id="nomeEmpresa" placeholder="Razão social">
       <input type="text" id="cnpj" placeholder="CNPJ" style="min-width:170px">
-      <input type="text" id="email" placeholder="E-mail de contato">
+      <input type="text" id="email" placeholder="E-mail de contato (opcional)">
       <button onclick="criarConvite()">Gerar link</button>
     </div>
     ${convites.length ? `<table><thead><tr>
       <th>Cliente</th><th>Link</th><th>Aberturas</th><th>Respostas</th><th>Criado</th><th></th>
       </tr></thead><tbody>${linhas}</tbody></table>`
-      : '<div class="vazio">Nenhum convite gerado ainda.</div>'}
+      : '<div class="vazio">Nenhum convite ainda. Preencha a razão social ou o CNPJ acima e gere o primeiro link.</div>'}
     ${base ? '' : `<p class="nota"><b>AUSTER_ENDERECO_PUBLICO não está definido</b> no ambiente,
       então os links saem sem domínio. Defina no painel do Dokploy para poder copiar e enviar.</p>`}`;
 }
@@ -540,12 +559,12 @@ window.criarConvite = async () => {
 };
 
 window.apagarConvite = async token => {
-  if (!confirm('Apagar este convite? O link para de funcionar.')) return;
+  if (!confirm('Apagar este convite? O link para de funcionar na hora, inclusive para quem já o recebeu.')) return;
   const r = await fetch('/api/backoffice/convites/apagar', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token }),
   });
-  if (!r.ok) { const d = await r.json(); alert('Não deu: ' + (d.motivo || 'erro')); }
+  if (!r.ok) { const d = await r.json(); alert('Não consegui apagar o convite: ' + (d.motivo || 'erro desconhecido') + '.'); }
   verConvites();
 };
 
@@ -566,7 +585,7 @@ async function verEventos() {
       ${eventos.map(e => `<tr><td>${quando(e.quando)}</td><td>${esc(e.quem || '—')}</td>
         <td>${esc(e.o_que)}</td><td>${esc(e.referencia || '—')}</td>
         <td style="font-size:var(--t-meta);color:var(--cinza)">${esc(e.detalhe || '')}</td></tr>`).join('')}
-      </tbody></table>` : '<div class="vazio">Nada registrado ainda.</div>'}`;
+      </tbody></table>` : '<div class="vazio">Nada registrado ainda. Os eventos aparecem aqui conforme a equipe entra, gera convites e trata respostas.</div>'}`;
 }
 
 // ------------------------------------------------------------------ usuarios

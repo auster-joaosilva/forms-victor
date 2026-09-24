@@ -166,6 +166,23 @@ function portalConfigurado(convite) {
 const RESUMO_TERMO = createHash('sha256')
   .update(JSON.stringify(TERMO), 'utf8').digest('hex');
 
+/* A marca do backoffice.
+ *
+ * O portal e a página de adesão recebem os logos no build, porque são montados
+ * a partir de um modelo. O backoffice não é montado — é servido como está —,
+ * então o logo entra aqui, do mesmo arquivo versionado. Variante NEGATIVA: o
+ * cabeçalho é azul escuro.
+ *
+ * Falhar na leitura não derruba o servidor: cabeçalho sem imagem é feio, mas
+ * uma equipe sem backoffice às vésperas do prazo é pior. */
+let LOGO_NEGATIVA = '';
+try {
+  LOGO_NEGATIVA = readFileSync('./ativos/logo-contabil-negativa.b64', 'utf8').trim();
+} catch {
+  console.error('aviso: ativos/logo-contabil-negativa.b64 nao foi lido; o backoffice');
+  console.error('sobe sem a marca no cabecalho.');
+}
+
 const soDigitos = v => String(v || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
 
 /** Endereço de origem de quem confirmou — o IP que vai para a prova.
@@ -653,7 +670,7 @@ const servidor = createServer(async (req, res) => {
       if (req.method === 'GET' && rota === '/backoffice') {
         const html = pagina('./backoffice.html');
         if (!html) return responder(res, 500, 'backoffice.html não encontrado.');
-        return responder(res, 200, html.replace('/*__QUEM__*/',
+        return responder(res, 200, html.replace('/*__LOGO__*/', LOGO_NEGATIVA).replace('/*__QUEM__*/',
           `window.__QUEM__ = ${jsonParaScript(quem)};\n`
           + `window.__PAPEL__ = ${jsonParaScript(sessao.papel)};\n`
           + `window.__IMPLANTACAO__ = ${sessao.implantacao === true};`),

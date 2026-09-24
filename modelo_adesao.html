@@ -123,13 +123,19 @@ button:disabled{opacity:.45;cursor:default}
 @media print{
   /* Margem no elemento, e não só em @page: a caixa de impressão do Chrome
      sobrepõe @page, e foi assim que o relatório saiu rente à borda. */
-  @page{ margin:10mm; }
+  @page{ margin:8mm; }
   body{background:#fff;font-size:10pt}
-  header{box-shadow:none;padding:0 0 8mm;background:#fff}
+  header{box-shadow:none;padding:0 0 7mm;background:#fff}
   header .logo.tela{display:none}
   header .logo.papel{display:block;margin:0 auto}
   header .sub{display:none}
-  main{max-width:none;padding:0 2mm}
+  main{max-width:none;padding:0}
+  /* A margem de verdade mora AQUI, e não só em `@page`: a caixa de impressão do
+     Chrome sobrepõe `@page` quando a pessoa escolhe "margens: nenhuma", e aí o
+     texto encosta na borda do papel. Com padding na folha, o pior caso ainda
+     são 14 mm de lateral — medida de leitura, com sobra para grampo. */
+  .folha{padding:0 14mm}
+  header{padding-left:14mm;padding-right:14mm}
   #tela,#recibo{display:none !important}
   .doc{display:block !important}
   .termo .caixa{background:#f6f6f6;border:1px solid #bbb;border-left:3px solid #666}

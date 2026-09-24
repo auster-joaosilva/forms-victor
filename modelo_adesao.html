@@ -50,9 +50,13 @@ li{margin-bottom:6px;max-width:70ch}
 @media (max-width:620px){ .campos{grid-template-columns:1fr} }
 .campo label{display:block;font-size:var(--t-meta);color:var(--cinza);margin-bottom:4px;
   text-transform:uppercase;letter-spacing:.7px}
-.campo input{width:100%;padding:10px 12px;border:1px solid var(--borda-forte);border-radius:7px;
-  font-family:inherit;font-size:var(--t-corpo);font-weight:300;background:#fff;color:var(--tinta)}
-.campo input:focus{outline:2px solid var(--acento);outline-offset:1px}
+.campo input,.campo select{width:100%;padding:10px 12px;border:1px solid var(--borda-forte);
+  border-radius:7px;font-family:inherit;font-size:var(--t-corpo);font-weight:300;
+  background:#fff;color:var(--tinta)}
+.campo input:focus,.campo select:focus{outline:2px solid var(--acento);outline-offset:1px}
+/* O CNPJ vem primeiro e é curto: esticá-lo na largura da folha faria parecer
+   que cabe um nome de empresa ali. */
+.campo input.curto{max-width:260px}
 .campo .erro{color:var(--alto);font-size:var(--t-meta);min-height:17px;display:block;margin-top:3px}
 .campo.largo{grid-column:1/-1}
 .aviso-cnpj{font-size:var(--t-meta);color:var(--medio);min-height:17px}
@@ -66,6 +70,11 @@ li{margin-bottom:6px;max-width:70ch}
   border-radius:8px;padding:14px 16px;margin:12px 0}
 .termo .caixa .t{font-weight:500;margin-bottom:8px}
 .termo .fonte{font-size:11.5px;color:#8496a5;font-style:italic}
+/* Texto justificado, como documento. `hyphens` é o que impede o rio de espaços
+   em branco: sem hifenização, justificar coluna estreita abre buracos entre as
+   palavras. A página declara lang="pt-BR", então o Chrome hifeniza em português. */
+.termo p,.termo li,.declaracao,.opcao .texto,.opcao .parte,
+.folha .prova,.sub-escolha label span{text-align:justify;hyphens:auto}
 /* Contorno de 3:1 porque é controle, não divisória (WCAG 1.4.11). */
 .opcao{display:block;border:1px solid var(--borda-forte);border-radius:9px;padding:16px 18px;
   margin-bottom:12px;cursor:pointer;background:#fff;transition:border-color .12s,background .12s}
@@ -173,8 +182,13 @@ const R = {
 };
 let enviando = false, recibo = null, avisoCnpj = '';
 
-const CAMPOS_DE_ERRO = ['eEmpresa', 'eCnpj', 'eRep', 'eCpf', 'eCargo', 'eEmail',
+const CAMPOS_DE_ERRO = ['eCnpj', 'eEmpresa', 'eRep', 'eCargo', 'eCpf', 'eEmail',
                         'eTel', 'eModalidade', 'eSemManifestacao', 'eDeclara'];
+
+/** Cargo em lista fechada: é campo de documento, e "sócio", "socio", "Sócio-adm"
+ *  e "SÓCIO ADM" digitados à mão viram quatro cargos diferentes na planilha. */
+const CARGOS = ['Sócio', 'Sócio Administrador', 'Administrador não Sócio', 'Diretor',
+                'Empresário', 'Gerente', 'Administrativo', 'Financeiro', 'Consultor'];
 
 /** CPF com os dois dígitos verificadores.
  *
@@ -245,29 +259,33 @@ function desenhar() {
       legal da empresa, ou ter poderes para decidir por ela.</p>
     <div class="campos">
       <div class="campo largo">
+        <label for="cCnpj">CNPJ</label>
+        <input id="cCnpj" class="curto" type="text" value="${esc(R.cnpj)}"
+               oninput="window.anotar('cnpj', this.value)" onblur="window.consultarEmpresa()">
+        <span class="erro" id="eCnpj"></span>
+        <div class="aviso-cnpj" id="aviso">${esc(avisoCnpj)
+          || 'digite o CNPJ e saia do campo: a razão social vem da Receita'}</div>
+      </div>
+      <div class="campo largo">
         <label for="cEmpresa">Razão social</label>
         <input id="cEmpresa" type="text" value="${esc(R.nomeEmpresa)}" autocomplete="organization"
                oninput="window.anotar('nomeEmpresa', this.value)">
         <span class="erro" id="eEmpresa"></span>
       </div>
       <div class="campo">
-        <label for="cCnpj">CNPJ</label>
-        <input id="cCnpj" type="text" value="${esc(R.cnpj)}"
-               oninput="window.anotar('cnpj', this.value)" onblur="window.consultarEmpresa()">
-        <span class="erro" id="eCnpj"></span>
-        <div class="aviso-cnpj" id="aviso">${esc(avisoCnpj)}</div>
-      </div>
-      <div class="campo">
-        <label for="cCargo">Cargo de quem confirma</label>
-        <input id="cCargo" type="text" value="${esc(R.cargo)}" placeholder="sócio, administrador…"
-               oninput="window.anotar('cargo', this.value)">
-        <span class="erro" id="eCargo"></span>
-      </div>
-      <div class="campo">
         <label for="cRep">Nome do representante legal</label>
         <input id="cRep" type="text" value="${esc(R.representante)}" autocomplete="name"
                oninput="window.anotar('representante', this.value)">
         <span class="erro" id="eRep"></span>
+      </div>
+      <div class="campo">
+        <label for="cCargo">Cargo de quem confirma</label>
+        <select id="cCargo" onchange="window.anotar('cargo', this.value)">
+          <option value="">Selecione…</option>
+          ${CARGOS.map(c =>
+            `<option value="${esc(c)}" ${R.cargo === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+        </select>
+        <span class="erro" id="eCargo"></span>
       </div>
       <div class="campo">
         <label for="cCpf">CPF do representante</label>
@@ -387,6 +405,9 @@ window.consultarEmpresa = async () => {
   const fora = document.getElementById('aviso');
   if (fora) fora.textContent = 'consultando…';
   const r = await consultarCnpj(R.cnpj);
+  // `razaoSocial`, e não `razao_social`: o módulo já traduz o campo cru da
+  // Receita. Ler o nome errado fazia a consulta funcionar e o resultado ser
+  // descartado calado, com a página dizendo que a API estava fora.
   if (r.ok && r.dados && r.dados.razao_social) {
     if (!String(R.nomeEmpresa || '').trim()) {
       R.nomeEmpresa = r.dados.razao_social;

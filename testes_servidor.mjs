@@ -637,6 +637,21 @@ try {
   conferir('o termo do backoffice não deixa fechar o bloco de script',
     !comInjecao.includes('</script><script>x=1'));
 
+  // ------------------------------- a pagina le o campo que o modulo devolve
+  // Defeito real: a pagina lia `dados.razao_social`, o nome CRU do campo da
+  // Receita, mas `consultarCnpj` ja traduz para `razaoSocial`. A consulta
+  // funcionava, o resultado era descartado calado, e a tela acusava a API de
+  // estar fora. Nada de HTTP pega isso — so conferir os dois lados.
+  const fonteConsulta = readFileSync('src/consulta_cnpj.js', 'utf8');
+  const campos = [...fonteConsulta.matchAll(/^\s{8}(\w+):/gm)].map(m => m[1]);
+  conferir('o modulo de consulta devolve os campos ja traduzidos',
+    campos.includes('razaoSocial') && !campos.includes('razao_social'), campos.join(','));
+  for (const arquivo of ['modelo.html', 'modelo_adesao.html']) {
+    const fonte = readFileSync(arquivo, 'utf8');
+    const crus = [...fonte.matchAll(/dados\.([a-z]+_[a-z_]+)/g)].map(m => m[1]);
+    conferir(`${arquivo} nao le campo cru da Receita`, crus.length === 0, crus.join(','));
+  }
+
   // ------------------------------------- a imagem leva tudo o que o servidor le
   // Defeito real: a tela de entrada nasceu e o Dockerfile copia uma LISTA
   // EXPLICITA de arquivos. `entrar.html` ficou fora, e em producao a tela de

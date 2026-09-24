@@ -17,7 +17,12 @@
  */
 
 export const TERMO = {
-  versao: 'V3',
+  /* V4 — 24/09/2026: acrescentado o quarto serviço complementar (assessoria e
+     acompanhamento contínuo). A versão sobe porque o texto mudou: manter V3
+     faria o resumo guardado deixar de casar com o que se exibe, e quem tivesse
+     aceitado a V3 apareceria como tendo aceitado outro texto. Nenhuma adesão
+     real existia ainda — só as de teste. */
+  versao: 'V4',
   titulo: 'Termo de ciência, consentimento e autorização',
   subtitulo: 'Modalidade de recolhimento da CBS no Simples Nacional — 1º semestre de 2027',
 
@@ -69,6 +74,11 @@ export const TERMO = {
         + 'com efeito em preço, margem e carga tributária;'],
       ['Assessoria em negociações', 'apoio nas tratativas com clientes e fornecedores '
         + 'sobre tomada e repasse de créditos de CBS.'],
+      // Acrescentado a pedido de Victor em 24/09/2026. A redação é proposta —
+      // é escopo comercial, e quem fecha o texto de escopo é a Auster.
+      ['Assessoria e acompanhamento contínuo', 'acompanhamento das obrigações e da '
+        + 'apuração decorrentes da modalidade escolhida, com reavaliação da decisão '
+        + 'nas janelas seguintes.'],
     ],
     pergunta: 'A empresa tem interesse em receber proposta para esses serviços.',
   },

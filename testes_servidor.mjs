@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { TERMO } from './src/termo.js';
 
 const SENHA = 'senha-de-teste-nao-usar-em-producao';
 const PORTA = 8731;
@@ -514,7 +515,7 @@ try {
   // em nome dele. Tudo aqui é testado pelo que prova depois: qual texto foi
   // aceito, por quem, quando e de onde.
   const adesaoValida = (extra = {}) => ({
-    versaoTermo: 'V3',
+    versaoTermo: TERMO.versao,
     empresa: {
       nomeEmpresa: 'Empresa de Teste', cnpj: '11.222.333/0001-81',
       representante: 'Fulano de Tal', cpf: '390.533.447-05',
@@ -565,11 +566,36 @@ try {
     forjada.resumoTermo === adesaoGravada.resumoTermo && forjada.resumoTermo !== 'mentira');
   conferir('a origem do acesso não vem do navegador', forjada.origem !== '9.9.9.9');
 
+  // O IP e a prova de onde partiu o aceite. `x-forwarded-for` e CABECALHO: quem
+  // mandar `X-Forwarded-For: 1.2.3.4` aparece como 1.2.3.4, porque a Cloudflare
+  // ACRESCENTA o IP real a cadeia em vez de substitui-la. Por isso a ordem:
+  // cf-connecting-ip e x-real-ip valem mais que o primeiro salto da cadeia.
+  r = await postar('/api/adesao', adesaoValida(), {
+    'X-Forwarded-For': '1.2.3.4, 198.51.100.7',
+    'CF-Connecting-IP': '203.0.113.9',
+  });
+  const comCloudflare = await r.json();
+  conferir('o IP da Cloudflare vence o x-forwarded-for forjado',
+    comCloudflare.origem === '203.0.113.9', String(comCloudflare.origem));
+
+  r = await postar('/api/adesao', adesaoValida(), { 'X-Forwarded-For': '1.2.3.4' });
+  const soCadeia = await r.json();
+  conferir('sem cabeçalho de proxy confiável, ainda assim registra a origem',
+    typeof soCadeia.origem === 'string' && soCadeia.origem.length > 0,
+    String(soCadeia.origem));
+
+  r = await fetch(`${BASE}/api/backoffice/adesoes.csv`,
+    { headers: { Authorization: cabecalhoDe('maria', SENHA_MARIA) } });
+  const csvComOrigem = await r.text();
+  conferir('a planilha diz COMO o IP foi apurado, e guarda a cadeia crua',
+    csvComOrigem.includes('cf-connecting-ip') && csvComOrigem.includes('1.2.3.4'),
+    'origem apurada por / cadeia ausentes');
+
   for (const [nome, corpo] of [
     ['recusa adesão sem a declaração marcada', adesaoValida({ declara: false })],
     ['recusa modalidade inválida', adesaoValida({ modalidade: 'outra' })],
     ['recusa híbrido sem a escolha de 20/11', adesaoValida({ semManifestacao: null })],
-    ['recusa termo de versão diferente', adesaoValida({ versaoTermo: 'V2' })],
+    ['recusa termo de versão diferente', adesaoValida({ versaoTermo: 'V0-que-nunca-existiu' })],
     ['recusa CNPJ incompleto',
      adesaoValida({ empresa: { ...adesaoValida().empresa, cnpj: '11.222' } })],
     ['recusa adesão sem representante',

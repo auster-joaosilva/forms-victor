@@ -408,9 +408,9 @@ window.consultarEmpresa = async () => {
   // `razaoSocial`, e não `razao_social`: o módulo já traduz o campo cru da
   // Receita. Ler o nome errado fazia a consulta funcionar e o resultado ser
   // descartado calado, com a página dizendo que a API estava fora.
-  if (r.ok && r.dados && r.dados.razao_social) {
+  if (r.ok && r.dados && r.dados.razaoSocial) {
     if (!String(R.nomeEmpresa || '').trim()) {
-      R.nomeEmpresa = r.dados.razao_social;
+      R.nomeEmpresa = r.dados.razaoSocial;
       const c = document.getElementById('cEmpresa');
       if (c) c.value = R.nomeEmpresa;
     }

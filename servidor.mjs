@@ -168,12 +168,30 @@ const RESUMO_TERMO = createHash('sha256')
 
 const soDigitos = v => String(v || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
 
-/** Endereço de origem. Atrás do Traefik e da Cloudflare o socket é o do
- *  proxy: quem vale é o PRIMEIRO salto de `x-forwarded-for`, que é o cliente.
- *  Sem proxy, cai no socket mesmo. */
+/** Endereço de origem de quem confirmou — o IP que vai para a prova.
+ *
+ *  A ordem não é capricho. `x-forwarded-for` é cabeçalho, e cabeçalho o
+ *  cliente escreve: quem mandasse `X-Forwarded-For: 1.2.3.4` apareceria como
+ *  1.2.3.4, porque a Cloudflare ACRESCENTA o IP real à cadeia em vez de
+ *  substituí-la. O primeiro salto, então, pode ser inventado.
+ *
+ *  `CF-Connecting-IP` a Cloudflare sempre sobrescreve, e `X-Real-IP` o Traefik
+ *  define. Os dois valem mais que a cadeia. Sem proxy nenhum, o socket é a
+ *  verdade. A cadeia crua fica guardada à parte, para auditoria. */
 function origemDoPedido(req) {
-  const cadeia = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return (cadeia || req.socket.remoteAddress || '').replace(/^::ffff:/, '') || null;
+  const limpar = v => String(v || '').trim().replace(/^::ffff:/, '');
+  const daCloudflare = limpar(req.headers['cf-connecting-ip']);
+  const doTraefik = limpar(req.headers['x-real-ip']);
+  const daCadeia = limpar(String(req.headers['x-forwarded-for'] || '').split(',')[0]);
+  const doSocket = limpar(req.socket.remoteAddress);
+  return {
+    origem: daCloudflare || doTraefik || daCadeia || doSocket || null,
+    // Como foi determinado, e a cadeia inteira: sem isto, dois anos depois
+    // ninguém sabe se aquele IP veio de fonte confiável ou de cabeçalho.
+    comoObtido: daCloudflare ? 'cf-connecting-ip' : doTraefik ? 'x-real-ip'
+              : daCadeia ? 'x-forwarded-for' : 'socket',
+    cadeia: String(req.headers['x-forwarded-for'] || '') || null,
+  };
 }
 
 /** Serve a página do termo. `previo` pré-preenche pelo convite; `soTermo`
@@ -236,7 +254,7 @@ function conferirAdesao(corpo, req) {
     versaoTermo: TERMO.versao,
     resumoTermo: RESUMO_TERMO,
     aceitoEm: new Date().toISOString(),
-    origem: origemDoPedido(req),
+    ...origemDoPedido(req),
     agente: String(req.headers['user-agent'] || '').slice(0, 300) || null,
   } };
 }
@@ -257,20 +275,27 @@ function planilhaDeAdesoes(linhas) {
     'sem manifestacao ate 20/11', 'empresa', 'CNPJ', 'representante', 'CPF',
     'cargo', 'e-mail', 'telefone', 'quer proposta', 'diagnostico vinculado',
     'convite', 'versao do termo', 'resumo do termo', 'origem do acesso',
+    'origem apurada por', 'cadeia de proxies', 'navegador',
     'tratado por', 'tratado em', 'nota interna'];
   const celula = v => {
     const texto = v === undefined || v === null ? '' : String(v);
     return /[";\n]/.test(texto) ? '"' + texto.replace(/"/g, '""') + '"' : texto;
   };
-  const corpo = linhas.map(l => [
-    l.protocolo, l.aceito_em, l.situacao, MODALIDADE_LEGIVEL[l.modalidade] || l.modalidade,
-    SEM_MANIFESTACAO_LEGIVEL[l.sem_manifestacao] || '', l.nome_empresa, l.cnpj,
-    l.representante, l.cpf, l.cargo, l.email, l.telefone,
-    l.quer_proposta ? 'sim' : 'nao',
-    l.resposta_id ? `resposta ${l.resposta_id}` : '', l.token_convite || '',
-    l.versao_termo, l.resumo_termo, l.origem,
-    l.tratado_por || '', l.tratado_em || '', l.nota_interna || '',
-  ].map(celula).join(';'));
+  const corpo = linhas.map(l => {
+    // Como o IP foi apurado e a cadeia crua vivem no pacote, não em coluna:
+    // são dado de auditoria, e quem audita abre a planilha, não a tela.
+    const p = l.pacote || {};
+    return [
+      l.protocolo, l.aceito_em, l.situacao, MODALIDADE_LEGIVEL[l.modalidade] || l.modalidade,
+      SEM_MANIFESTACAO_LEGIVEL[l.sem_manifestacao] || '', l.nome_empresa, l.cnpj,
+      l.representante, l.cpf, l.cargo, l.email, l.telefone,
+      l.quer_proposta ? 'sim' : 'nao',
+      l.resposta_id ? `resposta ${l.resposta_id}` : '', l.token_convite || '',
+      l.versao_termo, l.resumo_termo, l.origem,
+      p.comoObtido || '', p.cadeia || '', l.agente || p.agente || '',
+      l.tratado_por || '', l.tratado_em || '', l.nota_interna || '',
+    ].map(celula).join(';');
+  });
   return '﻿' + [cabecalho.map(celula).join(';'), ...corpo].join('\r\n') + '\r\n';
 }
 
@@ -766,7 +791,7 @@ const servidor = createServer(async (req, res) => {
           modalidade: url.searchParams.get('modalidade') || undefined,
           busca: url.searchParams.get('busca') || undefined,
           limite: 5000,
-        });
+        }).map(l => banco.adesao(l.id));
         banco.registrar(quem, 'planilha_adesoes_exportada', String(linhas.length));
         const hoje = new Date().toISOString().slice(0, 10);
         return responder(res, 200, planilhaDeAdesoes(linhas), 'text/csv; charset=utf-8',

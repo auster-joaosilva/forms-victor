@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23052C47%27/%3E%3Cpath d=%27M8 21l8-11 8 11%27 stroke=%27%2371CFEB%27 stroke-width=%273%27 fill=%27none%27/%3E%3C/svg%3E">
+<title>Termo de opção — Simples Nacional 2027</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Mesma paleta e mesma escala do portal: quem chega aqui vem de lá, e a página
+   tem de parecer a mesma casa. */
+:root{
+  --escuro:#052C47; --claro:#71CFEB; --branco:#fff; --acento:#007E99;
+  --tinta:#052C47; --cinza:#5b6b78; --fundo:#f1f5f8;
+  --borda:#cfd9e0; --borda-forte:#8496a5;
+  --sombra:0 1px 2px rgba(5,44,71,.06), 0 4px 12px rgba(5,44,71,.05);
+  --alto:#b63b32; --medio:#9a6608; --baixo:#2f7d52;
+  --t-meta:12px; --t-corpo:14px; --t-destaque:16px; --t-titulo:20px; --t-tela:28px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--tinta);
+  font-family:Kanit,Montserrat,Raleway,Arial,sans-serif;font-weight:300;line-height:1.55;
+  font-size:var(--t-corpo)}
+header{background:var(--escuro);color:#fff;padding:30px 24px 26px;box-shadow:var(--sombra);text-align:center}
+header .cabecalho{display:flex;justify-content:center;align-items:center}
+header .logo{height:52px;width:auto;display:block}
+header .logo.papel{display:none}
+header .sub{color:var(--claro);font-size:13.5px;margin-top:14px;line-height:1.5;
+  max-width:60ch;margin-left:auto;margin-right:auto}
+@media (max-width:560px){ header{padding:24px 16px 20px} header .logo{height:42px} }
+main{max-width:820px;margin:0 auto;padding:28px 24px 48px}
+h2{font-size:var(--t-titulo);font-weight:400;color:var(--escuro);margin:0 0 6px}
+h3{font-weight:500;font-size:var(--t-destaque);margin:26px 0 10px;color:var(--escuro)}
+p{margin:0 0 12px;max-width:70ch}
+ul{margin:8px 0;padding-left:20px}
+li{margin-bottom:6px;max-width:70ch}
+.cartao{background:#fff;border:1px solid var(--borda);border-radius:10px;
+  padding:24px 26px;margin-bottom:18px;box-shadow:var(--sombra)}
+.rot{font-size:var(--t-meta);text-transform:uppercase;letter-spacing:.8px;color:var(--cinza);
+  margin:0 0 4px}
+/* O termo morre em 29/09. Quem abre a página precisa ver isso antes do primeiro
+   campo, não depois de rolar três telas. */
+.prazo{background:#fdf4e3;border:1px solid #e3d3ab;border-left:4px solid var(--medio);
+  border-radius:9px;padding:16px 18px;margin-bottom:20px}
+.prazo b{font-weight:500}
+.campos{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+@media (max-width:620px){ .campos{grid-template-columns:1fr} }
+.campo label{display:block;font-size:var(--t-meta);color:var(--cinza);margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:.7px}
+.campo input,.campo select{width:100%;padding:10px 12px;border:1px solid var(--borda-forte);
+  border-radius:7px;font-family:inherit;font-size:var(--t-corpo);font-weight:300;
+  background:#fff;color:var(--tinta)}
+.campo input:focus,.campo select:focus{outline:2px solid var(--acento);outline-offset:1px}
+/* O CNPJ vem primeiro e é curto: esticá-lo na largura da folha faria parecer
+   que cabe um nome de empresa ali. */
+.campo input.curto{max-width:260px}
+.campo .erro{color:var(--alto);font-size:var(--t-meta);min-height:17px;display:block;margin-top:3px}
+.campo.largo{grid-column:1/-1}
+.aviso-cnpj{font-size:var(--t-meta);color:var(--medio);min-height:17px}
+/* Texto corrido, sem caixa de rolagem: esconder o termo num quadradinho de
+   200 px é o truque que faz ninguém ler — e é o que fragiliza o consentimento
+   depois, quando alguém perguntar o que a pessoa teve diante dos olhos. */
+.termo{font-size:var(--t-corpo);line-height:1.65}
+.termo .secao{margin-top:22px}
+.termo .secao:first-child{margin-top:0}
+.termo .caixa{background:#f6fafc;border:1px solid var(--borda);border-left:4px solid var(--claro);
+  border-radius:8px;padding:14px 16px;margin:12px 0}
+.termo .caixa .t{font-weight:500;margin-bottom:8px}
+.termo .fonte{font-size:11.5px;color:#8496a5;font-style:italic}
+/* Texto justificado, como documento. `hyphens` é o que impede o rio de espaços
+   em branco: sem hifenização, justificar coluna estreita abre buracos entre as
+   palavras. A página declara lang="pt-BR", então o Chrome hifeniza em português. */
+.termo p,.termo li,.declaracao,.opcao .texto,.opcao .parte,
+.folha .prova,.sub-escolha label span{text-align:justify;hyphens:auto}
+/* Contorno de 3:1 porque é controle, não divisória (WCAG 1.4.11). */
+.opcao{display:block;border:1px solid var(--borda-forte);border-radius:9px;padding:16px 18px;
+  margin-bottom:12px;cursor:pointer;background:#fff;transition:border-color .12s,background .12s}
+.opcao:hover{background:#f7fafc}
+.opcao.marcada{border-color:var(--escuro);border-width:2px;padding:15px 17px;background:#f6fafc}
+.opcao .cabeca{display:flex;gap:10px;align-items:flex-start}
+.opcao input{accent-color:var(--escuro);margin:3px 0 0}
+.opcao .titulo{font-weight:500;font-size:var(--t-destaque);color:var(--escuro)}
+.opcao .texto{display:block;margin:8px 0 0 26px;max-width:66ch}
+.opcao .parte{display:block;margin:10px 0 0 26px;max-width:66ch;font-size:13.5px}
+.opcao .parte b{font-weight:500}
+.sub-escolha{margin:14px 0 0 26px;padding:14px 16px;border:1px solid var(--borda);
+  border-radius:8px;background:#fff}
+.sub-escolha .enunciado{font-weight:500;margin-bottom:10px}
+.sub-escolha label{display:flex;gap:9px;align-items:flex-start;margin-bottom:9px;cursor:pointer}
+.sub-escolha input{accent-color:var(--escuro);margin:3px 0 0}
+.marca{display:flex;gap:10px;align-items:flex-start;margin-top:12px;cursor:pointer}
+.marca input{accent-color:var(--escuro);margin:3px 0 0;width:17px;height:17px}
+.marca span{max-width:66ch}
+.declaracao{background:#f6fafc;border:1px solid var(--borda);border-left:4px solid var(--claro);
+  border-radius:8px;padding:16px 18px;margin:16px 0}
+button{font-family:inherit;font-size:var(--t-destaque);font-weight:500;padding:13px 26px;
+  border-radius:8px;border:1px solid var(--escuro);background:var(--escuro);color:#fff;cursor:pointer}
+button.secundario{background:#fff;color:var(--escuro);margin-left:8px}
+button:disabled{opacity:.45;cursor:default}
+.erro{color:var(--alto);font-size:var(--t-meta);display:block}
+.erro-envio{color:var(--alto);margin-top:10px;min-height:20px}
+.nota{font-size:var(--t-meta);color:var(--cinza);max-width:70ch}
+.recibo{background:var(--escuro);color:#fff;border-radius:12px;padding:32px 34px;margin-bottom:18px}
+.recibo h2{color:#fff;font-size:var(--t-tela);font-weight:300;margin:0 0 10px}
+.recibo .protocolo{font-size:var(--t-titulo);color:var(--claro);letter-spacing:.5px}
+.recibo .linha{margin-top:8px;font-size:13.5px;color:#dbe7ee}
+.recibo .linha b{font-weight:500;color:#fff}
+/* A folha do documento. Não existe na tela; existe no papel. */
+.doc{display:none}
+.folha h1{font-size:22px;font-weight:400;color:var(--escuro);margin:0 0 2px;text-align:center}
+.folha .sublinha{text-align:center;color:var(--cinza);font-size:13px;margin-bottom:20px}
+.folha table.ident{width:100%;border-collapse:collapse;margin-bottom:6px}
+.folha table.ident td{border:1px solid var(--borda-forte);padding:7px 9px;font-size:12.5px}
+.folha table.ident td.r{background:#f2f6f9;font-weight:500;width:15%}
+.folha .prova{border:1px solid var(--borda-forte);padding:12px 14px;margin-top:16px;
+  font-size:11px;line-height:1.6;word-break:break-word}
+.folha .prova .t{font-weight:500;font-size:12.5px;margin-bottom:6px}
+.folha .rodape-doc{margin-top:22px;padding-top:10px;border-top:1px solid var(--borda);
+  font-size:10.5px;color:var(--cinza);text-align:center}
+@media print{
+  /* Margem no elemento, e não só em @page: a caixa de impressão do Chrome
+     sobrepõe @page, e foi assim que o relatório saiu rente à borda. */
+  @page{ margin:10mm; }
+  body{background:#fff;font-size:10pt}
+  header{box-shadow:none;padding:0 0 8mm;background:#fff}
+  header .logo.tela{display:none}
+  header .logo.papel{display:block;margin:0 auto}
+  header .sub{display:none}
+  main{max-width:none;padding:0 2mm}
+  #tela,#recibo{display:none !important}
+  .doc{display:block !important}
+  .termo .caixa{background:#f6f6f6;border:1px solid #bbb;border-left:3px solid #666}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  /* Proteger a SEÇÃO inteira contra quebra empurrava um bloco de meia página
+     para a folha seguinte e deixava metade do papel em branco. O que não pode
+     partir ao meio é curto: a caixa, a tabela e o registro do aceite. */
+  .folha .prova,.folha table.ident,.termo .caixa{break-inside:avoid;page-break-inside:avoid}
+  .termo .secao>.rot{break-after:avoid;page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="cabecalho">
+    <img class="logo tela" alt="auster" src="data:image/png;base64,/*__LOGO_TELA__*/">
+    <img class="logo papel" alt="auster" src="data:image/png;base64,/*__LOGO_PAPEL__*/">
+  </div>
+  <div class="sub" id="subCabecalho">Termo de ciência, consentimento e autorização</div>
+</header>
+
+<main>
+  <section id="tela">carregando…</section>
+  <section id="recibo" hidden></section>
+  <div class="doc" id="doc"></div>
+</main>
+
+<script type="module">
+/*__MODULOS__*/
+/*__PUBLICACAO__*/
+
+const CONFIG = { endpointAdesao: '/api/adesao', portal: '/' };
+const TERMO = (typeof window.__TERMO__ === 'object' && window.__TERMO__) || null;
+const PREVIO = (typeof window.__PREVIO__ === 'object' && window.__PREVIO__) || {};
+const VINCULO = window.__VINCULO__ || null;
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const tela = document.getElementById('tela');
+const painelRecibo = document.getElementById('recibo');
+const doc = document.getElementById('doc');
+
+const R = {
+  nomeEmpresa: PREVIO.nomeEmpresa || '', cnpj: PREVIO.cnpj || '',
+  representante: PREVIO.representante || '', cpf: '', cargo: '',
+  email: PREVIO.email || '', telefone: PREVIO.telefone || '',
+  modalidade: '', semManifestacao: '', querProposta: false, declara: false,
+};
+let enviando = false, recibo = null, avisoCnpj = '';
+
+const CAMPOS_DE_ERRO = ['eCnpj', 'eEmpresa', 'eRep', 'eCargo', 'eCpf', 'eEmail',
+                        'eTel', 'eModalidade', 'eSemManifestacao', 'eDeclara'];
+
+/** Cargo em lista fechada: é campo de documento, e "sócio", "socio", "Sócio-adm"
+ *  e "SÓCIO ADM" digitados à mão viram quatro cargos diferentes na planilha. */
+const CARGOS = ['Sócio', 'Sócio Administrador', 'Administrador não Sócio', 'Diretor',
+                'Empresário', 'Gerente', 'Administrativo', 'Financeiro', 'Consultor'];
+
+/** CPF com os dois dígitos verificadores.
+ *
+ *  Fica aqui, e não em src/validacao.js, porque o portal nunca pediu CPF: é
+ *  este termo que pede, por ser documento assinado por pessoa. Repetir a
+ *  validação de CNPJ seria erro — aquela já trata o CNPJ alfanumérico e vem
+ *  inteira do módulo. */
+function cpfValido(bruto) {
+  const n = String(bruto || '').replace(/\D/g, '');
+  if (n.length !== 11 || /^(\d)\1{10}$/.test(n)) return false;
+  const digito = ate => {
+    let soma = 0;
+    for (let i = 0; i < ate; i++) soma += Number(n[i]) * (ate + 1 - i);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  return digito(9) === Number(n[9]) && digito(10) === Number(n[10]);
+}
+
+const mascararCpf = bruto => {
+  const n = String(bruto || '').replace(/\D/g, '').slice(0, 11);
+  return n.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+          .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+};
+
+// ------------------------------------------------------- o texto do termo
+function blocoTermo(t) {
+  return `<div class="termo">
+    <div class="secao">
+      <p class="rot">Orientação recebida</p>
+      <p>${esc(t.orientacao)}</p>
+      <div class="caixa">
+        <div class="t">${esc(t.prazos.titulo)}
+          <span class="fonte">(${esc(t.prazos.fonte)})</span></div>
+        <ul>${t.prazos.itens.map(([r, x]) => `<li><b>${esc(r)}:</b> ${esc(x)}</li>`).join('')}</ul>
+      </div>
+    </div>
+    <div class="secao">
+      <p class="rot">Critérios que orientam a recomendação</p>
+      ${t.criterios.map(([r, x]) => `<p><b>${esc(r)}</b> ${esc(x)}</p>`).join('')}
+    </div>
+    <div class="secao">
+      <p class="rot">Ciência sobre a decisão e reavaliação</p>
+      <ul>${t.ciencia.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    </div>
+  </div>`;
+}
+
+// ------------------------------------------------------------------- tela
+function desenhar() {
+  if (!TERMO) {
+    tela.innerHTML = '<div class="cartao">Termo indisponível. Recarregue a página.</div>';
+    return;
+  }
+  const t = TERMO;
+  const hibrido = R.modalidade === 'hibrido';
+
+  tela.innerHTML = `
+  <div class="prazo">
+    <b>Prazo.</b> A opção pelo Simples Híbrido é feita no Portal do Simples Nacional
+    <b>até 30/09/2026</b>. Para que a Auster consiga formalizá-la, esta confirmação
+    precisa estar concluída <b>até 29/09/2026</b>.
+  </div>
+
+  <div class="cartao">
+    <h2>Identificação da empresa</h2>
+    <p class="nota" style="margin-bottom:16px">Quem confirma precisa ser o representante
+      legal da empresa, ou ter poderes para decidir por ela.</p>
+    <div class="campos">
+      <div class="campo largo">
+        <label for="cCnpj">CNPJ</label>
+        <input id="cCnpj" class="curto" type="text" value="${esc(R.cnpj)}"
+               oninput="window.anotar('cnpj', this.value)" onblur="window.consultarEmpresa()">
+        <span class="erro" id="eCnpj"></span>
+        <div class="aviso-cnpj" id="aviso">${esc(avisoCnpj)
+          || 'digite o CNPJ e saia do campo: a razão social vem da Receita'}</div>
+      </div>
+      <div class="campo largo">
+        <label for="cEmpresa">Razão social</label>
+        <input id="cEmpresa" type="text" value="${esc(R.nomeEmpresa)}" autocomplete="organization"
+               oninput="window.anotar('nomeEmpresa', this.value)">
+        <span class="erro" id="eEmpresa"></span>
+      </div>
+      <div class="campo">
+        <label for="cRep">Nome do representante legal</label>
+        <input id="cRep" type="text" value="${esc(R.representante)}" autocomplete="name"
+               oninput="window.anotar('representante', this.value)">
+        <span class="erro" id="eRep"></span>
+      </div>
+      <div class="campo">
+        <label for="cCargo">Cargo de quem confirma</label>
+        <select id="cCargo" onchange="window.anotar('cargo', this.value)">
+          <option value="">Selecione…</option>
+          ${CARGOS.map(c =>
+            `<option value="${esc(c)}" ${R.cargo === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+        </select>
+        <span class="erro" id="eCargo"></span>
+      </div>
+      <div class="campo">
+        <label for="cCpf">CPF do representante</label>
+        <input id="cCpf" type="text" value="${esc(R.cpf)}" inputmode="numeric"
+               oninput="window.anotar('cpf', this.value)" onblur="window.formatarCpf()">
+        <span class="erro" id="eCpf"></span>
+      </div>
+      <div class="campo">
+        <label for="cEmail">E-mail</label>
+        <input id="cEmail" type="email" value="${esc(R.email)}" autocomplete="email"
+               oninput="window.anotar('email', this.value)">
+        <span class="erro" id="eEmail"></span>
+      </div>
+      <div class="campo">
+        <label for="cTel">Telefone</label>
+        <input id="cTel" type="text" value="${esc(R.telefone)}" inputmode="numeric"
+               oninput="window.anotar('telefone', this.value)">
+        <span class="erro" id="eTel"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cartao">
+    <h2>O que você está confirmando</h2>
+    ${blocoTermo(t)}
+  </div>
+
+  <div class="cartao">
+    <h2>Modalidade escolhida</h2>
+    <p class="nota" style="margin-bottom:16px">Escolha uma das duas.</p>
+    ${t.modalidades.map(m => `
+      <label class="opcao ${R.modalidade === m.valor ? 'marcada' : ''}">
+        <span class="cabeca">
+          <input type="radio" name="modalidade" value="${esc(m.valor)}"
+                 ${R.modalidade === m.valor ? 'checked' : ''}
+                 onchange="window.escolher('${esc(m.valor)}')">
+          <span class="titulo">${esc(m.titulo)}</span>
+        </span>
+        <span class="texto">${esc(m.texto)}</span>
+        ${m.partes.map(([r, x]) =>
+          `<span class="parte"><b>${esc(r)}:</b> ${esc(x)}</span>`).join('')}
+      </label>`).join('')}
+
+    ${hibrido ? `<div class="sub-escolha">
+      <div class="enunciado">${esc(t.semManifestacao.enunciado)}</div>
+      ${t.semManifestacao.opcoes.map(([v, x]) => `
+        <label><input type="radio" name="semManifestacao" value="${esc(v)}"
+               ${R.semManifestacao === v ? 'checked' : ''}
+               onchange="window.anotar('semManifestacao', '${esc(v)}')">
+          <span>${esc(x)}</span></label>`).join('')}
+      <span class="erro" id="eSemManifestacao"></span>
+    </div>` : ''}
+    <span class="erro" id="eModalidade"></span>
+  </div>
+
+  <div class="cartao">
+    <h2>Serviços complementares</h2>
+    <p>${esc(t.servicos.abertura)}</p>
+    <ul>${t.servicos.itens.map(([r, x]) => `<li><b>${esc(r)}:</b> ${esc(x)}</li>`).join('')}</ul>
+    <label class="marca">
+      <input type="checkbox" ${R.querProposta ? 'checked' : ''}
+             onchange="window.anotar('querProposta', this.checked)">
+      <span>${esc(t.servicos.pergunta)}</span>
+    </label>
+  </div>
+
+  <div class="cartao">
+    <h2>Declaração final</h2>
+    <div class="declaracao">${esc(t.declaracao)}</div>
+    <label class="marca">
+      <input type="checkbox" ${R.declara ? 'checked' : ''}
+             onchange="window.anotar('declara', this.checked)">
+      <span>Li o termo acima, declaro o que nele consta e confirmo a modalidade
+        assinalada. Estou ciente de que esta confirmação registra data, hora e origem
+        do acesso, e vale como manifestação da empresa.</span>
+    </label>
+    <span class="erro" id="eDeclara"></span>
+    <div style="margin-top:18px">
+      <button id="btnConfirmar" onclick="window.confirmar()" ${enviando ? 'disabled' : ''}>
+        ${enviando ? 'Registrando…' : 'Confirmar a opção'}</button>
+    </div>
+    <div class="erro-envio" id="erroEnvio"></div>
+    <p class="nota" style="margin-top:14px">Depois de confirmar você recebe o protocolo
+      e pode baixar o termo preenchido em PDF.</p>
+  </div>`;
+}
+
+// -------------------------------------------------------------- anotações
+/** Anotar NÃO redesenha: redesenhar a cada tecla faria o campo perder o foco. */
+window.anotar = (campo, valor) => {
+  R[campo] = valor;
+  if (campo === 'semManifestacao') {
+    const e = document.getElementById('eSemManifestacao');
+    if (e) e.textContent = '';
+  }
+};
+
+window.escolher = valor => {
+  R.modalidade = valor;
+  if (valor !== 'hibrido') R.semManifestacao = '';
+  desenhar();
+};
+
+window.formatarCpf = () => {
+  R.cpf = mascararCpf(R.cpf);
+  const campo = document.getElementById('cCpf');
+  if (campo) campo.value = R.cpf;
+};
+
+window.consultarEmpresa = async () => {
+  if (!String(R.cnpj || '').trim()) return;
+  R.cnpj = mascararCnpj(R.cnpj);
+  const campo = document.getElementById('cCnpj');
+  if (campo) campo.value = R.cnpj;
+  if (!cnpjValido(R.cnpj)) return;
+
+  const fora = document.getElementById('aviso');
+  if (fora) fora.textContent = 'consultando…';
+  const r = await consultarCnpj(R.cnpj);
+  // `razaoSocial`, e não `razao_social`: o módulo já traduz o campo cru da
+  // Receita. Ler o nome errado fazia a consulta funcionar e o resultado ser
+  // descartado calado, com a página dizendo que a API estava fora.
+  if (r.ok && r.dados && r.dados.razaoSocial) {
+    if (!String(R.nomeEmpresa || '').trim()) {
+      R.nomeEmpresa = r.dados.razaoSocial;
+      const c = document.getElementById('cEmpresa');
+      if (c) c.value = R.nomeEmpresa;
+    }
+    avisoCnpj = '';
+  } else {
+    // Nunca bloqueia: a consulta é conveniência, não porteira.
+    avisoCnpj = 'não consegui consultar o cadastro agora — confira a razão social à mão.';
+  }
+  if (fora) fora.textContent = avisoCnpj;
+};
+
+// ------------------------------------------------------------ conferência
+function conferir() {
+  const faltas = {};
+  if (!nomeValido(R.nomeEmpresa, 3)) faltas.eEmpresa = 'informe a razão social';
+  if (!cnpjValido(R.cnpj)) faltas.eCnpj = 'CNPJ incompleto ou inválido';
+  if (!nomeValido(R.representante, 3)) faltas.eRep = 'informe o nome de quem confirma';
+  if (!cpfValido(R.cpf)) faltas.eCpf = 'CPF incompleto ou inválido';
+  if (!String(R.cargo || '').trim()) faltas.eCargo = 'informe o cargo';
+  if (!emailValido(R.email)) faltas.eEmail = 'e-mail inválido';
+  if (!telefoneValido(R.telefone)) faltas.eTel = 'telefone inválido';
+  if (!R.modalidade) faltas.eModalidade = 'escolha uma das duas modalidades';
+  if (R.modalidade === 'hibrido' && !R.semManifestacao) {
+    faltas.eSemManifestacao = 'escolha o que acontece se não houver manifestação até 20/11';
+  }
+  if (!R.declara) faltas.eDeclara = 'é preciso marcar a declaração para confirmar';
+  return faltas;
+}
+
+// ------------------------------------------------------------------ envio
+window.confirmar = async () => {
+  const faltas = conferir();
+  for (const id of CAMPOS_DE_ERRO) {
+    const e = document.getElementById(id);
+    if (e) e.textContent = faltas[id] || '';
+  }
+  const erro = document.getElementById('erroEnvio');
+  const pendentes = Object.keys(faltas);
+  if (pendentes.length) {
+    if (erro) erro.textContent = 'Faltam campos acima.';
+    const primeiro = document.getElementById(pendentes[0]);
+    if (primeiro) primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (erro) erro.textContent = '';
+  enviando = true;
+  desenhar();
+
+  try {
+    const resposta = await fetch(CONFIG.endpointAdesao, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vinculo: VINCULO,
+        versaoTermo: TERMO.versao,
+        empresa: {
+          nomeEmpresa: R.nomeEmpresa, cnpj: R.cnpj, representante: R.representante,
+          cpf: R.cpf, cargo: R.cargo, email: R.email, telefone: R.telefone,
+        },
+        modalidade: R.modalidade,
+        semManifestacao: R.semManifestacao || null,
+        querProposta: R.querProposta === true,
+        declara: R.declara === true,
+      }),
+    });
+    const dados = await resposta.json();
+    if (!resposta.ok || !dados.ok) throw new Error(dados.erro || 'não foi possível registrar');
+    recibo = dados;
+    enviando = false;
+    mostrarRecibo();
+  } catch (e) {
+    enviando = false;
+    desenhar();
+    const x = document.getElementById('erroEnvio');
+    if (x) x.textContent = 'Não consegui registrar: ' + e.message + '. Tente de novo.';
+  }
+};
+
+// ----------------------------------------------------------------- recibo
+const NOME_DA_MODALIDADE = {
+  padrao: 'Simples Nacional Puro (Padrão)',
+  hibrido: 'Simples Nacional Híbrido (CBS fora do DAS)',
+};
+
+function mostrarRecibo() {
+  tela.hidden = true;
+  painelRecibo.hidden = false;
+  const quando = new Date(recibo.aceitoEm);
+  painelRecibo.innerHTML = `
+    <div class="recibo">
+      <h2>Opção registrada</h2>
+      <div class="protocolo">${esc(recibo.protocolo)}</div>
+      <div class="linha"><b>Modalidade:</b>
+        ${esc(NOME_DA_MODALIDADE[R.modalidade] || R.modalidade)}</div>
+      <div class="linha"><b>Registrado em:</b> ${esc(quando.toLocaleString('pt-BR'))}</div>
+      ${R.modalidade === 'hibrido'
+        ? `<div class="linha">A Auster fará a opção no Portal do Simples Nacional
+             até 30/09/2026 e confirmará por e-mail.</div>`
+        : `<div class="linha">Nada a protocolar: a empresa permanece com a CBS
+             dentro do DAS.</div>`}
+    </div>
+    <div class="cartao">
+      <h3 style="margin-top:0">Guarde a sua via</h3>
+      <p>O termo preenchido, com protocolo e registro do aceite, sai em PDF pelo botão
+        abaixo. Guarde junto dos documentos da empresa.</p>
+      <button onclick="window.baixarTermo()">Baixar o termo (PDF)</button>
+      <button class="secundario" onclick="window.voltarAoPortal()">Voltar ao diagnóstico</button>
+    </div>`;
+  montarDocumento();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.voltarAoPortal = () => { window.location = CONFIG.portal; };
+
+/** A folha que vai ao papel: identificação, termo integral, modalidade
+ *  escolhida e o registro do aceite. É a via do cliente. */
+function montarDocumento() {
+  const t = TERMO;
+  const quando = new Date(recibo.aceitoEm);
+  const escolhida = t.modalidades.find(m => m.valor === R.modalidade);
+  const semManif = (t.semManifestacao.opcoes.find(([v]) => v === R.semManifestacao)
+                    || [null, ''])[1];
+
+  doc.innerHTML = `<div class="folha">
+    <h1>${esc(t.titulo)}</h1>
+    <div class="sublinha">${esc(t.subtitulo)}</div>
+
+    <p class="rot">1. Identificação da empresa</p>
+    <table class="ident">
+      <tr><td class="r">Razão social</td><td>${esc(R.nomeEmpresa)}</td>
+          <td class="r">CNPJ</td><td>${esc(R.cnpj)}</td></tr>
+      <tr><td class="r">Representante</td><td>${esc(R.representante)}</td>
+          <td class="r">CPF</td><td>${esc(R.cpf)}</td></tr>
+      <tr><td class="r">Cargo</td><td>${esc(R.cargo)}</td>
+          <td class="r">E-mail</td><td>${esc(R.email)}</td></tr>
+      <tr><td class="r">Telefone</td><td>${esc(R.telefone)}</td>
+          <td class="r">Protocolo</td><td>${esc(recibo.protocolo)}</td></tr>
+    </table>
+
+    <div class="termo">
+      <div class="secao"><p class="rot">2. Orientação recebida</p>
+        <p>${esc(t.orientacao)}</p>
+        <div class="caixa">
+          <div class="t">${esc(t.prazos.titulo)}
+            <span class="fonte">(${esc(t.prazos.fonte)})</span></div>
+          <ul>${t.prazos.itens.map(([r, x]) =>
+            `<li><b>${esc(r)}:</b> ${esc(x)}</li>`).join('')}</ul>
+        </div>
+      </div>
+      <div class="secao"><p class="rot">3. Critérios que orientam a recomendação</p>
+        ${t.criterios.map(([r, x]) => `<p><b>${esc(r)}</b> ${esc(x)}</p>`).join('')}
+      </div>
+      <div class="secao"><p class="rot">4. Serviços complementares</p>
+        <p>${esc(t.servicos.abertura)}</p>
+        <ul>${t.servicos.itens.map(([r, x]) =>
+          `<li><b>${esc(r)}:</b> ${esc(x)}</li>`).join('')}</ul>
+        <p><b>${R.querProposta ? '[X]' : '[  ]'}</b> ${esc(t.servicos.pergunta)}</p>
+      </div>
+      <div class="secao"><p class="rot">5. Modalidade escolhida</p>
+        <div class="caixa">
+          <div class="t">[X] ${esc(escolhida ? escolhida.titulo : '')}</div>
+          <p>${esc(escolhida ? escolhida.texto : '')}</p>
+          ${(escolhida ? escolhida.partes : []).map(([r, x]) =>
+            `<p><b>${esc(r)}:</b> ${esc(x)}</p>`).join('')}
+          ${R.modalidade === 'hibrido'
+            ? `<p><b>${esc(t.semManifestacao.enunciado)}</b><br>[X] ${esc(semManif)}</p>`
+            : ''}
+        </div>
+      </div>
+      <div class="secao"><p class="rot">6. Ciência sobre a decisão e reavaliação</p>
+        <ul>${t.ciencia.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      </div>
+      <div class="secao"><p class="rot">Declaração final</p>
+        <div class="caixa"><p style="margin:0">${esc(t.declaracao)}</p></div>
+      </div>
+    </div>
+
+    <div class="prova">
+      <div class="t">Registro do aceite eletrônico</div>
+      Confirmado por <b>${esc(R.representante)}</b>, CPF ${esc(R.cpf)}, na qualidade de
+      ${esc(R.cargo)}, em <b>${esc(quando.toLocaleString('pt-BR'))}</b>
+      (${esc(recibo.aceitoEm)}).<br>
+      Protocolo ${esc(recibo.protocolo)} · origem do acesso
+      ${esc(recibo.origem || 'não registrada')} · versão do termo
+      ${esc(recibo.versaoTermo || t.versao)}<br>
+      Resumo criptográfico do texto aceito (SHA-256): ${esc(recibo.resumoTermo || '')}<br>
+      Aceite manifestado por meio eletrônico no portal da Auster Inteligência Contábil.
+      O resumo acima identifica o texto exato a que o representante aderiu.
+    </div>
+
+    <div class="rodape-doc">${esc(t.rodape)}</div>
+  </div>`;
+}
+
+/** O Chrome usa o título do documento como nome sugerido do PDF. */
+window.baixarTermo = () => {
+  const limpo = String(R.nomeEmpresa || 'Empresa').toUpperCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  const titulo = document.title;
+  document.title = `Termo-Opcao-SN-${limpo}`;
+  window.print();
+  setTimeout(() => { document.title = titulo; }, 1200);
+};
+
+if (TERMO) document.getElementById('subCabecalho').textContent = TERMO.subtitulo;
+
+/* Modo "só o termo": o backoffice reabre uma adesão já registrada para tirar a
+ * via em PDF. Reaproveita o mesmo desenho que o cliente viu — o backoffice não
+ * precisa aprender a montar o documento de novo, e assim as duas vias não
+ * podem divergir. */
+if (window.__SO_TERMO__) {
+  const guardado = window.__SO_TERMO__;
+  Object.assign(R, guardado.empresa || {});
+  R.modalidade = guardado.modalidade || '';
+  R.semManifestacao = guardado.semManifestacao || '';
+  R.querProposta = guardado.querProposta === true;
+  R.declara = true;
+  recibo = guardado.recibo || {};
+  mostrarRecibo();
+} else {
+  desenhar();
+}
+</script>
+</body>
+</html>

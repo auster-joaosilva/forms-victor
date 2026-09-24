@@ -25,3 +25,9 @@ CHANGELOG_CLAUDE.md
 # Configuracao de sessao de ferramenta, nada a ver com a aplicacao.
 .claude/
 .claude-flow/
+
+# Gerado pelo build (a fonte e modelo_adesao.html).
+adesao.html
+[INFO] Recording command outcome: printf
+
+[OK] Command outcome recorded

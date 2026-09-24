@@ -7,13 +7,16 @@ mais ninguém; onde houver decisão a tomar, está marcado.
 
 ## O que é
 
-Uma aplicação Node que serve três coisas na mesma porta:
+Uma aplicação Node que serve tudo na mesma porta:
 
 | Rota | O que faz |
 |---|---|
 | `GET /` | o formulário público |
 | `GET /?c=TOKEN` | o mesmo formulário, pré-preenchido pelo convite |
 | `POST /api/respostas` | recebe o preenchimento |
+| `GET /adesao` | termo de opção, aberto: a empresa digita o próprio CNPJ |
+| `GET /adesao?c=TOKEN` | o mesmo termo, pré-preenchido pelo convite |
+| `POST /api/adesao` | recebe a opção confirmada |
 | `GET /entrar` | tela de entrada: usuário e senha na própria página |
 | `GET /sair` | encerra a sessão |
 | `GET /backoffice` | conferência interna; sem sessão, manda para `/entrar` |
@@ -121,6 +124,47 @@ onde isso foi medido.
 
 ---
 
+## O termo de opção (`/adesao`)
+
+Página separada do formulário, com o texto integral do **Termo de ciência,
+consentimento e autorização** e duas escolhas: **Opção 1 (Padrão)** ou
+**Opção 2 (Híbrido)**. Na Opção 2 o representante **autoriza a Auster a
+formalizar a opção no Portal do Simples Nacional**, e por isso a página é mais
+exigente que o formulário.
+
+**Duas portas, de propósito.** O link com `?c=TOKEN` chega pré-preenchido e
+amarra a adesão ao cliente; o link sem nada aceita qualquer empresa, que digita
+o CNPJ. O botão **Adesão**, na aba Convites, copia o link de cada cliente.
+
+**O que fica guardado como prova**, tudo decidido pelo servidor e nunca pelo
+navegador:
+
+| Campo | Para que serve |
+|---|---|
+| `versao_termo` e `resumo_termo` | dizem **qual texto** foi aceito — o resumo é SHA-256 do termo |
+| `aceito_em` | quando, em UTC |
+| `origem` | endereço de origem (primeiro salto do `x-forwarded-for`) |
+| `representante`, `cpf`, `cargo` | quem confirmou, e em que qualidade |
+
+**Mudou o texto do termo, sobe a versão.** O texto vive em `src/termo.js` e é a
+única fonte: a página exibe o que o servidor manda, e o servidor resume a
+própria cópia. Editar o texto sem trocar a versão faria o resumo guardado deixar
+de casar com o que se exibe — e a prova perderia o sentido. Adesão enviada com
+versão diferente da atual é **recusada**, para ninguém aderir a um texto que não
+viu.
+
+**O sistema não protocola nada.** A opção continua sendo feita à mão no Portal
+do Simples Nacional, empresa por empresa. A aba **Adesões** existe para isso:
+o quadro *A protocolar* conta o híbrido confirmado e ainda não feito, e o botão
+**Protocolei** registra quem fez e quando.
+
+**Validação jurídica pendente.** O aceite em página vale entre as partes, e o
+registro acima é o que o sustenta. Se essa prova basta para um documento que
+autoriza ato irretratável no semestre é pergunta para o parceiro jurídico —
+a Auster não é escritório de advocacia.
+
+---
+
 ## Backup
 
 O banco é **um arquivo**. Backup é copiar `/app/dados/portal.db` mais os
@@ -173,8 +217,8 @@ AUSTER_SENHA_BACKOFFICE=teste AUSTER_ENDERECO_PUBLICO=http://localhost:8080 node
 Testes, todos sem dependência:
 
 ```bash
-node testes.mjs            # 26 invariantes sobre 40.000 preenchimentos
-node testes_servidor.mjs   # 78 verificações: servidor, backoffice, usuários e sessão
+node testes.mjs            # 28 invariantes sobre 40.000 preenchimentos
+node testes_servidor.mjs   # 128 verificações: servidor, backoffice, usuários, sessão e adesões
 node varredura.mjs         # distribuição das saídas, sorteio uniforme
 node varredura_pesos.mjs   # distribuição com pesos plausíveis (premissa, não dado)
 ```

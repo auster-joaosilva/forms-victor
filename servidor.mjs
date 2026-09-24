@@ -18,11 +18,12 @@
  */
 
 import { createServer } from 'node:http';
-import { createHmac, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHmac, createHash, scryptSync, timingSafeEqual } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
-import { abrirBanco, senhaConfere, MINIMO_SENHA,
-         VERSAO_DO_ESQUEMA } from './src/banco.mjs';
+import { abrirBanco, senhaConfere, MINIMO_SENHA, VERSAO_DO_ESQUEMA,
+         MODALIDADES_ADESAO, SEM_MANIFESTACAO } from './src/banco.mjs';
 import { PERGUNTAS, BLOCOS } from './src/perguntas.js';
+import { TERMO } from './src/termo.js';
 
 const HORAS_DE_SESSAO = 12;
 
@@ -152,6 +153,150 @@ function portalConfigurado(convite) {
     );
   }
   return html.replace('/*__PUBLICACAO__*/', trechos.join('\n'));
+}
+
+// --------------------------------------------------------------------------
+// Termo de opção
+//
+// O resumo é calculado UMA vez, sobre a cópia do servidor, e é ele que vai
+// para o banco. Aceitar o resumo que o navegador mandasse seria guardar a
+// prova que o cliente quisesse — que não é prova nenhuma.
+// --------------------------------------------------------------------------
+
+const RESUMO_TERMO = createHash('sha256')
+  .update(JSON.stringify(TERMO), 'utf8').digest('hex');
+
+const soDigitos = v => String(v || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+
+/** Endereço de origem de quem confirmou — o IP que vai para a prova.
+ *
+ *  A ordem não é capricho. `x-forwarded-for` é cabeçalho, e cabeçalho o
+ *  cliente escreve: quem mandasse `X-Forwarded-For: 1.2.3.4` apareceria como
+ *  1.2.3.4, porque a Cloudflare ACRESCENTA o IP real à cadeia em vez de
+ *  substituí-la. O primeiro salto, então, pode ser inventado.
+ *
+ *  `CF-Connecting-IP` a Cloudflare sempre sobrescreve, e `X-Real-IP` o Traefik
+ *  define. Os dois valem mais que a cadeia. Sem proxy nenhum, o socket é a
+ *  verdade. A cadeia crua fica guardada à parte, para auditoria. */
+function origemDoPedido(req) {
+  const limpar = v => String(v || '').trim().replace(/^::ffff:/, '');
+  const daCloudflare = limpar(req.headers['cf-connecting-ip']);
+  const doTraefik = limpar(req.headers['x-real-ip']);
+  const daCadeia = limpar(String(req.headers['x-forwarded-for'] || '').split(',')[0]);
+  const doSocket = limpar(req.socket.remoteAddress);
+  return {
+    origem: daCloudflare || doTraefik || daCadeia || doSocket || null,
+    // Como foi determinado, e a cadeia inteira: sem isto, dois anos depois
+    // ninguém sabe se aquele IP veio de fonte confiável ou de cabeçalho.
+    comoObtido: daCloudflare ? 'cf-connecting-ip' : doTraefik ? 'x-real-ip'
+              : daCadeia ? 'x-forwarded-for' : 'socket',
+    cadeia: String(req.headers['x-forwarded-for'] || '') || null,
+  };
+}
+
+/** Serve a página do termo. `previo` pré-preenche pelo convite; `soTermo`
+ *  reabre uma adesão já registrada, para o backoffice tirar a via. */
+function paginaDeAdesao({ previo, vinculo, soTermo } = {}) {
+  const html = pagina('./adesao.html');
+  if (!html) return null;
+  const trechos = [
+    `window.__TERMO__ = ${jsonParaScript(TERMO)};`,
+    `window.__HOJE__ = ${jsonParaScript(new Date().toISOString())};`,
+  ];
+  if (previo) trechos.push(`window.__PREVIO__ = ${jsonParaScript(previo)};`);
+  if (vinculo) trechos.push(`window.__VINCULO__ = ${jsonParaScript(vinculo)};`);
+  if (soTermo) trechos.push(`window.__SO_TERMO__ = ${jsonParaScript(soTermo)};`);
+  return html.replace('/*__PUBLICACAO__*/', trechos.join('\n'));
+}
+
+/** Confere o que chegou do navegador. Devolve `{ erro }` ou `{ dados }`.
+ *  Campo a campo, porque uma adesão incompleta é pior que uma recusada: vira
+ *  autorização sem autor. */
+function conferirAdesao(corpo, req) {
+  if (!corpo || typeof corpo !== 'object') return { erro: 'corpo inválido' };
+  if (corpo.declara !== true) return { erro: 'sem a declaração final marcada' };
+  if (!MODALIDADES_ADESAO.includes(corpo.modalidade)) return { erro: 'modalidade inválida' };
+  if (corpo.modalidade === 'hibrido' && !SEM_MANIFESTACAO.includes(corpo.semManifestacao)) {
+    return { erro: 'falta escolher o que acontece sem manifestação até 20/11' };
+  }
+  // Versão diferente significa página aberta antes de o texto mudar. Gravar
+  // assim registraria adesão a um texto que a pessoa não viu.
+  if (corpo.versaoTermo !== TERMO.versao) {
+    return { erro: 'o termo foi atualizado; recarregue a página e confirme de novo' };
+  }
+  const e = corpo.empresa || {};
+  for (const [campo, rotulo] of [['nomeEmpresa', 'razão social'], ['cnpj', 'CNPJ'],
+      ['representante', 'nome do representante'], ['cpf', 'CPF'],
+      ['cargo', 'cargo'], ['email', 'e-mail']]) {
+    if (!String(e[campo] || '').trim()) return { erro: `falta ${rotulo}` };
+  }
+  if (soDigitos(e.cnpj).length !== 14) return { erro: 'CNPJ incompleto' };
+  if (String(e.cpf).replace(/\D/g, '').length !== 11) return { erro: 'CPF incompleto' };
+
+  const convite = corpo.vinculo ? banco.convite(corpo.vinculo) : null;
+  // Sem convite, ainda dá para amarrar ao diagnóstico: o CNPJ é o mesmo, e o
+  // vínculo é o que faz a adesão dizer sobre qual recomendação se apoia.
+  const resposta = banco.respostas({ busca: e.cnpj, limite: 1 })[0]
+    || banco.respostas({ busca: soDigitos(e.cnpj), limite: 1 })[0] || null;
+
+  return { dados: {
+    empresa: {
+      nomeEmpresa: String(e.nomeEmpresa).trim(), cnpj: String(e.cnpj).trim(),
+      representante: String(e.representante).trim(), cpf: String(e.cpf).trim(),
+      cargo: String(e.cargo).trim(), email: String(e.email).trim(),
+      telefone: String(e.telefone || '').trim(),
+    },
+    modalidade: corpo.modalidade,
+    semManifestacao: corpo.modalidade === 'hibrido' ? corpo.semManifestacao : null,
+    querProposta: corpo.querProposta === true,
+    respostaId: resposta ? resposta.id : null,
+    tokenConvite: convite ? convite.token : null,
+    versaoTermo: TERMO.versao,
+    resumoTermo: RESUMO_TERMO,
+    aceitoEm: new Date().toISOString(),
+    ...origemDoPedido(req),
+    agente: String(req.headers['user-agent'] || '').slice(0, 300) || null,
+  } };
+}
+
+const MODALIDADE_LEGIVEL = {
+  padrao: 'Simples Nacional Puro (Padrão)',
+  hibrido: 'Simples Nacional Híbrido (CBS fora do DAS)',
+};
+const SEM_MANIFESTACAO_LEGIVEL = {
+  cancelar: 'autoriza cancelar, voltando ao Padrão',
+  manter: 'mantém o Híbrido',
+};
+
+/** Planilha das adesões. Mesma regra da outra: ponto e vírgula e BOM, porque o
+ *  destino é Excel em português. */
+function planilhaDeAdesoes(linhas) {
+  const cabecalho = ['protocolo', 'aceito em', 'situacao', 'modalidade',
+    'sem manifestacao ate 20/11', 'empresa', 'CNPJ', 'representante', 'CPF',
+    'cargo', 'e-mail', 'telefone', 'quer proposta', 'diagnostico vinculado',
+    'convite', 'versao do termo', 'resumo do termo', 'origem do acesso',
+    'origem apurada por', 'cadeia de proxies', 'navegador',
+    'tratado por', 'tratado em', 'nota interna'];
+  const celula = v => {
+    const texto = v === undefined || v === null ? '' : String(v);
+    return /[";\n]/.test(texto) ? '"' + texto.replace(/"/g, '""') + '"' : texto;
+  };
+  const corpo = linhas.map(l => {
+    // Como o IP foi apurado e a cadeia crua vivem no pacote, não em coluna:
+    // são dado de auditoria, e quem audita abre a planilha, não a tela.
+    const p = l.pacote || {};
+    return [
+      l.protocolo, l.aceito_em, l.situacao, MODALIDADE_LEGIVEL[l.modalidade] || l.modalidade,
+      SEM_MANIFESTACAO_LEGIVEL[l.sem_manifestacao] || '', l.nome_empresa, l.cnpj,
+      l.representante, l.cpf, l.cargo, l.email, l.telefone,
+      l.quer_proposta ? 'sim' : 'nao',
+      l.resposta_id ? `resposta ${l.resposta_id}` : '', l.token_convite || '',
+      l.versao_termo, l.resumo_termo, l.origem,
+      p.comoObtido || '', p.cadeia || '', l.agente || p.agente || '',
+      l.tratado_por || '', l.tratado_em || '', l.nota_interna || '',
+    ].map(celula).join(';');
+  });
+  return '﻿' + [cabecalho.map(celula).join(';'), ...corpo].join('\r\n') + '\r\n';
 }
 
 // --------------------------------------------------------------------------
@@ -418,6 +563,44 @@ const servidor = createServer(async (req, res) => {
       return json(res, 201, { ok: true, id, protocolo: pacote.protocolo });
     }
 
+    // ------------------------------------------------------ termo de opção
+    if (req.method === 'GET' && rota === '/adesao') {
+      const token = url.searchParams.get('c');
+      const convite = token ? banco.convite(token) : null;
+      if (token && convite) banco.marcarAbertura(token);
+      const previo = {};
+      if (convite) {
+        if (convite.nome_empresa) previo.nomeEmpresa = convite.nome_empresa;
+        if (convite.cnpj) previo.cnpj = convite.cnpj;
+        if (convite.email) previo.email = convite.email;
+      }
+      const html = paginaDeAdesao({
+        previo: Object.keys(previo).length ? previo : null,
+        vinculo: convite ? convite.token : null,
+      });
+      if (!html) return responder(res, 500, 'adesao.html não encontrado. Rode node construir.mjs.');
+      return responder(res, 200, html, 'text/html; charset=utf-8',
+        { 'Cache-Control': 'no-store' });
+    }
+
+    if (req.method === 'POST' && rota === '/api/adesao') {
+      let corpo;
+      try { corpo = JSON.parse(await lerCorpo(req)); }
+      catch (e) {
+        return e && e.grande
+          ? json(res, 413, { ok: false, erro: 'corpo grande demais' })
+          : json(res, 400, { ok: false, erro: 'corpo inválido' });
+      }
+      const { erro, dados } = conferirAdesao(corpo, req);
+      if (erro) return json(res, 422, { ok: false, erro });
+      const { id, protocolo } = banco.gravarAdesao(dados);
+      return json(res, 201, {
+        ok: true, id, protocolo,
+        aceitoEm: dados.aceitoEm, origem: dados.origem,
+        versaoTermo: dados.versaoTermo, resumoTermo: dados.resumoTermo,
+      });
+    }
+
     // ------------------------------------------------ entrar e sair
     if (rota === '/entrar') {
       if (req.method === 'GET') {
@@ -579,6 +762,61 @@ const servidor = createServer(async (req, res) => {
         return html
           ? responder(res, 200, html, 'text/html; charset=utf-8', { 'Cache-Control': 'no-store' })
           : responder(res, 500, 'portal.html não encontrado. Rode node construir.mjs.');
+      }
+
+      // ------------------------------------------------------------ adesões
+      if (req.method === 'GET' && rota === '/api/backoffice/adesoes') {
+        return json(res, 200, {
+          ok: true,
+          contagem: banco.contagemAdesoes(),
+          base: ENDERECO_PUBLICO,
+          adesoes: banco.adesoes({
+            situacao: url.searchParams.get('situacao') || undefined,
+            modalidade: url.searchParams.get('modalidade') || undefined,
+            busca: url.searchParams.get('busca') || undefined,
+          }),
+        });
+      }
+
+      if (req.method === 'POST' && rota === '/api/backoffice/adesoes/tratar') {
+        const corpo = JSON.parse(await lerCorpo(req) || '{}');
+        const r = banco.tratarAdesao(Number(corpo.id),
+          { situacao: corpo.situacao, nota: corpo.nota, quem });
+        return json(res, r.ok ? 200 : 400, r);
+      }
+
+      if (req.method === 'GET' && rota === '/api/backoffice/adesoes.csv') {
+        const linhas = banco.adesoes({
+          situacao: url.searchParams.get('situacao') || undefined,
+          modalidade: url.searchParams.get('modalidade') || undefined,
+          busca: url.searchParams.get('busca') || undefined,
+          limite: 5000,
+        }).map(l => banco.adesao(l.id));
+        banco.registrar(quem, 'planilha_adesoes_exportada', String(linhas.length));
+        const hoje = new Date().toISOString().slice(0, 10);
+        return responder(res, 200, planilhaDeAdesoes(linhas), 'text/csv; charset=utf-8',
+          { 'Content-Disposition': `attachment; filename="adesoes-simples-${hoje}.csv"` });
+      }
+
+      if (req.method === 'GET' && rota === '/backoffice/termo') {
+        const a = banco.adesao(Number(url.searchParams.get('id')));
+        if (!a) return responder(res, 404, 'Adesão não encontrada.', 'text/plain; charset=utf-8');
+        const html = paginaDeAdesao({ soTermo: {
+          empresa: {
+            nomeEmpresa: a.nome_empresa, cnpj: a.cnpj, representante: a.representante,
+            cpf: a.cpf, cargo: a.cargo, email: a.email, telefone: a.telefone,
+          },
+          modalidade: a.modalidade,
+          semManifestacao: a.sem_manifestacao,
+          querProposta: a.quer_proposta === 1,
+          recibo: {
+            protocolo: a.protocolo, aceitoEm: a.aceito_em, origem: a.origem,
+            versaoTermo: a.versao_termo, resumoTermo: a.resumo_termo,
+          },
+        } });
+        return html
+          ? responder(res, 200, html, 'text/html; charset=utf-8', { 'Cache-Control': 'no-store' })
+          : responder(res, 500, 'adesao.html não encontrado. Rode node construir.mjs.');
       }
 
       if (req.method === 'GET' && rota === '/api/backoffice/eventos') {

@@ -1,8 +1,13 @@
-/* Gera portal.html — arquivo único, abre com duplo clique, sem servidor.
+/* Gera as páginas montadas a partir de fonte única.
  *
- * Fonte única: lê src/perguntas.js, src/motor.js e src/acoes.js e inlina os três
- * no HTML, removendo import/export. O mesmo código roda na varredura (Node) e no
- * protótipo (navegador) — não há duas versões para divergir.
+ *   modelo.html         + src/*.js  ->  portal.html   (formulário e relatório)
+ *   modelo_adesao.html  + src/*.js  ->  adesao.html   (termo de opção)
+ *
+ * Fonte única: lê os módulos de src/ e os inlina no HTML, removendo
+ * import/export. O mesmo código roda na varredura (Node) e no navegador — não
+ * há duas versões para divergir. A página de adesão reaproveita validação e
+ * consulta cadastral em vez de reescrevê-las: o CNPJ alfanumérico já está
+ * tratado lá, e uma segunda implementação recusaria empresa válida.
  *
  * Uso: node construir.mjs
  */
@@ -14,33 +19,32 @@ const limpar = caminho => readFileSync(caminho, 'utf8')
   .replace(/^export\s+/gm, '')
   .replace(/^export\s*\{[^}]*\};?\s*$/gm, '');
 
-const modulos = ['src/validacao.js', 'src/consulta_cnpj.js', 'src/simples.js',
-                 'src/perguntas.js', 'src/motor.js', 'src/acoes.js']
-  .map(limpar).join('\n\n');
-const modelo = readFileSync('modelo.html', 'utf8');
-let html = modelo.replace('/*__MODULOS__*/', modulos);
-
 /* Os dois logos entram aqui, e não no modelo: 63 KB de base64 no meio do HTML
  * tornavam o modelo ilegível e impossível de revisar por diff. A marca é ativo
- * versionado em ativos/, o modelo só diz onde cada variante entra. */
+ * versionado em ativos/, o modelo só diz onde cada variante entra.
+ *
+ * São DOIS arquivos, e não um com filtro: `invert(1)` sobre a logo negativa
+ * leva #70CEEC a #8F3113 — marrom — na impressão. A variante positiva existe
+ * para o papel. */
 const LOGOS = {
   '/*__LOGO_TELA__*/': 'ativos/logo-contabil-negativa.b64',
   '/*__LOGO_PAPEL__*/': 'ativos/logo-contabil-positiva.b64',
 };
-for (const [marcador, arquivo] of Object.entries(LOGOS)) {
-  if (!html.includes(marcador)) {
-    console.error(`ERRO: o marcador ${marcador} desapareceu do modelo.`);
-    console.error('Sem ele o cabeçalho sai com a imagem quebrada.');
-    process.exit(1);
-  }
-  html = html.replace(marcador, readFileSync(arquivo, 'utf8').trim());
+
+function abortar(...linhas) {
+  for (const l of linhas) console.error(l);
+  process.exit(1);
 }
 
-if (!html.includes('/*__PUBLICACAO__*/')) {
-  console.error('ERRO: o marcador /*__PUBLICACAO__*/ desapareceu do modelo.');
-  console.error('É por ele que o servidor injeta endpoint e convite. Sem ele, o');
-  console.error('portal servido nunca envia resposta nenhuma — em silêncio.');
-  process.exit(1);
+function inlinarLogos(html, nome) {
+  for (const [marcador, arquivo] of Object.entries(LOGOS)) {
+    if (!html.includes(marcador)) {
+      abortar(`ERRO: o marcador ${marcador} desapareceu de ${nome}.`,
+              'Sem ele o cabeçalho sai com a imagem quebrada.');
+    }
+    html = html.replace(marcador, readFileSync(arquivo, 'utf8').trim());
+  }
+  return html;
 }
 
 /* Guarda contra um defeito que já aconteceu: atributo `onclick` roda no escopo
@@ -80,37 +84,56 @@ export function conferirFuncoesOrfas(texto) {
   return orfas;
 }
 
-const orfas = conferirFuncoesOrfas(html);
-if (orfas.length) {
-  console.error('ERRO: função exposta em window e não chamada por handler nenhum.');
-  for (const x of orfas) console.error(`  window.${x}`);
-  console.error('Ou ligue ao botão que deveria chamá-la, ou apague — as duas coisas');
-  console.error('são melhores que uma tela que não alcança a função.');
-  process.exit(1);
-}
-
-const suspeitos = conferirHandlersInline(html);
-if (suspeitos.length) {
-  console.error('ERRO: handler inline cita identificador de módulo e vai lançar ReferenceError.');
-  for (const x of suspeitos) console.error(`  ${x}`);
-  console.error('Interpole o valor no template em vez de escrever o nome.');
-  process.exit(1);
-}
-
-/* O backoffice não é montado pelo build — é servido como está. Mas as duas
- * guardas valem para ele igual, e até aqui ninguém as aplicava: é HTML com
- * handler inline e funções em `window`, os mesmos dois defeitos. */
-const backoffice = readFileSync('backoffice.html', 'utf8');
-for (const [rotulo, achados] of [
-  ['função exposta em window e não chamada por handler nenhum', conferirFuncoesOrfas(backoffice)],
-  ['handler inline citando identificador de módulo', conferirHandlersInline(backoffice)],
-]) {
-  if (achados.length) {
-    console.error(`ERRO em backoffice.html: ${rotulo}.`);
-    for (const x of achados) console.error(`  ${x}`);
-    process.exit(1);
+function guardar(html, nome) {
+  for (const [rotulo, achados, conserto] of [
+    ['função exposta em window e não chamada por handler nenhum',
+     conferirFuncoesOrfas(html),
+     'Ou ligue ao botão que deveria chamá-la, ou apague — as duas coisas são '
+     + 'melhores que uma tela que não alcança a função.'],
+    ['handler inline cita identificador de módulo e vai lançar ReferenceError',
+     conferirHandlersInline(html),
+     'Interpole o valor no template em vez de escrever o nome.'],
+  ]) {
+    if (achados.length) {
+      abortar(`ERRO em ${nome}: ${rotulo}.`, ...achados.map(x => `  ${x}`), conserto);
+    }
   }
 }
 
-writeFileSync('portal.html', html, 'utf8');
-console.log(`portal.html gerado — ${(html.length / 1024).toFixed(0)} KB`);
+function exigirMarcador(html, marcador, nome, porque) {
+  if (!html.includes(marcador)) abortar(`ERRO: o marcador ${marcador} desapareceu de ${nome}.`, porque);
+}
+
+// ------------------------------------------------------------------ portal
+const modulosDoPortal = ['src/validacao.js', 'src/consulta_cnpj.js', 'src/simples.js',
+                         'src/perguntas.js', 'src/motor.js', 'src/acoes.js']
+  .map(limpar).join('\n\n');
+
+let portal = readFileSync('modelo.html', 'utf8').replace('/*__MODULOS__*/', modulosDoPortal);
+portal = inlinarLogos(portal, 'modelo.html');
+exigirMarcador(portal, '/*__PUBLICACAO__*/', 'modelo.html',
+  'É por ele que o servidor injeta endpoint e convite. Sem ele, o portal servido '
+  + 'nunca envia resposta nenhuma — em silêncio.');
+guardar(portal, 'portal.html');
+writeFileSync('portal.html', portal, 'utf8');
+
+// ------------------------------------------------------------------ adesão
+const modulosDaAdesao = ['src/validacao.js', 'src/consulta_cnpj.js']
+  .map(limpar).join('\n\n');
+
+let adesao = readFileSync('modelo_adesao.html', 'utf8')
+  .replace('/*__MODULOS__*/', modulosDaAdesao);
+adesao = inlinarLogos(adesao, 'modelo_adesao.html');
+exigirMarcador(adesao, '/*__PUBLICACAO__*/', 'modelo_adesao.html',
+  'É por ele que o servidor injeta o texto do termo. Sem ele a página abre vazia.');
+guardar(adesao, 'adesao.html');
+writeFileSync('adesao.html', adesao, 'utf8');
+
+// -------------------------------------------------------------- backoffice
+/* O backoffice não é montado pelo build — é servido como está. Mas as duas
+ * guardas valem para ele igual: é HTML com handler inline e funções em
+ * `window`, os mesmos dois defeitos. */
+guardar(readFileSync('backoffice.html', 'utf8'), 'backoffice.html');
+
+console.log(`portal.html gerado — ${(portal.length / 1024).toFixed(0)} KB`);
+console.log(`adesao.html gerado — ${(adesao.length / 1024).toFixed(0)} KB`);

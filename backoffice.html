@@ -54,7 +54,13 @@ th{text-align:left;font-weight:500;font-size:var(--t-meta);text-transform:upperc
   letter-spacing:.7px;color:var(--cinza);padding:8px 10px;border-bottom:1px solid var(--borda-forte)}
 td{padding:11px 10px;border-bottom:1px solid var(--borda);vertical-align:top}
 tr.linha:hover{background:#f7fafc;cursor:pointer}
-.selo{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11.5px}
+.selo{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11.5px;
+  white-space:nowrap}
+.a-recebida{background:#fdf4e3;color:#7a5200}
+.a-protocolada{background:#eaf5ee;color:#1f5c3b}
+.a-cancelada{background:#f1f1f1;color:#5b6b78}
+.aviso-prazo{background:#fdf4e3;border:1px solid #e3d3ab;border-left:4px solid var(--medio);
+  border-radius:9px;padding:14px 16px;margin-bottom:16px}
 .s-nova{background:#dff0f5;color:#00596b}
 .s-em_analise{background:#fdf4e3;color:#7a5200}
 .s-validada{background:#eaf5ee;color:#1f5c3b}
@@ -106,6 +112,7 @@ dialog::backdrop{background:rgba(5,44,71,.45)}
 <main>
   <div class="abas">
     <button class="aba ativa" data-aba="respostas">Respostas</button>
+    <button class="aba" data-aba="adesoes">Adesões</button>
     <button class="aba" data-aba="convites">Convites</button>
     <button class="aba" data-aba="eventos">Auditoria</button>
     <button class="aba oculta" data-aba="usuarios" id="abaUsuarios">Usuários</button>
@@ -360,10 +367,123 @@ window.tratar = async (id, situacao) => {
   verRespostas();
 };
 
+// ------------------------------------------------------------------- adesões
+/* A adesão é de outra natureza que a resposta: aqui há prazo e há ato a
+   praticar. O número que manda nesta tela é "a protocolar" — híbrido
+   confirmado e ainda não feito no Portal do Simples Nacional. */
+const SITUACOES_ADESAO = { recebida:'Recebida', protocolada:'Protocolada', cancelada:'Cancelada' };
+const MODALIDADES = { padrao:'Simples Padrão', hibrido:'Simples Híbrido' };
+const SEM_MANIFESTACAO = { cancelar:'cancela em 20/11', manter:'mantém em 20/11' };
+let filtroModalidade = '', filtroSituacaoAdesao = '', filtroBuscaAdesao = '';
+
+async function verAdesoes() {
+  const q = new URLSearchParams();
+  if (filtroSituacaoAdesao) q.set('situacao', filtroSituacaoAdesao);
+  if (filtroModalidade) q.set('modalidade', filtroModalidade);
+  if (filtroBuscaAdesao) q.set('busca', filtroBuscaAdesao);
+  const { contagem, adesoes } = await pedir('/api/backoffice/adesoes?' + q);
+
+  const caixas = [['total','Total'], ['hibrido','Híbrido'], ['padrao','Padrão'],
+                  ['aProtocolar','A protocolar'], ['protocolada','Protocoladas']]
+    .map(([k, rot]) => `<div class="caixa"><div class="rot">${rot}</div>
+      <div class="val">${contagem[k] ?? 0}</div></div>`).join('');
+
+  const linhas = adesoes.map(a => `
+    <tr>
+      <td><b>${esc(a.nome_empresa || '(sem nome)')}</b><br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(a.cnpj || '')}</span></td>
+      <td>${esc(a.representante || '—')}<br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(a.cargo || '')} ·
+        ${esc(a.email || '')}</span></td>
+      <td><b>${esc(MODALIDADES[a.modalidade] || a.modalidade)}</b>${a.sem_manifestacao
+        ? `<br><span style="color:var(--cinza);font-size:var(--t-meta)">${esc(SEM_MANIFESTACAO[a.sem_manifestacao] || '')}</span>` : ''}</td>
+      <td>${quando(a.aceito_em)}<br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(a.protocolo)}</span></td>
+      <td><span class="selo a-${esc(a.situacao)}">${esc(SITUACOES_ADESAO[a.situacao] || a.situacao)}</span>
+        ${a.quer_proposta ? '<br><span class="selo s-em_analise">quer proposta</span>' : ''}</td>
+      <td style="white-space:nowrap">
+        <button class="claro" onclick="window.abrirTermo(${a.id})">Termo (PDF)</button>
+        ${a.modalidade === 'hibrido' && a.situacao === 'recebida'
+          ? `<button onclick="window.marcarAdesao(${a.id},'protocolada')">Protocolei</button>` : ''}
+        ${a.situacao !== 'cancelada'
+          ? `<button class="claro" onclick="window.marcarAdesao(${a.id},'cancelada')">Cancelar</button>` : ''}
+      </td>
+    </tr>`).join('');
+
+  conteudo.innerHTML = `
+    <div class="contagem">${caixas}</div>
+    ${contagem.aProtocolar
+      ? `<div class="aviso-prazo"><b>${contagem.aProtocolar}</b>
+          ${contagem.aProtocolar === 1 ? 'empresa autorizou' : 'empresas autorizaram'} a opção
+          pelo Híbrido e ainda não ${contagem.aProtocolar === 1 ? 'foi feita' : 'foram feitas'}
+          no Portal do Simples Nacional. <b>O prazo é 30/09/2026.</b></div>`
+      : ''}
+    <div class="filtros">
+      <input type="text" id="buscaAdesao" placeholder="Empresa, CNPJ, protocolo ou representante"
+        value="${esc(filtroBuscaAdesao)}">
+      <select id="modalidadeAdesao">
+        <option value="">Todas as modalidades</option>
+        ${Object.entries(MODALIDADES).map(([k, v]) =>
+          `<option value="${k}" ${filtroModalidade === k ? 'selected' : ''}>${v}</option>`).join('')}
+      </select>
+      <select id="situacaoAdesao">
+        <option value="">Todas as situações</option>
+        ${Object.entries(SITUACOES_ADESAO).map(([k, v]) =>
+          `<option value="${k}" ${filtroSituacaoAdesao === k ? 'selected' : ''}>${v}</option>`).join('')}
+      </select>
+      <button class="claro" onclick="window.filtrarAdesoes()">Filtrar</button>
+      <button class="claro" onclick="window.baixarPlanilhaAdesoes()">Baixar planilha (CSV)</button>
+    </div>
+    ${adesoes.length ? `<table><thead><tr>
+      <th>Empresa</th><th>Quem confirmou</th><th>Modalidade</th><th>Confirmado</th>
+      <th>Situação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>`
+      : '<div class="vazio">Nenhuma adesão com esse filtro.</div>'}
+    <p class="nota">Confirmar aqui não protocola nada: a opção continua sendo feita à mão no
+    Portal do Simples Nacional, empresa por empresa. Esta tela serve para ninguém ficar de fora
+    e para registrar quem fez.</p>`;
+
+  document.getElementById('buscaAdesao').addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.filtrarAdesoes();
+  });
+}
+
+window.filtrarAdesoes = () => {
+  filtroBuscaAdesao = document.getElementById('buscaAdesao').value.trim();
+  filtroModalidade = document.getElementById('modalidadeAdesao').value;
+  filtroSituacaoAdesao = document.getElementById('situacaoAdesao').value;
+  verAdesoes();
+};
+
+window.abrirTermo = id => { window.open('/backoffice/termo?id=' + id, '_blank'); };
+
+window.baixarPlanilhaAdesoes = () => {
+  const q = new URLSearchParams();
+  if (filtroSituacaoAdesao) q.set('situacao', filtroSituacaoAdesao);
+  if (filtroModalidade) q.set('modalidade', filtroModalidade);
+  if (filtroBuscaAdesao) q.set('busca', filtroBuscaAdesao);
+  window.location = '/api/backoffice/adesoes.csv' + (q.toString() ? '?' + q : '');
+};
+
+window.marcarAdesao = async (id, situacao) => {
+  if (situacao === 'cancelada'
+      && !confirm('Cancelar esta adesão? Use quando o cliente desistiu ou o termo saiu errado.')) {
+    return;
+  }
+  const r = await fetch('/api/backoffice/adesoes/tratar', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, situacao }),
+  }).then(x => x.json());
+  if (!r.ok) { alert('Não deu: ' + (r.motivo || r.erro || 'erro')); return; }
+  verAdesoes();
+};
+
 // ------------------------------------------------------------------ convites
 async function verConvites() {
   const { convites, base } = await pedir('/api/backoffice/convites');
   const link = t => `${base || ''}/?c=${t}`;
+  // O mesmo convite abre as duas portas: o diagnóstico e o termo de opção. Quem
+  // já decidiu não precisa refazer o formulário para formalizar.
+  const linkAdesao = t => `${base || ''}/adesao?c=${t}`;
 
   const linhas = convites.map(c => `
     <tr>
@@ -374,8 +494,9 @@ async function verConvites() {
       <td>${c.respostas || 0}</td>
       <td>${quando(c.criado_em)}<br>
         <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(c.criado_por || '')}</span></td>
-      <td>
-        <button class="claro" onclick="copiar('${esc(link(c.token))}')">Copiar</button>
+      <td style="white-space:nowrap">
+        <button class="claro" onclick="copiar('${esc(link(c.token))}')">Diagnóstico</button>
+        <button class="claro" onclick="copiar('${esc(linkAdesao(c.token))}')">Adesão</button>
         ${c.respostas ? '' : `<button class="claro" onclick="apagarConvite('${esc(c.token)}')">Apagar</button>`}
       </td>
     </tr>`).join('');
@@ -385,7 +506,8 @@ async function verConvites() {
     <p class="nota" style="margin:0 0 18px">O link de convite já chega com o nome e o CNPJ
     preenchidos, e amarra a resposta ao cliente a quem foi enviado. Para divulgação aberta —
     redes sociais, por exemplo — use o endereço sem <code>?c=</code>: a resposta entra como
-    "link aberto".</p>
+    "link aberto". O botão <b>Adesão</b> copia o link do <b>termo de opção</b>, para quem já
+    decidiu e só precisa formalizar.</p>
     <div class="filtros">
       <input type="text" id="nomeEmpresa" placeholder="Nome da empresa">
       <input type="text" id="cnpj" placeholder="CNPJ" style="min-width:170px">
@@ -630,8 +752,8 @@ document.querySelectorAll('.aba').forEach(b => b.addEventListener('click', () =>
 
 function desenhar() {
   conteudo.innerHTML = 'carregando…';
-  const fn = { respostas: verRespostas, convites: verConvites, eventos: verEventos,
-               usuarios: verUsuarios }[abaAtual];
+  const fn = { respostas: verRespostas, adesoes: verAdesoes, convites: verConvites,
+               eventos: verEventos, usuarios: verUsuarios }[abaAtual];
   fn().catch(e => { conteudo.innerHTML = `<div class="vazio">Falha ao carregar: ${esc(e.message)}</div>`; });
 }
 

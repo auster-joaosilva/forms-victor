@@ -88,8 +88,58 @@ CREATE TABLE IF NOT EXISTS eventos (
 );
 `;
 
+/* Adesões: o termo de opção confirmado pelo cliente.
+ *
+ * Tabela separada de `respostas` de propósito. Uma resposta é autodeclaração
+ * para orientar; uma adesão é manifestação de vontade com efeito — na Opção 2 o
+ * cliente autoriza a Auster a agir no Portal do Simples Nacional. Misturar as
+ * duas faria a fila de conferência esconder a fila que tem prazo.
+ *
+ * O que faz a prova valer está em quatro colunas: `versao_termo` e
+ * `resumo_termo` dizem QUAL texto foi aceito, `aceito_em` e `origem` dizem
+ * quando e de onde. Sem o resumo, mudar o texto amanhã reescreveria o passado. */
+const ESQUEMA_ADESOES = `
+CREATE TABLE IF NOT EXISTS adesoes (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  protocolo        TEXT NOT NULL,
+  resposta_id      INTEGER,
+  token_convite    TEXT,
+  aceito_em        TEXT NOT NULL,
+  nome_empresa     TEXT,
+  cnpj             TEXT,
+  representante    TEXT,
+  cpf              TEXT,
+  cargo            TEXT,
+  email            TEXT,
+  telefone         TEXT,
+  modalidade       TEXT NOT NULL,
+  sem_manifestacao TEXT,
+  quer_proposta    INTEGER NOT NULL DEFAULT 0,
+  versao_termo     TEXT NOT NULL,
+  resumo_termo     TEXT NOT NULL,
+  origem           TEXT,
+  agente           TEXT,
+  pacote           TEXT NOT NULL,
+  situacao         TEXT NOT NULL DEFAULT 'recebida',
+  nota_interna     TEXT,
+  tratado_por      TEXT,
+  tratado_em       TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_adesoes_aceito     ON adesoes(aceito_em);
+CREATE INDEX IF NOT EXISTS idx_adesoes_situacao   ON adesoes(situacao);
+CREATE INDEX IF NOT EXISTS idx_adesoes_modalidade ON adesoes(modalidade);
+CREATE INDEX IF NOT EXISTS idx_adesoes_cnpj       ON adesoes(cnpj);
+`;
+
 export const SITUACOES = ['nova', 'em_analise', 'validada', 'descartada'];
 export const PAPEIS = ['admin', 'equipe'];
+
+/** Situação da adesão. `protocolada` só faz sentido no híbrido — é o registro
+ *  de que alguém entrou no Portal do Simples Nacional e fez. */
+export const SITUACOES_ADESAO = ['recebida', 'protocolada', 'cancelada'];
+export const MODALIDADES_ADESAO = ['padrao', 'hibrido'];
+export const SEM_MANIFESTACAO = ['cancelar', 'manter'];
 
 /** Regras mínimas de usuário e senha. Comprimento é a única exigência de senha:
  *  obrigar símbolo e maiúscula produz senha curta e anotada em papel, que é
@@ -115,6 +165,9 @@ const MIGRACOES = [
   { versao: 1,
     descricao: 'esquema inicial: convites, respostas, eventos, usuarios',
     aplicar: db => db.exec(ESQUEMA) },
+  { versao: 2,
+    descricao: 'adesoes: termo de opcao confirmado pelo cliente',
+    aplicar: db => db.exec(ESQUEMA_ADESOES) },
 ];
 
 /** Versão máxima que este código conhece. */
@@ -154,7 +207,7 @@ export function abrirBanco(caminho) {
   const passo = migrar(db);
   if (passo.aplicadas) {
     console.log(`esquema do banco: ${passo.de} -> ${passo.para} `
-      + `(${passo.aplicadas} migração${passo.aplicadas > 1 ? 'ões' : ''} aplicada)`);
+      + `(${passo.aplicadas} ${passo.aplicadas > 1 ? 'migrações aplicadas' : 'migração aplicada'})`);
   }
   return criarApi(db);
 }
@@ -166,6 +219,13 @@ function novoToken() {
   const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem I, O, 0, 1
   const bytes = randomBytes(10);
   return [...bytes].map(b => alfabeto[b % alfabeto.length]).join('');
+}
+
+/** Protocolo da adesão: legível ao telefone e sem colisão prática.
+ *  A data na frente serve para quem confere sem abrir o sistema. */
+function protocoloDeAdesao(quando = new Date()) {
+  const dia = quando.toISOString().slice(0, 10).replace(/-/g, '');
+  return `ADS-${dia}-${novoToken().slice(0, 5)}`;
 }
 
 function criarApi(db) {
@@ -287,6 +347,92 @@ function criarApi(db) {
       const fora = { total: 0 };
       for (const s of SITUACOES) fora[s] = 0;
       for (const l of linhas) { fora[l.situacao] = l.n; fora.total += l.n; }
+      return fora;
+    },
+
+    // ------------------------------------------------------------- adesões
+    /** Grava a adesão. Quem decide `origem`, `aceitoEm`, `versaoTermo` e
+     *  `resumoTermo` é o SERVIDOR, nunca o navegador: se a página pudesse
+     *  mandar o resumo do texto, a prova provaria o que o cliente quisesse. */
+    gravarAdesao(dados) {
+      const e = dados.empresa || {};
+      const protocolo = protocoloDeAdesao();
+      const info = db.prepare(`INSERT INTO adesoes
+        (protocolo, resposta_id, token_convite, aceito_em, nome_empresa, cnpj,
+         representante, cpf, cargo, email, telefone, modalidade, sem_manifestacao,
+         quer_proposta, versao_termo, resumo_termo, origem, agente, pacote)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(protocolo, dados.respostaId || null, dados.tokenConvite || null,
+             dados.aceitoEm, e.nomeEmpresa || null, e.cnpj || null,
+             e.representante || null, e.cpf || null, e.cargo || null,
+             e.email || null, e.telefone || null, dados.modalidade,
+             dados.semManifestacao || null, dados.querProposta ? 1 : 0,
+             dados.versaoTermo, dados.resumoTermo, dados.origem || null,
+             dados.agente || null, JSON.stringify(dados));
+      registrar(null, 'adesao_recebida', protocolo,
+                { id: Number(info.lastInsertRowid), modalidade: dados.modalidade });
+      return { id: Number(info.lastInsertRowid), protocolo };
+    },
+
+    adesoes({ situacao, modalidade, busca, limite = 500 } = {}) {
+      const onde = [], params = [];
+      if (situacao && SITUACOES_ADESAO.includes(situacao)) {
+        onde.push('situacao = ?'); params.push(situacao);
+      }
+      if (modalidade && MODALIDADES_ADESAO.includes(modalidade)) {
+        onde.push('modalidade = ?'); params.push(modalidade);
+      }
+      if (busca) {
+        onde.push('(nome_empresa LIKE ? OR cnpj LIKE ? OR protocolo LIKE ? OR representante LIKE ?)');
+        const alvo = `%${busca}%`;
+        params.push(alvo, alvo, alvo, alvo);
+      }
+      const filtro = onde.length ? 'WHERE ' + onde.join(' AND ') : '';
+      return db.prepare(`SELECT id, protocolo, resposta_id, token_convite, aceito_em,
+        nome_empresa, cnpj, representante, cpf, cargo, email, telefone, modalidade,
+        sem_manifestacao, quer_proposta, versao_termo, resumo_termo, origem,
+        situacao, nota_interna, tratado_por, tratado_em
+        FROM adesoes ${filtro} ORDER BY aceito_em DESC LIMIT ?`).all(...params, limite);
+    },
+
+    adesao(id) {
+      const linha = db.prepare('SELECT * FROM adesoes WHERE id = ?').get(id);
+      if (!linha) return null;
+      return { ...linha, pacote: JSON.parse(linha.pacote) };
+    },
+
+    tratarAdesao(id, { situacao, nota, quem }) {
+      if (situacao && !SITUACOES_ADESAO.includes(situacao)) {
+        return { ok: false, motivo: 'situação inválida' };
+      }
+      const atual = db.prepare('SELECT situacao, modalidade FROM adesoes WHERE id = ?').get(id);
+      if (!atual) return { ok: false, motivo: 'adesão não encontrada' };
+      // Marcar como protocolada uma adesão pelo Padrão seria registrar ato que
+      // não existe: no Padrão não há o que fazer no Portal do Simples Nacional.
+      if (situacao === 'protocolada' && atual.modalidade !== 'hibrido') {
+        return { ok: false, motivo: 'só a opção pelo híbrido é protocolada' };
+      }
+      db.prepare(`UPDATE adesoes
+        SET situacao = COALESCE(?, situacao), nota_interna = COALESCE(?, nota_interna),
+            tratado_por = ?, tratado_em = ?
+        WHERE id = ?`).run(situacao || null, nota ?? null, quem || null, agora(), id);
+      registrar(quem, 'adesao_tratada', String(id),
+                { de: atual.situacao, para: situacao || atual.situacao });
+      return { ok: true };
+    },
+
+    contagemAdesoes() {
+      const fora = { total: 0, padrao: 0, hibrido: 0, aProtocolar: 0 };
+      for (const s of SITUACOES_ADESAO) fora[s] = 0;
+      for (const l of db.prepare(`SELECT situacao, modalidade, COUNT(*) AS n
+                                  FROM adesoes GROUP BY situacao, modalidade`).all()) {
+        fora[l.situacao] = (fora[l.situacao] || 0) + l.n;
+        fora[l.modalidade] = (fora[l.modalidade] || 0) + l.n;
+        fora.total += l.n;
+        // O número que importa na segunda-feira: híbrido confirmado e ainda
+        // não protocolado no Portal do Simples Nacional.
+        if (l.modalidade === 'hibrido' && l.situacao === 'recebida') fora.aProtocolar += l.n;
+      }
       return fora;
     },
 

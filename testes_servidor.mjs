@@ -509,6 +509,134 @@ try {
   await postar('/api/backoffice/usuarios/alterar', { usuario: 'joao', ativo: true },
     { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
 
+  // ------------------------------------------------------ termo de opção
+  // A adesão é o único lugar do portal onde o cliente AUTORIZA a Auster a agir
+  // em nome dele. Tudo aqui é testado pelo que prova depois: qual texto foi
+  // aceito, por quem, quando e de onde.
+  const adesaoValida = (extra = {}) => ({
+    versaoTermo: 'V3',
+    empresa: {
+      nomeEmpresa: 'Empresa de Teste', cnpj: '11.222.333/0001-81',
+      representante: 'Fulano de Tal', cpf: '390.533.447-05',
+      cargo: 'sócio administrador', email: 'fulano@exemplo.test',
+      telefone: '(34) 99999-9999',
+    },
+    modalidade: 'hibrido', semManifestacao: 'cancelar',
+    querProposta: true, declara: true,
+    ...extra,
+  });
+
+  r = await fetch(BASE + '/adesao');
+  const paginaAdesao = await r.text();
+  conferir('GET /adesao devolve a página do termo',
+    r.ok && paginaAdesao.includes('window.__TERMO__'), 'status ' + r.status);
+  conferir('o marcador de publicação da adesão foi substituído',
+    !paginaAdesao.includes('/*__PUBLICACAO__*/'));
+  conferir('a página do termo traz o texto da autorização',
+    paginaAdesao.includes('Portal do Simples Nacional'));
+
+  // Convite abre as duas portas: diagnóstico e termo.
+  r = await postar('/api/backoffice/convites',
+    { nomeEmpresa: 'Convidada do Termo', cnpj: '11.222.333/0001-81' },
+    { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  const conviteTermo = (await r.json()).convite;
+  r = await fetch(`${BASE}/adesao?c=${conviteTermo.token}`);
+  const adesaoComConvite = await r.text();
+  conferir('/adesao?c= pré-preenche pelo convite',
+    adesaoComConvite.includes('Convidada do Termo'));
+
+  r = await postar('/api/adesao', adesaoValida());
+  const adesaoGravada = await r.json();
+  conferir('POST /api/adesao grava a adesão',
+    r.status === 201 && adesaoGravada.ok, 'status ' + r.status);
+  conferir('o protocolo da adesão sai no formato ADS-',
+    /^ADS-\d{8}-[A-Z0-9]{5}$/.test(adesaoGravada.protocolo || ''), adesaoGravada.protocolo);
+  conferir('o recibo traz o resumo do termo em SHA-256',
+    /^[0-9a-f]{64}$/.test(adesaoGravada.resumoTermo || ''), adesaoGravada.resumoTermo);
+  conferir('o recibo traz a origem do acesso',
+    typeof adesaoGravada.origem === 'string' && adesaoGravada.origem.length > 0,
+    String(adesaoGravada.origem));
+
+  // O resumo é do SERVIDOR. Se o navegador pudesse mandá-lo, a prova provaria
+  // o que o cliente quisesse — e não o texto que ele teve diante dos olhos.
+  r = await postar('/api/adesao', adesaoValida({ resumoTermo: 'mentira', origem: '9.9.9.9' }));
+  const forjada = await r.json();
+  conferir('o resumo do termo não vem do navegador',
+    forjada.resumoTermo === adesaoGravada.resumoTermo && forjada.resumoTermo !== 'mentira');
+  conferir('a origem do acesso não vem do navegador', forjada.origem !== '9.9.9.9');
+
+  for (const [nome, corpo] of [
+    ['recusa adesão sem a declaração marcada', adesaoValida({ declara: false })],
+    ['recusa modalidade inválida', adesaoValida({ modalidade: 'outra' })],
+    ['recusa híbrido sem a escolha de 20/11', adesaoValida({ semManifestacao: null })],
+    ['recusa termo de versão diferente', adesaoValida({ versaoTermo: 'V2' })],
+    ['recusa CNPJ incompleto',
+     adesaoValida({ empresa: { ...adesaoValida().empresa, cnpj: '11.222' } })],
+    ['recusa adesão sem representante',
+     adesaoValida({ empresa: { ...adesaoValida().empresa, representante: '  ' } })],
+  ]) {
+    r = await postar('/api/adesao', corpo);
+    conferir(nome, r.status === 422, 'status ' + r.status);
+  }
+
+  r = await fetch(BASE + '/api/backoffice/adesoes');
+  conferir('a lista de adesões exige credencial', r.status === 401, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/adesoes', { headers: { Authorization: cabecalhoDe('maria', SENHA_MARIA) } });
+  const listaAdesoes = await r.json();
+  conferir('o backoffice lista as adesões', r.ok && listaAdesoes.adesoes.length >= 2);
+  conferir('a contagem separa o que falta protocolar',
+    listaAdesoes.contagem.aProtocolar === listaAdesoes.contagem.hibrido
+    && listaAdesoes.contagem.aProtocolar >= 2,
+    JSON.stringify(listaAdesoes.contagem));
+  conferir('a adesão se amarra ao diagnóstico pelo CNPJ',
+    listaAdesoes.adesoes.every(a => a.resposta_id !== null),
+    JSON.stringify(listaAdesoes.adesoes.map(a => a.resposta_id)));
+
+  r = await postar('/api/backoffice/adesoes/tratar',
+    { id: adesaoGravada.id, situacao: 'protocolada' }, { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  conferir('marcar como protocolada funciona', r.ok, 'status ' + r.status);
+
+  // Adesão pelo Padrão não tem o que protocolar: marcar seria registrar ato
+  // que não existe.
+  r = await postar('/api/adesao',
+    adesaoValida({ modalidade: 'padrao', semManifestacao: null }));
+  const adesaoPadrao = await r.json();
+  r = await postar('/api/backoffice/adesoes/tratar',
+    { id: adesaoPadrao.id, situacao: 'protocolada' }, { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
+  conferir('recusa protocolar adesão pelo Padrão', r.status === 400, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/adesoes.csv', { headers: { Authorization: cabecalhoDe('maria', SENHA_MARIA) } });
+  const csvAdesoes = await r.text();
+  // `text()` do fetch remove o BOM na decodificacao: conferir nos BYTES.
+  const bytesAdesoes = new Uint8Array(await (await fetch(BASE + '/api/backoffice/adesoes.csv',
+    { headers: { Authorization: cabecalhoDe('maria', SENHA_MARIA) } })).arrayBuffer());
+  conferir('a planilha de adesões sai com BOM e ponto e vírgula',
+    bytesAdesoes[0] === 0xEF && bytesAdesoes[1] === 0xBB && bytesAdesoes[2] === 0xBF
+    && csvAdesoes.includes('protocolo;'),
+    'primeiros bytes ' + [...bytesAdesoes.slice(0, 3)].join(','));
+  conferir('a planilha de adesões traz o resumo do termo',
+    csvAdesoes.includes(adesaoGravada.resumoTermo));
+
+  r = await fetch(`${BASE}/backoffice/termo?id=${adesaoGravada.id}`,
+    { headers: { Authorization: cabecalhoDe('maria', SENHA_MARIA) } });
+  const viaDoTermo = await r.text();
+  conferir('o backoffice reabre o termo para tirar a via',
+    r.ok && viaDoTermo.includes('window.__SO_TERMO__')
+    && viaDoTermo.includes(adesaoGravada.protocolo), 'status ' + r.status);
+
+  // Mesmo defeito que já apareceu no relatório: `JSON.stringify` não escapa
+  // `</script>`, e o valor vira HTML executável na sessão de quem confere.
+  r = await postar('/api/adesao', adesaoValida({
+    empresa: { ...adesaoValida().empresa, nomeEmpresa: 'Malicia </script><script>x=1</script>' },
+  }));
+  const injetada = await r.json();
+  r = await fetch(`${BASE}/backoffice/termo?id=${injetada.id}`,
+    { headers: { Authorization: cabecalhoDe('maria', SENHA_MARIA) } });
+  const comInjecao = await r.text();
+  conferir('o termo do backoffice não deixa fechar o bloco de script',
+    !comInjecao.includes('</script><script>x=1'));
+
   // ------------------------------------- a imagem leva tudo o que o servidor le
   // Defeito real: a tela de entrada nasceu e o Dockerfile copia uma LISTA
   // EXPLICITA de arquivos. `entrar.html` ficou fora, e em producao a tela de
@@ -518,8 +646,11 @@ try {
   const dockerfile = readFileSync('Dockerfile', 'utf8');
   const lidos = [...fonteServidor.matchAll(/pagina\('\.\/([\w.-]+)'\)/g)].map(m => m[1]);
   conferir('o servidor le pelo menos tres paginas do disco', lidos.length >= 3, lidos.join(','));
+  // portal.html e adesao.html sao GERADOS dentro da imagem pelo construir.mjs;
+  // o que precisa estar copiado sao os modelos deles.
+  const gerados = ['portal.html', 'adesao.html'];
   const foraDaImagem = [...new Set(lidos)]
-    .filter(arquivo => arquivo !== 'portal.html' && !dockerfile.includes(arquivo));
+    .filter(arquivo => !gerados.includes(arquivo) && !dockerfile.includes(arquivo));
   conferir('todo arquivo que o servidor le esta no Dockerfile',
     foraDaImagem.length === 0, 'fora: ' + foraDaImagem.join(', '));
 

@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/*__FAVICON__*/">
+<title>Eventos — Auster Inteligência Contábil</title>
+<!--__METADADOS__-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Mesma paleta do portal. Sem dourado: é cor do Mastermind, não da Auster —
+   a peça que serviu de referência usava #D1A347 no título. */
+:root{
+  --escuro:#052C47; --claro:#71CFEB; --branco:#fff; --acento:#007E99;
+  --tinta:#052C47; --cinza:#5b6b78; --fundo:#f1f5f8;
+  --borda:#cfd9e0; --borda-forte:#8496a5;
+  --sombra:0 1px 2px rgba(5,44,71,.06), 0 4px 12px rgba(5,44,71,.05);
+  --alto:#b63b32; --medio:#9a6608; --baixo:#2f7d52;
+  --t-meta:12px; --t-corpo:14px; --t-destaque:16px; --t-titulo:20px; --t-tela:28px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--tinta);
+  font-family:Kanit,Montserrat,Raleway,Arial,sans-serif;font-weight:300;line-height:1.55;
+  font-size:var(--t-corpo)}
+a{color:var(--acento)}
+/* ------------------------------------------------------------- abertura */
+.capa{background:var(--escuro);color:#fff;padding:34px 24px 40px;text-align:center}
+.capa .logo{height:52px;width:auto;display:block;margin:0 auto 26px}
+.capa h1{margin:0 auto 14px;font-size:var(--t-tela);font-weight:300;line-height:1.24;
+  letter-spacing:-.3px;max-width:22ch}
+.capa h1 b{font-weight:500;color:var(--claro)}
+.capa .chamada{color:#dbe7ee;max-width:62ch;margin:0 auto;font-size:var(--t-destaque);
+  line-height:1.6}
+.sessoes-capa{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:26px auto 0;
+  max-width:820px}
+.sessao-chip{background:rgba(255,255,255,.07);border:1px solid rgba(113,207,235,.35);
+  border-radius:10px;padding:12px 16px;text-align:left;min-width:210px;flex:1 1 210px}
+.sessao-chip .quando{font-weight:500;color:var(--claro);font-size:13.5px}
+.sessao-chip .oque{color:#dbe7ee;font-size:var(--t-meta);margin-top:3px}
+.capa .onde{color:#dbe7ee;font-size:13.5px;margin-top:22px}
+.botao{display:inline-block;background:var(--claro);color:var(--escuro);text-decoration:none;
+  font-weight:500;font-size:var(--t-destaque);padding:13px 30px;border-radius:8px;
+  border:1px solid var(--claro);margin-top:24px;cursor:pointer;font-family:inherit}
+.botao.fantasma{background:transparent;color:var(--claro)}
+@media (max-width:560px){
+  .capa{padding:26px 16px 30px}
+  .capa .logo{height:42px}
+  .capa h1{font-size:23px}
+  .sessao-chip{min-width:0;flex:1 1 100%}
+}
+/* --------------------------------------------------------------- corpo */
+main{max-width:860px;margin:0 auto;padding:30px 24px 56px}
+section{margin-bottom:34px}
+h2{font-size:var(--t-titulo);font-weight:400;color:var(--escuro);margin:0 0 6px}
+.linha-fina{color:var(--cinza);margin:0 0 18px;max-width:70ch}
+p{margin:0 0 12px;max-width:72ch}
+.cartao{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:20px 22px;
+  box-shadow:var(--sombra)}
+.destaques{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:620px){ .destaques{grid-template-columns:1fr} }
+.destaques .t{font-weight:500;color:var(--escuro);margin-bottom:4px}
+.destaques .d{color:var(--cinza);font-size:13.5px}
+ol.temas{list-style:none;counter-reset:t;padding:0;margin:0}
+ol.temas li{counter-increment:t;display:flex;gap:12px;align-items:flex-start;
+  padding:11px 0;border-bottom:1px solid var(--borda)}
+ol.temas li:last-child{border-bottom:0}
+ol.temas li::before{content:counter(t);flex:0 0 24px;height:24px;border-radius:50%;
+  background:var(--escuro);color:#fff;font-size:12px;display:flex;align-items:center;
+  justify-content:center;font-weight:500}
+.programacao .item{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--borda)}
+.programacao .item:last-child{border-bottom:0}
+.programacao .quando{flex:0 0 116px}
+.programacao .data{font-weight:500;color:var(--escuro)}
+.programacao .dia,.programacao .hora{color:var(--cinza);font-size:var(--t-meta)}
+.selo{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11.5px;
+  white-space:nowrap;background:#dff0f5;color:#00596b;margin-top:4px}
+.selo.esgotado{background:#fdeceb;color:var(--alto)}
+.selo.restam{background:#fdf4e3;color:#7a5200}
+.programacao .t{font-weight:500}
+.programacao .d{color:var(--cinza);font-size:13.5px;margin-top:3px;max-width:60ch}
+.palestrante{display:flex;gap:20px;align-items:flex-start}
+.palestrante img{width:104px;height:104px;border-radius:10px;object-fit:cover;flex:0 0 104px}
+.palestrante .nome{font-size:var(--t-destaque);font-weight:500;color:var(--escuro)}
+.palestrante .cargo{color:var(--acento);font-size:13.5px}
+.palestrante .bio{color:var(--cinza);font-size:13.5px;margin-top:8px;max-width:62ch}
+@media (max-width:560px){ .palestrante{flex-direction:column} }
+ul.avisos{margin:0;padding-left:20px}
+ul.avisos li{margin-bottom:7px;max-width:70ch}
+.aviso{background:#fdf4e3;border:1px solid #e3d3ab;border-left:4px solid var(--medio);
+  border-radius:9px;padding:15px 17px}
+/* ------------------------------------------------------------ inscrição */
+.campos{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+@media (max-width:620px){ .campos{grid-template-columns:1fr} }
+.campo.largo{grid-column:1/-1}
+.campo label{display:block;font-size:var(--t-meta);color:var(--cinza);margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:.7px}
+.campo input,.campo select{width:100%;padding:10px 12px;border:1px solid var(--borda-forte);
+  border-radius:7px;font-family:inherit;font-size:var(--t-corpo);font-weight:300;background:#fff;
+  color:var(--tinta)}
+.campo input:focus,.campo select:focus{outline:2px solid var(--acento);outline-offset:1px}
+.campo input.curto{max-width:260px}
+.campo .erro{color:var(--alto);font-size:var(--t-meta);min-height:17px;display:block;margin-top:3px}
+.aviso-cnpj{font-size:var(--t-meta);color:var(--medio);min-height:17px}
+.marca{display:flex;gap:10px;align-items:flex-start;margin-top:14px;cursor:pointer}
+.marca input{accent-color:var(--escuro);margin:3px 0 0;width:17px;height:17px}
+.marca span{max-width:66ch;font-size:13.5px}
+button.enviar{font-family:inherit;font-size:var(--t-destaque);font-weight:500;padding:13px 26px;
+  border-radius:8px;border:1px solid var(--escuro);background:var(--escuro);color:#fff;
+  cursor:pointer;margin-top:18px}
+button.enviar:disabled{opacity:.45;cursor:default}
+.erro-envio{color:var(--alto);margin-top:10px;min-height:20px}
+.nota{font-size:var(--t-meta);color:var(--cinza);max-width:72ch;line-height:1.6}
+.recibo{background:var(--escuro);color:#fff;border-radius:12px;padding:30px 32px}
+.recibo h2{color:#fff;font-size:var(--t-tela);font-weight:300;margin:0 0 10px}
+.recibo .protocolo{font-size:var(--t-titulo);color:var(--claro);letter-spacing:.5px}
+.recibo .linha{margin-top:8px;font-size:13.5px;color:#dbe7ee}
+.recibo .linha b{font-weight:500;color:#fff}
+.encerrado{background:#eef3f6;border:1px solid var(--borda);border-radius:10px;padding:20px 22px}
+/* ------------------------------------------------------- lista de eventos */
+.lista .evento{display:block;text-decoration:none;color:inherit;background:#fff;
+  border:1px solid var(--borda);border-radius:10px;padding:20px 22px;margin-bottom:14px;
+  box-shadow:var(--sombra)}
+.lista .evento:hover{border-color:var(--borda-forte)}
+.lista .evento h3{margin:0 0 4px;font-size:var(--t-destaque);font-weight:500;color:var(--escuro)}
+.lista .vazio{color:var(--cinza);padding:30px 0;text-align:center}
+footer{background:var(--escuro);color:#dbe7ee;text-align:center;padding:22px 24px;
+  font-size:var(--t-meta);line-height:1.7}
+footer a{color:var(--claro)}
+</style>
+</head>
+<body>
+
+<div class="capa">
+  <img class="logo" alt="auster" src="data:image/png;base64,/*__LOGO_TELA__*/">
+  <div id="capa"></div>
+</div>
+
+<main id="corpo">carregando…</main>
+
+<footer>
+  Auster Inteligência Contábil · CRC MG-007231/O-8 · Uberlândia-MG<br>
+  Dúvidas sobre os seus dados: <a href="mailto:contato@austercontabil.com.br">contato@austercontabil.com.br</a>
+</footer>
+
+<script type="module">
+/*__MODULOS__*/
+/*__PUBLICACAO__*/
+
+const EVENTO = (typeof window !== 'undefined' && window.__EVENTO__) || null;
+const LISTA = (typeof window !== 'undefined' && window.__LISTA__) || null;
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const capa = document.getElementById('capa');
+const corpo = document.getElementById('corpo');
+
+const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira',
+              'sexta-feira', 'sábado'];
+
+/** Data de sessão é dia civil, não instante: `new Date('2026-10-20')` cai no
+ *  fuso UTC e, no Brasil, volta um dia. Por isso a data é partida à mão. */
+function partesDaData(iso) {
+  const [a, m, d] = String(iso || '').split('-').map(Number);
+  if (!a || !m || !d) return { curta: String(iso || ''), diaDaSemana: '' };
+  const data = new Date(a, m - 1, d);
+  return {
+    curta: `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`,
+    diaDaSemana: DIAS[data.getDay()],
+  };
+}
+
+const FORMATO = { online: 'Online', presencial: 'Presencial' };
+
+function estadoDaSessao(s) {
+  if (s.vagas === null || s.vagas === undefined) return null;
+  const restam = Math.max(0, s.vagas - (s.inscritos || 0));
+  if (restam === 0) return { texto: 'Sem vagas', classe: 'esgotado', restam };
+  if (restam <= 5) return { texto: `Restam ${restam}`, classe: 'restam', restam };
+  return { texto: `${restam} vagas`, classe: '', restam };
+}
+
+// ===================================================== lista de eventos
+function desenharLista() {
+  capa.innerHTML = `<h1>Eventos da <b>Auster</b></h1>
+    <div class="chamada">Encontros sobre a Reforma Tributária e o que ela muda na sua
+    empresa. Inscrição gratuita.</div>`;
+  const itens = LISTA.map(e => {
+    // Sem sessão a página ainda tem de abrir: um evento em montagem não pode
+    // derrubar a lista inteira.
+    const s = (e.sessoes || [])[0];
+    const quando = s ? partesDaData(s.data) : null;
+    return `<a class="evento" href="/eventos/${esc(e.apelido)}">
+      <h3>${esc(e.titulo)}</h3>
+      <div class="nota">${quando ? esc(quando.curta) : 'data a definir'}
+        ${(e.sessoes || []).length > 1 ? ` · ${e.sessoes.length} encontros` : ''}
+        ${e.inscricoes === 'encerradas' ? ' · inscrições encerradas' : ''}</div>
+      ${e.conteudo.chamada ? `<p class="nota" style="margin-top:8px">${esc(e.conteudo.chamada)}</p>` : ''}
+    </a>`;
+  }).join('');
+  corpo.innerHTML = `<section class="lista">
+    ${itens || '<div class="vazio">Nenhum evento aberto no momento. Volte em breve.</div>'}
+  </section>`;
+}
+
+// ====================================================== página do evento
+const R = { nome: '', email: '', telefone: '', empresa: '', cnpj: '', cargo: '',
+            sessaoId: '', aceite: false };
+let enviando = false, recibo = null, avisoCnpj = '';
+
+const CARGOS = ['Sócio', 'Sócio Administrador', 'Administrador não Sócio', 'Diretor',
+                'Empresário', 'Gerente', 'Administrativo', 'Financeiro', 'Contador',
+                'Consultor', 'Outro'];
+
+function blocoCapa(e) {
+  const c = e.conteudo;
+  const chips = e.sessoes.map(s => {
+    const q = partesDaData(s.data);
+    return `<div class="sessao-chip">
+      <div class="quando">${esc(q.curta)} — ${esc(s.hora)}</div>
+      <div class="oque">${esc(FORMATO[s.formato] || s.formato)}${s.titulo ? ': ' + esc(s.titulo) : ''}</div>
+    </div>`;
+  }).join('');
+  capa.innerHTML = `
+    <h1>${esc(e.titulo)}</h1>
+    ${c.chamada ? `<div class="chamada">${esc(c.chamada)}</div>` : ''}
+    ${chips ? `<div class="sessoes-capa">${chips}</div>` : ''}
+    ${c.local ? `<div class="onde">${esc(c.local)}</div>` : ''}
+    ${e.inscricoes === 'abertas' && e.situacao === 'publicado'
+      ? `<button class="botao" onclick="window.irParaInscricao()">Quero me inscrever</button>`
+      : `<div class="onde" style="margin-top:22px">Inscrições encerradas.</div>`}`;
+}
+
+function blocoPrograma(e) {
+  return `<section class="programacao">
+    <h2>Programação</h2>
+    <p class="linha-fina">${e.sessoes.length === 1 ? 'Um encontro.'
+      : `${e.sessoes.length} encontros.`} A inscrição é por encontro.</p>
+    <div class="cartao">${e.sessoes.map(s => {
+      const q = partesDaData(s.data);
+      const est = estadoDaSessao(s);
+      return `<div class="item">
+        <div class="quando">
+          <div class="data">${esc(q.curta)}</div>
+          <div class="dia">${esc(q.diaDaSemana)}</div>
+          <div class="hora">${esc(s.hora)}</div>
+          <span class="selo ${est ? est.classe : ''}">${esc(FORMATO[s.formato] || s.formato)}</span>
+          ${est ? `<span class="selo ${est.classe}">${esc(est.texto)}</span>` : ''}
+        </div>
+        <div>
+          <div class="t">${esc(s.titulo)}</div>
+          ${s.descricao ? `<div class="d">${esc(s.descricao)}</div>` : ''}
+          ${s.local ? `<div class="d">${esc(s.local)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('')}</div>
+  </section>`;
+}
+
+function blocoInscricao(e) {
+  if (e.inscricoes !== 'abertas' || e.situacao !== 'publicado') {
+    return `<section id="inscricao"><h2>Inscrições</h2>
+      <div class="encerrado"><b>As inscrições estão encerradas.</b>
+      ${e.conteudo.aposEncerrar ? ' ' + esc(e.conteudo.aposEncerrar)
+        : ' Se quiser ser avisado do próximo encontro, fale com a Auster.'}</div></section>`;
+  }
+  const abertas = e.sessoes.filter(s => {
+    const est = estadoDaSessao(s);
+    return !est || est.restam > 0;
+  });
+  if (!abertas.length) {
+    return `<section id="inscricao"><h2>Inscrições</h2>
+      <div class="encerrado"><b>Todas as vagas foram preenchidas.</b>
+      Fale com a Auster para entrar na lista de espera.</div></section>`;
+  }
+  return `<section id="inscricao">
+    <h2>Inscrição</h2>
+    <p class="linha-fina">Gratuita. A confirmação é enviada por e-mail.</p>
+    <div class="cartao">
+      <div class="campos">
+        <div class="campo largo">
+          <label for="cSessao">Qual encontro</label>
+          <select id="cSessao" onchange="window.anotar('sessaoId', this.value)">
+            <option value="">Selecione…</option>
+            ${abertas.map(s => {
+              const q = partesDaData(s.data);
+              const est = estadoDaSessao(s);
+              return `<option value="${s.id}" ${String(R.sessaoId) === String(s.id) ? 'selected' : ''}>${
+                esc(q.curta)} ${esc(s.hora)} — ${esc(FORMATO[s.formato] || s.formato)}${
+                s.titulo ? ': ' + esc(s.titulo) : ''}${est ? ` (${esc(est.texto.toLowerCase())})` : ''}</option>`;
+            }).join('')}
+          </select>
+          <span class="erro" id="eSessao"></span>
+        </div>
+        <div class="campo largo">
+          <label for="cNome">Seu nome</label>
+          <input id="cNome" type="text" value="${esc(R.nome)}" autocomplete="name"
+                 oninput="window.anotar('nome', this.value)">
+          <span class="erro" id="eNome"></span>
+        </div>
+        <div class="campo">
+          <label for="cEmail">E-mail</label>
+          <input id="cEmail" type="email" value="${esc(R.email)}" autocomplete="email"
+                 oninput="window.anotar('email', this.value)">
+          <span class="erro" id="eEmail"></span>
+        </div>
+        <div class="campo">
+          <label for="cTel">Telefone (WhatsApp)</label>
+          <input id="cTel" type="text" value="${esc(R.telefone)}" inputmode="numeric"
+                 oninput="window.anotar('telefone', this.value)">
+          <span class="erro" id="eTel"></span>
+        </div>
+        <div class="campo largo">
+          <label for="cCnpj">CNPJ da empresa <span style="text-transform:none">(opcional)</span></label>
+          <input id="cCnpj" class="curto" type="text" value="${esc(R.cnpj)}"
+                 oninput="window.anotar('cnpj', this.value)" onblur="window.consultarEmpresa()">
+          <div class="aviso-cnpj" id="aviso">${esc(avisoCnpj)
+            || 'digite o CNPJ e saia do campo: a razão social vem da Receita'}</div>
+        </div>
+        <div class="campo">
+          <label for="cEmpresa">Empresa</label>
+          <input id="cEmpresa" type="text" value="${esc(R.empresa)}" autocomplete="organization"
+                 oninput="window.anotar('empresa', this.value)">
+        </div>
+        <div class="campo">
+          <label for="cCargo">Seu cargo</label>
+          <select id="cCargo" onchange="window.anotar('cargo', this.value)">
+            <option value="">Selecione…</option>
+            ${CARGOS.map(c => `<option value="${esc(c)}" ${R.cargo === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <label class="marca">
+        <input type="checkbox" ${R.aceite ? 'checked' : ''}
+               onchange="window.anotar('aceite', this.checked)">
+        <span>Concordo que a Auster use meus dados para organizar este evento e falar
+        comigo sobre ele. Guardamos por 24 meses; para sair ou pedir exclusão, escreva
+        para contato@austercontabil.com.br.</span>
+      </label>
+      <span class="erro" id="eAceite"></span>
+      <div><button class="enviar" id="btnInscrever" onclick="window.inscrever()"
+                   ${enviando ? 'disabled' : ''}>${enviando ? 'Inscrevendo…' : 'Confirmar inscrição'}</button></div>
+      <div class="erro-envio" id="erroEnvio"></div>
+    </div>
+  </section>`;
+}
+
+function desenharEvento() {
+  const e = EVENTO, c = e.conteudo || {};
+  blocoCapa(e);
+  if (recibo) { mostrarRecibo(); return; }
+  const destaques = (c.destaques || []).map(d =>
+    `<div><div class="t">${esc(d.titulo)}</div><div class="d">${esc(d.texto)}</div></div>`).join('');
+  corpo.innerHTML = `
+    ${c.intro || destaques ? `<section>
+      <h2>O que você vai ver no encontro</h2>
+      ${c.intro ? `<p class="linha-fina">${esc(c.intro)}</p>` : ''}
+      ${destaques ? `<div class="cartao destaques">${destaques}</div>` : ''}
+    </section>` : ''}
+
+    ${(c.temas || []).length ? `<section>
+      <h2>Temas abordados</h2>
+      <div class="cartao"><ol class="temas">
+        ${c.temas.map(t => `<li><span>${esc(t)}</span></li>`).join('')}
+      </ol></div>
+    </section>` : ''}
+
+    ${blocoPrograma(e)}
+
+    ${c.palestrante && c.palestrante.nome ? `<section>
+      <h2>Quem apresenta</h2>
+      <div class="cartao palestrante">
+        ${c.palestrante.foto ? `<img src="${esc(c.palestrante.foto)}" alt="${esc(c.palestrante.nome)}">` : ''}
+        <div>
+          <div class="nome">${esc(c.palestrante.nome)}</div>
+          ${c.palestrante.cargo ? `<div class="cargo">${esc(c.palestrante.cargo)}</div>` : ''}
+          ${c.palestrante.bio ? `<div class="bio">${esc(c.palestrante.bio)}</div>` : ''}
+        </div>
+      </div>
+    </section>` : ''}
+
+    ${(c.avisos || []).length ? `<section>
+      <h2>Informações gerais</h2>
+      <div class="aviso"><ul class="avisos">
+        ${c.avisos.map(a => `<li>${esc(a)}</li>`).join('')}
+      </ul></div>
+    </section>` : ''}
+
+    ${blocoInscricao(e)}`;
+}
+
+// ------------------------------------------------------------ interação
+window.anotar = (campo, valor) => { R[campo] = valor; };
+
+window.irParaInscricao = () => {
+  const alvo = document.getElementById('inscricao');
+  if (alvo) alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.voltarAosEventos = () => { window.location = '/eventos'; };
+
+window.consultarEmpresa = async () => {
+  if (!String(R.cnpj || '').trim()) return;
+  R.cnpj = mascararCnpj(R.cnpj);
+  const campo = document.getElementById('cCnpj');
+  if (campo) campo.value = R.cnpj;
+  if (!cnpjValido(R.cnpj)) return;
+  const fora = document.getElementById('aviso');
+  if (fora) fora.textContent = 'consultando…';
+  const r = await consultarCnpj(R.cnpj);
+  if (r.ok && r.dados && r.dados.razaoSocial) {
+    if (!String(R.empresa || '').trim()) {
+      R.empresa = r.dados.razaoSocial;
+      const c = document.getElementById('cEmpresa');
+      if (c) c.value = R.empresa;
+    }
+    avisoCnpj = '';
+  } else {
+    avisoCnpj = 'não consegui consultar o cadastro agora — escreva a empresa à mão.';
+  }
+  if (fora) fora.textContent = avisoCnpj;
+};
+
+function conferir() {
+  const faltas = {};
+  if (!R.sessaoId) faltas.eSessao = 'escolha o encontro';
+  if (!nomeValido(R.nome, 3)) faltas.eNome = 'informe o seu nome';
+  if (!emailValido(R.email)) faltas.eEmail = 'e-mail inválido';
+  if (!telefoneValido(R.telefone)) faltas.eTel = 'telefone inválido';
+  // CNPJ é opcional; se preenchido, tem de ser válido.
+  if (String(R.cnpj || '').trim() && !cnpjValido(R.cnpj)) faltas.eCnpj = 'CNPJ inválido';
+  if (!R.aceite) faltas.eAceite = 'é preciso concordar para se inscrever';
+  return faltas;
+}
+
+window.inscrever = async () => {
+  const faltas = conferir();
+  for (const id of ['eSessao', 'eNome', 'eEmail', 'eTel', 'eCnpj', 'eAceite']) {
+    const e = document.getElementById(id);
+    if (e) e.textContent = faltas[id] || '';
+  }
+  const erro = document.getElementById('erroEnvio');
+  const pendentes = Object.keys(faltas);
+  if (pendentes.length) {
+    if (erro) erro.textContent = 'Faltam campos acima.';
+    const primeiro = document.getElementById(pendentes[0]);
+    if (primeiro) primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (erro) erro.textContent = '';
+  enviando = true;
+  desenharEvento();
+
+  try {
+    const resposta = await fetch('/api/inscricao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        evento: EVENTO.apelido, sessaoId: Number(R.sessaoId),
+        nome: R.nome, email: R.email, telefone: R.telefone,
+        empresa: R.empresa, cnpj: R.cnpj, cargo: R.cargo, aceite: R.aceite === true,
+      }),
+    });
+    const dados = await resposta.json();
+    if (!resposta.ok || !dados.ok) throw new Error(dados.erro || 'não foi possível inscrever');
+    recibo = dados;
+    enviando = false;
+    desenharEvento();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (e) {
+    enviando = false;
+    desenharEvento();
+    const x = document.getElementById('erroEnvio');
+    if (x) {
+      x.textContent = e instanceof TypeError
+        ? 'Não foi possível falar com o servidor. Confira a conexão e tente de novo.'
+        : 'Não foi possível inscrever: ' + e.message;
+    }
+  }
+};
+
+function mostrarRecibo() {
+  const sessao = EVENTO.sessoes.find(s => String(s.id) === String(R.sessaoId));
+  const q = sessao ? partesDaData(sessao.data) : null;
+  corpo.innerHTML = `
+    <div class="recibo">
+      <h2>${recibo.repetida ? 'Você já estava inscrito' : 'Inscrição confirmada'}</h2>
+      <div class="protocolo">${esc(recibo.protocolo)}</div>
+      ${sessao ? `<div class="linha"><b>Encontro:</b> ${esc(q.curta)}, ${esc(sessao.hora)} —
+        ${esc(FORMATO[sessao.formato] || sessao.formato)}${sessao.titulo ? ': ' + esc(sessao.titulo) : ''}</div>` : ''}
+      <div class="linha"><b>Em nome de:</b> ${esc(R.nome)} · ${esc(R.email)}</div>
+      <div class="linha">A confirmação e as instruções vão para o seu e-mail. Guarde o
+        protocolo: é por ele que a equipe encontra a sua inscrição.</div>
+    </div>
+    <section style="margin-top:20px">
+      <div class="cartao">
+        <h2 style="margin-top:0">Enquanto isso</h2>
+        <p>Se a sua empresa é do Simples Nacional, o diagnóstico do portal mostra em
+        minutos se ela deve permanecer na guia única ou recolher IBS e CBS por fora.</p>
+        <a class="botao" style="background:var(--escuro);color:#fff;border-color:var(--escuro)"
+           href="/">Fazer o diagnóstico</a>
+        <button class="botao fantasma" style="color:var(--escuro);border-color:var(--borda-forte)"
+                onclick="window.voltarAosEventos()">Ver outros eventos</button>
+      </div>
+    </section>`;
+}
+
+if (LISTA) desenharLista();
+else if (EVENTO) desenharEvento();
+else corpo.innerHTML = '<div class="cartao">Evento não encontrado.</div>';
+</script>
+</body>
+</html>

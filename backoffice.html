@@ -111,6 +111,16 @@ dialog::backdrop{background:rgba(5,44,71,.45)}
 .link-convite{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--t-meta);
   background:#f1f5f8;padding:3px 7px;border-radius:5px;word-break:break-all}
 .nota{font-size:var(--t-meta);color:var(--cinza);line-height:1.6;margin:14px 0 0;max-width:80ch}
+/* Campos do painel de eventos: rótulo visível acima, nunca dentro do campo. */
+.campo-bo{margin-bottom:12px}
+.campo-bo label{display:block;font-size:var(--t-meta);color:var(--cinza);margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:.7px}
+.campo-bo input[type=text],.campo-bo textarea{width:100%;max-width:none}
+.campo-bo textarea{min-height:64px}
+.campos-bo{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+@media (max-width:700px){ .campos-bo{grid-template-columns:1fr} }
+#tabelaSessoes input,#tabelaSessoes select{min-width:0;width:100%}
+#tabelaSessoes td{padding:6px 5px}
 </style>
 </head>
 <body>
@@ -132,6 +142,7 @@ dialog::backdrop{background:rgba(5,44,71,.45)}
   <div class="abas">
     <button class="aba ativa" data-aba="respostas">Respostas</button>
     <button class="aba" data-aba="adesoes">Adesões</button>
+    <button class="aba" data-aba="eventosAgenda">Eventos</button>
     <button class="aba" data-aba="convites">Convites</button>
     <button class="aba" data-aba="eventos">Auditoria</button>
     <button class="aba oculta" data-aba="usuarios" id="abaUsuarios">Usuários</button>
@@ -496,6 +507,305 @@ window.marcarAdesao = async (id, situacao) => {
   verAdesoes();
 };
 
+// ------------------------------------------------------------------- eventos
+/* Painel da agenda: a equipe cria e publica evento sem depender de alteração
+   de código. O conteúdo da página vive em JSON no banco; aqui é só formulário.
+   Listas vão em caixa de texto, uma por linha — é o que a equipe consegue
+   editar sem treinamento, e o que não quebra ao colar de um documento. */
+const SITUACOES_EVENTO = { rascunho:'Rascunho', publicado:'Publicado', encerrado:'Encerrado' };
+const SITUACOES_INSCRICAO = { inscrita:'Inscrita', confirmada:'Confirmada',
+  presente:'Presente', ausente:'Ausente', cancelada:'Cancelada' };
+let eventoAberto = null;   // id do evento em edição; null = lista
+
+const linhas = v => String(v || '').split('\n').map(s => s.trim()).filter(Boolean);
+const valor = id => (document.getElementById(id) || {}).value || '';
+const dataCurta = iso => {
+  const [a, m, d] = String(iso || '').split('-');
+  return a ? `${d}/${m}/${a}` : (iso || '—');
+};
+
+async function verAgenda() {
+  if (eventoAberto) return verEvento(eventoAberto);
+  const { eventos, base } = await pedir('/api/backoffice/eventos');
+  const linhasTabela = eventos.map(e => `
+    <tr class="linha" onclick="window.abrirEvento(${e.id})">
+      <td><b>${esc(e.titulo)}</b><br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">/eventos/${esc(e.apelido)}</span></td>
+      <td>${e.primeira_data ? esc(dataCurta(e.primeira_data)) : '—'}</td>
+      <td><span class="selo s-${e.situacao === 'publicado' ? 'validada' : 'nova'}">${
+        esc(SITUACOES_EVENTO[e.situacao] || e.situacao)}</span>
+        ${e.inscricoes === 'encerradas' ? '<br><span class="selo a-cancelada">inscrições encerradas</span>' : ''}</td>
+      <td><b>${e.inscritos || 0}</b></td>
+    </tr>`).join('');
+
+  conteudo.innerHTML = `
+    <h2 style="margin:0 0 4px;font-size:var(--t-titulo);font-weight:400">Agenda de eventos</h2>
+    <p class="nota" style="margin:0 0 18px">Cada evento vira uma página em
+      <code>/eventos/apelido</code>, com inscrição por encontro. Enquanto está em
+      <b>rascunho</b>, só quem tem sessão aqui consegue abrir o endereço — dá para conferir
+      antes de divulgar.${base ? '' : ' <b>AUSTER_ENDERECO_PUBLICO não está definido</b>, então os links saem sem domínio.'}</p>
+    <div class="filtros"><button onclick="window.novoEvento()">Novo evento</button></div>
+    ${eventos.length ? `<table><thead><tr>
+      <th>Evento</th><th>Primeira data</th><th>Situação</th><th>Inscritos</th>
+      </tr></thead><tbody>${linhasTabela}</tbody></table>`
+      : '<div class="vazio">Nenhum evento ainda. Use “Novo evento” para criar o primeiro.</div>'}`;
+}
+
+window.novoEvento = async () => {
+  const titulo = prompt('Título do evento (dá para mudar depois):');
+  if (!titulo || !titulo.trim()) return;
+  const r = await fetch('/api/backoffice/eventos', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ titulo: titulo.trim(), conteudo: {}, sessoes: [] }),
+  }).then(x => x.json());
+  if (!r.ok) { alert('Não foi possível criar: ' + (r.motivo || 'erro')); return; }
+  eventoAberto = r.evento.id;
+  verAgenda();
+};
+
+window.abrirEvento = id => { eventoAberto = id; verAgenda(); };
+window.voltarParaAgenda = () => { eventoAberto = null; verAgenda(); };
+
+function campoSessao(s, i) {
+  return `<tr data-sessao="${s.id || ''}">
+    <td><input type="date" class="s-data" value="${esc(s.data || '')}" style="min-width:0"></td>
+    <td><input type="text" class="s-hora" value="${esc(s.hora || '')}" placeholder="19:30"
+        style="min-width:0;width:74px"></td>
+    <td><select class="s-formato">
+      <option value="presencial" ${s.formato !== 'online' ? 'selected' : ''}>Presencial</option>
+      <option value="online" ${s.formato === 'online' ? 'selected' : ''}>Online</option>
+    </select></td>
+    <td><input type="text" class="s-titulo" value="${esc(s.titulo || '')}"
+        placeholder="Encontro ${i + 1}" style="min-width:0"></td>
+    <td><input type="text" class="s-local" value="${esc(s.local || '')}"
+        placeholder="local ou canal" style="min-width:0"></td>
+    <td><input type="text" class="s-vagas" value="${s.vagas ?? ''}" placeholder="sem limite"
+        style="min-width:0;width:92px" inputmode="numeric"></td>
+    <td>${s.inscritos ? `<span class="selo s-nova">${s.inscritos} inscritos</span>`
+        : `<button class="claro" onclick="window.tirarSessao(this)">Tirar</button>`}</td>
+  </tr>`;
+}
+
+async function verEvento(id) {
+  const { evento, contagem, inscricoes, base } =
+    await pedir('/api/backoffice/eventos?id=' + id);
+  const c = evento.conteudo || {};
+  const p = c.palestrante || {};
+  const endereco = `${base || ''}/eventos/${evento.apelido}`;
+
+  const listaInscritos = inscricoes.map(i => `
+    <tr>
+      <td><b>${esc(i.nome)}</b><br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(i.email)}${
+          i.telefone ? ' · ' + esc(i.telefone) : ''}</span></td>
+      <td>${esc(i.empresa || '—')}<br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(i.cnpj || '')}${
+          i.resposta_id ? ' · fez o diagnóstico' : ''}</span></td>
+      <td>${esc(dataCurta(i.sessao_data))} ${esc(i.sessao_hora)}<br>
+        <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(i.sessao_titulo)}</span></td>
+      <td><span class="selo ${i.situacao === 'presente' ? 's-validada'
+        : i.situacao === 'cancelada' ? 'a-cancelada' : 's-nova'}">${
+        esc(SITUACOES_INSCRICAO[i.situacao] || i.situacao)}</span></td>
+      <td style="white-space:nowrap">
+        <button class="claro" onclick="window.marcarInscricao(${i.id},'presente')">Presente</button>
+        <button class="claro" onclick="window.marcarInscricao(${i.id},'ausente')">Ausente</button>
+        <button class="claro" onclick="window.marcarInscricao(${i.id},'cancelada')">Cancelar</button>
+      </td>
+    </tr>`).join('');
+
+  conteudo.innerHTML = `
+    <div class="filtros" style="justify-content:space-between">
+      <button class="claro" onclick="window.voltarParaAgenda()">← Todos os eventos</button>
+      <span>
+        <button class="claro" onclick="window.copiar('${esc(endereco)}')">Copiar link</button>
+        <button class="claro" onclick="window.abrirPagina('${esc('/eventos/' + evento.apelido)}')">Ver a página</button>
+      </span>
+    </div>
+
+    <div class="contagem">
+      ${[['total','Inscritos'],['presente','Presentes'],['cancelada','Canceladas']]
+        .map(([k, rot]) => `<div class="caixa"><div class="rot">${rot}</div>
+          <div class="val">${contagem[k] ?? 0}</div></div>`).join('')}
+      <div class="caixa"><div class="rot">Situação</div>
+        <div class="val" style="font-size:16px">${esc(SITUACOES_EVENTO[evento.situacao])}</div></div>
+      <div class="caixa"><div class="rot">Inscrições</div>
+        <div class="val" style="font-size:16px">${evento.inscricoes === 'abertas' ? 'Abertas' : 'Encerradas'}</div></div>
+    </div>
+
+    <div class="filtros">
+      ${evento.situacao !== 'publicado'
+        ? `<button onclick="window.mudarEvento('situacao','publicado')">Publicar</button>`
+        : `<button class="claro" onclick="window.mudarEvento('situacao','rascunho')">Voltar a rascunho</button>`}
+      ${evento.inscricoes === 'abertas'
+        ? `<button class="claro" onclick="window.mudarEvento('inscricoes','encerradas')">Encerrar inscrições</button>`
+        : `<button class="claro" onclick="window.mudarEvento('inscricoes','abertas')">Reabrir inscrições</button>`}
+      ${evento.situacao !== 'encerrado'
+        ? `<button class="claro" onclick="window.mudarEvento('situacao','encerrado')">Marcar como encerrado</button>` : ''}
+      <button class="claro" onclick="window.baixarInscritos(${evento.id})">Baixar inscritos (CSV)</button>
+    </div>
+
+    <div class="painel" style="margin-bottom:18px">
+      <h2 style="margin:0 0 14px;font-size:var(--t-titulo);font-weight:400">Conteúdo da página</h2>
+      <div class="campo-bo"><label for="evTitulo">Título</label>
+        <input type="text" id="evTitulo" value="${esc(evento.titulo)}"></div>
+      <div class="campo-bo"><label for="evChamada">Chamada (o parágrafo abaixo do título)</label>
+        <textarea id="evChamada">${esc(c.chamada || '')}</textarea></div>
+      <div class="campo-bo"><label for="evLocal">Onde (linha sob as datas, na capa)</label>
+        <input type="text" id="evLocal" value="${esc(c.local || '')}"
+               placeholder="Auditório da Auster — Uberlândia/MG"></div>
+      <div class="campo-bo"><label for="evIntro">Abertura de “O que você vai ver”</label>
+        <textarea id="evIntro">${esc(c.intro || '')}</textarea></div>
+      <div class="campo-bo"><label for="evDestaques">Destaques — um por linha, no formato <code>Título | texto</code></label>
+        <textarea id="evDestaques">${esc((c.destaques || []).map(d => `${d.titulo} | ${d.texto}`).join('\n'))}</textarea></div>
+      <div class="campo-bo"><label for="evTemas">Temas abordados — um por linha</label>
+        <textarea id="evTemas">${esc((c.temas || []).join('\n'))}</textarea></div>
+      <div class="campo-bo"><label for="evAvisos">Informações gerais — uma por linha</label>
+        <textarea id="evAvisos">${esc((c.avisos || []).join('\n'))}</textarea></div>
+      <div class="campo-bo"><label for="evEncerrado">Texto quando as inscrições fecharem</label>
+        <input type="text" id="evEncerrado" value="${esc(c.aposEncerrar || '')}"
+               placeholder="Se quiser ser avisado do próximo encontro, fale com a Auster."></div>
+
+      <h3 style="margin:22px 0 8px">Quem apresenta</h3>
+      <div class="campos-bo">
+        <div class="campo-bo"><label for="evPalNome">Nome</label>
+          <input type="text" id="evPalNome" value="${esc(p.nome || '')}"></div>
+        <div class="campo-bo"><label for="evPalCargo">Cargo</label>
+          <input type="text" id="evPalCargo" value="${esc(p.cargo || '')}"></div>
+      </div>
+      <div class="campo-bo"><label for="evPalBio">Apresentação</label>
+        <textarea id="evPalBio">${esc(p.bio || '')}</textarea></div>
+      <div class="campo-bo"><label for="evPalFoto">Foto (opcional)</label>
+        <input type="file" id="evPalFoto" accept="image/*" onchange="window.carregarFoto(this)">
+        <span class="nota" id="fotoEstado">${p.foto ? 'foto carregada' : 'sem foto'}</span></div>
+
+      <h3 style="margin:22px 0 8px">Encontros</h3>
+      <p class="nota" style="margin:0 0 10px">A inscrição é por encontro. Deixe as vagas em
+        branco para não limitar. Encontro que já tem inscrito não pode ser tirado.</p>
+      <table><thead><tr><th>Data</th><th>Hora</th><th>Formato</th><th>Título</th>
+        <th>Local ou canal</th><th>Vagas</th><th></th></tr></thead>
+        <tbody id="tabelaSessoes">${evento.sessoes.map(campoSessao).join('')}</tbody></table>
+      <div style="margin-top:10px"><button class="claro" onclick="window.novaSessao()">Acrescentar encontro</button></div>
+
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--borda)">
+        <button onclick="window.salvarEvento()">Salvar alterações</button>
+        <span class="nota" id="estadoSalvar" style="margin-left:10px"></span>
+      </div>
+    </div>
+
+    <div class="painel">
+      <h2 style="margin:0 0 4px;font-size:var(--t-titulo);font-weight:400">Inscritos</h2>
+      <p class="nota" style="margin:0 0 16px">“Presente” e “Ausente” são para depois do
+        encontro: é o que transforma esta tela em lista de presença.</p>
+      ${inscricoes.length ? `<table><thead><tr>
+        <th>Quem</th><th>Empresa</th><th>Encontro</th><th>Situação</th><th></th>
+        </tr></thead><tbody>${listaInscritos}</tbody></table>`
+        : '<div class="vazio">Ninguém inscrito ainda. O link é o que está no topo desta tela.</div>'}
+    </div>`;
+}
+
+window.abrirPagina = caminho => { window.open(caminho, '_blank'); };
+
+window.novaSessao = () => {
+  const corpo = document.getElementById('tabelaSessoes');
+  const molde = document.createElement('tbody');
+  molde.innerHTML = campoSessao({}, corpo.children.length);
+  corpo.appendChild(molde.firstElementChild);
+};
+
+window.tirarSessao = botao => { botao.closest('tr').remove(); };
+
+/* A foto é reduzida no navegador antes de subir: uma foto de celular tem
+   vários megabytes e o servidor recusa corpo acima de 256 KB. 360 px de lado
+   é o que a página mostra. */
+let fotoNova = null;
+window.carregarFoto = async entrada => {
+  const arquivo = entrada.files && entrada.files[0];
+  const estado = document.getElementById('fotoEstado');
+  if (!arquivo) return;
+  estado.textContent = 'reduzindo…';
+  try {
+    const bitmap = await createImageBitmap(arquivo);
+    const lado = 360;
+    const escala = Math.min(1, lado / Math.max(bitmap.width, bitmap.height));
+    const tela = document.createElement('canvas');
+    tela.width = Math.round(bitmap.width * escala);
+    tela.height = Math.round(bitmap.height * escala);
+    tela.getContext('2d').drawImage(bitmap, 0, 0, tela.width, tela.height);
+    fotoNova = tela.toDataURL('image/jpeg', 0.82);
+    estado.textContent = `foto pronta (${Math.round(fotoNova.length / 1024)} KB) — salve para valer`;
+  } catch (e) {
+    fotoNova = null;
+    estado.textContent = 'não consegui ler essa imagem: ' + e.message;
+  }
+};
+
+function sessoesDaTela() {
+  return [...document.querySelectorAll('#tabelaSessoes tr')].map(tr => {
+    const v = classe => (tr.querySelector('.' + classe) || {}).value || '';
+    const vagas = parseInt(v('s-vagas'), 10);
+    return {
+      id: Number(tr.dataset.sessao) || undefined,
+      data: v('s-data'), hora: v('s-hora'), formato: v('s-formato'),
+      titulo: v('s-titulo'), local: v('s-local') || null,
+      vagas: Number.isFinite(vagas) && vagas > 0 ? vagas : null,
+    };
+  }).filter(s => s.data && s.hora);
+}
+
+async function gravarEvento(extra) {
+  const r = await fetch('/api/backoffice/eventos/alterar', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: eventoAberto, ...extra }),
+  }).then(x => x.json());
+  if (!r.ok) { alert('Não foi possível salvar: ' + (r.motivo || 'erro')); return false; }
+  return true;
+}
+
+window.mudarEvento = async (campo, valorNovo) => {
+  if (await gravarEvento({ [campo]: valorNovo })) verAgenda();
+};
+
+window.salvarEvento = async () => {
+  const estado = document.getElementById('estadoSalvar');
+  estado.textContent = 'salvando…';
+  const { evento } = await pedir('/api/backoffice/eventos?id=' + eventoAberto);
+  const conteudo = {
+    ...evento.conteudo,
+    chamada: valor('evChamada').trim(),
+    local: valor('evLocal').trim(),
+    intro: valor('evIntro').trim(),
+    destaques: linhas(valor('evDestaques')).map(l => {
+      const [titulo, ...resto] = l.split('|');
+      return { titulo: titulo.trim(), texto: resto.join('|').trim() };
+    }).filter(d => d.titulo),
+    temas: linhas(valor('evTemas')),
+    avisos: linhas(valor('evAvisos')),
+    aposEncerrar: valor('evEncerrado').trim(),
+    palestrante: {
+      nome: valor('evPalNome').trim(), cargo: valor('evPalCargo').trim(),
+      bio: valor('evPalBio').trim(),
+      foto: fotoNova || (evento.conteudo.palestrante || {}).foto || '',
+    },
+  };
+  const ok = await gravarEvento({ titulo: valor('evTitulo').trim() || evento.titulo,
+                                  conteudo, sessoes: sessoesDaTela() });
+  estado.textContent = ok ? 'salvo' : '';
+  if (ok) { fotoNova = null; verAgenda(); }
+};
+
+window.marcarInscricao = async (id, situacao) => {
+  const r = await fetch('/api/backoffice/inscricoes/tratar', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, situacao }),
+  }).then(x => x.json());
+  if (!r.ok) { alert('Não foi possível mudar: ' + (r.motivo || 'erro')); return; }
+  verAgenda();
+};
+
+window.baixarInscritos = id => {
+  window.location = '/api/backoffice/inscricoes.csv?evento=' + id;
+};
+
 // ------------------------------------------------------------------ convites
 async function verConvites() {
   const { convites, base } = await pedir('/api/backoffice/convites');
@@ -575,7 +885,7 @@ window.copiar = async texto => {
 
 // ----------------------------------------------------------------- auditoria
 async function verEventos() {
-  const { eventos } = await pedir('/api/backoffice/eventos');
+  const { eventos } = await pedir('/api/backoffice/auditoria');
   conteudo.innerHTML = `
     <h2 style="margin:0 0 4px;font-size:var(--t-titulo);font-weight:400">Auditoria</h2>
     <p class="nota" style="margin:0 0 18px">Registro só de inserção: nada aqui é alterado
@@ -771,8 +1081,8 @@ document.querySelectorAll('.aba').forEach(b => b.addEventListener('click', () =>
 
 function desenhar() {
   conteudo.innerHTML = 'carregando…';
-  const fn = { respostas: verRespostas, adesoes: verAdesoes, convites: verConvites,
-               eventos: verEventos, usuarios: verUsuarios }[abaAtual];
+  const fn = { respostas: verRespostas, adesoes: verAdesoes, eventosAgenda: verAgenda,
+               convites: verConvites, eventos: verEventos, usuarios: verUsuarios }[abaAtual];
   fn().catch(e => { conteudo.innerHTML = `<div class="vazio">Falha ao carregar: ${esc(e.message)}</div>`; });
 }
 

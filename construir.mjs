@@ -31,18 +31,36 @@ const LOGOS = {
   '/*__LOGO_PAPEL__*/': 'ativos/logo-contabil-positiva.b64',
 };
 
+/* O favicon é um só para todas as páginas, e mora em `ativos/favicon.svg`.
+ * Antes cada página trazia o seu, escrito à mão, e eram dois desenhos
+ * diferentes — nenhum a marca. */
+function faviconEmUri() {
+  const svg = readFileSync('ativos/favicon.svg', 'utf8').trim().replace(/"/g, "'");
+  return 'data:image/svg+xml,' + encodeURIComponent(svg)
+    .replace(/%2F/g, '/').replace(/%3A/g, ':').replace(/%3D/g, '=')
+    .replace(/%3C/g, '<').replace(/%3E/g, '>').replace(/%27/g, "'").replace(/%20/g, ' ');
+}
+
 function abortar(...linhas) {
   for (const l of linhas) console.error(l);
   process.exit(1);
 }
 
-function inlinarLogos(html, nome) {
-  for (const [marcador, arquivo] of Object.entries(LOGOS)) {
+/* `quais` diz quais variantes a página declara. Páginas que também vão ao
+ * papel (portal, termo) pedem as duas; a de eventos é só de tela e pede uma.
+ * Exigir as duas de todas transformaria "não imprime" em erro de build. */
+function inlinarLogos(html, nome, quais = Object.keys(LOGOS)) {
+  for (const marcador of quais) {
     if (!html.includes(marcador)) {
       abortar(`ERRO: o marcador ${marcador} desapareceu de ${nome}.`,
               'Sem ele o cabeçalho sai com a imagem quebrada.');
     }
-    html = html.replace(marcador, readFileSync(arquivo, 'utf8').trim());
+    html = html.replace(marcador, readFileSync(LOGOS[marcador], 'utf8').trim());
+  }
+  const sobrando = Object.keys(LOGOS).filter(m => !quais.includes(m) && html.includes(m));
+  if (sobrando.length) {
+    abortar(`ERRO: ${nome} tem ${sobrando.join(' e ')} e o build não foi mandado preenchê-lo.`,
+            'Ou acrescente o marcador à lista, ou tire-o da página.');
   }
   return html;
 }
@@ -129,6 +147,19 @@ exigirMarcador(adesao, '/*__PUBLICACAO__*/', 'modelo_adesao.html',
 guardar(adesao, 'adesao.html');
 writeFileSync('adesao.html', adesao, 'utf8');
 
+// ------------------------------------------------------------------ eventos
+/* A página de eventos serve dois desenhos — a lista e o evento — porque os
+ * dois compartilham capa, rodapé e folha de estilo; o servidor injeta um ou
+ * outro. Um arquivo a menos para divergir. */
+let evento = readFileSync('modelo_evento.html', 'utf8')
+  .replace('/*__MODULOS__*/', modulosDaAdesao)
+  .replace('/*__FAVICON__*/', faviconEmUri());
+evento = inlinarLogos(evento, 'modelo_evento.html', ['/*__LOGO_TELA__*/']);
+exigirMarcador(evento, '/*__PUBLICACAO__*/', 'modelo_evento.html',
+  'É por ele que o servidor injeta o evento ou a lista. Sem ele a página abre vazia.');
+guardar(evento, 'evento.html');
+writeFileSync('evento.html', evento, 'utf8');
+
 // -------------------------------------------------------------- backoffice
 /* O backoffice não é montado pelo build — é servido como está. Mas as duas
  * guardas valem para ele igual: é HTML com handler inline e funções em
@@ -137,3 +168,4 @@ guardar(readFileSync('backoffice.html', 'utf8'), 'backoffice.html');
 
 console.log(`portal.html gerado — ${(portal.length / 1024).toFixed(0)} KB`);
 console.log(`adesao.html gerado — ${(adesao.length / 1024).toFixed(0)} KB`);
+console.log(`evento.html gerado — ${(evento.length / 1024).toFixed(0)} KB`);

@@ -190,7 +190,7 @@ try {
   conferir('convite sem nome nem CNPJ ainda é criado pelo servidor', r.status === 201);
 
   // ------------------------------------------------------------ auditoria
-  r = await fetch(BASE + '/api/backoffice/eventos', { headers: { Authorization: cabecalhoSenha() } });
+  r = await fetch(BASE + '/api/backoffice/auditoria', { headers: { Authorization: cabecalhoSenha() } });
   const eventos = (await r.json()).eventos;
   const tipos = new Set(eventos.map(e => e.o_que));
   conferir('auditoria registra recebimento, tratamento e convites',
@@ -434,7 +434,7 @@ try {
     { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
   conferir('com dois administradores, a trava libera o rebaixamento', r.ok, 'status ' + r.status);
 
-  r = await fetch(BASE + '/api/backoffice/eventos',
+  r = await fetch(BASE + '/api/backoffice/auditoria',
     { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO_NOVA) } });
   const trilha = (await r.json()).eventos;
   const tiposUsuario = new Set(trilha.map(e => e.o_que));
@@ -662,6 +662,177 @@ try {
   const comInjecao = await r.text();
   conferir('o termo do backoffice não deixa fechar o bloco de script',
     !comInjecao.includes('</script><script>x=1'));
+
+  // ------------------------------------------------------------- eventos
+  // A agenda e a unica area onde a EQUIPE cria conteudo publico sem passar
+  // por mim. O que se prova aqui: rascunho nao vaza, vaga e respeitada,
+  // repeticao nao duplica, e inscricao encontra o diagnostico pelo CNPJ.
+  const comSessao = { Authorization: cabecalhoDe('maria', SENHA_MARIA) };
+
+  r = await fetch(BASE + '/eventos');
+  const listaVazia = await r.text();
+  conferir('GET /eventos responde mesmo sem evento nenhum',
+    r.ok && listaVazia.includes('window.__LISTA__'), 'status ' + r.status);
+
+  r = await postar('/api/backoffice/eventos', { titulo: 'Conexão Tributária' }, comSessao);
+  const eventoCriado = await r.json();
+  const ev = eventoCriado.evento;
+  conferir('o painel cria evento e gera o apelido do endereço',
+    r.status === 201 && ev.apelido === 'conexao-tributaria' && ev.situacao === 'rascunho',
+    JSON.stringify(eventoCriado).slice(0, 90));
+
+  r = await postar('/api/backoffice/eventos', { titulo: '  ' }, comSessao);
+  conferir('recusa evento sem título', r.status === 400, 'status ' + r.status);
+
+  r = await postar('/api/backoffice/eventos/alterar', {
+    id: ev.id,
+    conteudo: { chamada: 'Setembro é o mês da escolha.', temas: ['Quem fica na guia única'] },
+    sessoes: [
+      { data: '2026-10-15', hora: '19:30', formato: 'online', titulo: 'Abertura' },
+      { data: '2026-10-20', hora: '09:00', formato: 'presencial', titulo: 'Presencial', vagas: 2 },
+    ],
+  }, comSessao);
+  const comSessoes = (await r.json()).evento;
+  conferir('grava conteúdo e dois encontros',
+    r.ok && comSessoes.sessoes.length === 2 && comSessoes.conteudo.temas.length === 1);
+
+  // Rascunho nao e publico: o endereco existe, mas so para quem tem sessao.
+  r = await fetch(`${BASE}/eventos/${ev.apelido}`);
+  conferir('rascunho não abre para quem está de fora', r.status === 404, 'status ' + r.status);
+  r = await fetch(`${BASE}/eventos/${ev.apelido}`, { headers: comSessao });
+  conferir('rascunho abre para quem tem sessão, para conferir antes de divulgar', r.ok,
+    'status ' + r.status);
+
+  const sessaoLimitada = comSessoes.sessoes.find(s => s.vagas === 2);
+  const inscricao = (extra = {}) => ({
+    evento: ev.apelido, sessaoId: sessaoLimitada.id, nome: 'Fulano de Tal',
+    email: 'fulano@exemplo.test', telefone: '(34) 99999-9999',
+    empresa: 'Empresa de Teste', cnpj: '11.222.333/0001-81', cargo: 'Sócio',
+    aceite: true, ...extra,
+  });
+
+  r = await postar('/api/inscricao', inscricao());
+  conferir('não aceita inscrição em evento que não foi publicado', r.status === 422,
+    'status ' + r.status);
+
+  await postar('/api/backoffice/eventos/alterar', { id: ev.id, situacao: 'publicado' }, comSessao);
+  r = await fetch(`${BASE}/eventos/${ev.apelido}`);
+  const paginaPublica = await r.text();
+  conferir('publicado, o evento abre para qualquer um',
+    r.ok && paginaPublica.includes('window.__EVENTO__'), 'status ' + r.status);
+  conferir('a página do evento traz título e descrição para a prévia do WhatsApp',
+    paginaPublica.includes('property="og:title"')
+    && paginaPublica.includes('Setembro é o mês da escolha'));
+  conferir('o marcador de publicação do evento foi substituído',
+    !paginaPublica.includes('/*__PUBLICACAO__*/'));
+
+  r = await postar('/api/inscricao', inscricao());
+  const primeira = await r.json();
+  conferir('inscrição gravada com protocolo INS-',
+    r.status === 201 && /^INS-\d{8}-[A-Z0-9]{5}$/.test(primeira.protocolo || ''),
+    primeira.protocolo);
+
+  // O CNPJ e o mesmo do pacote de teste do inicio da suite: a inscricao tem de
+  // achar o diagnostico sozinha, que e o que liga a palestra ao funil.
+  r = await fetch(`${BASE}/api/backoffice/eventos?id=${ev.id}`, { headers: comSessao });
+  const painel = await r.json();
+  conferir('a inscrição se amarra ao diagnóstico pelo CNPJ',
+    painel.inscricoes[0].resposta_id !== null,
+    String(painel.inscricoes[0].resposta_id));
+
+  r = await postar('/api/inscricao', inscricao({ email: 'FULANO@exemplo.test' }));
+  const repetida = await r.json();
+  conferir('a mesma pessoa não duplica, e recebe o protocolo que já tinha',
+    r.status === 200 && repetida.repetida === true
+    && repetida.protocolo === primeira.protocolo, JSON.stringify(repetida));
+
+  r = await postar('/api/inscricao', inscricao({ email: 'outra@exemplo.test', nome: 'Outra' }));
+  conferir('a segunda vaga ainda entra', r.status === 201, 'status ' + r.status);
+  r = await postar('/api/inscricao', inscricao({ email: 'terceira@exemplo.test', nome: 'Terceira' }));
+  conferir('a terceira é recusada: a sessão tem duas vagas', r.status === 409,
+    'status ' + r.status);
+  // Quem ja esta inscrito e recarrega a pagina numa sessao lotada nao pode
+  // ouvir "sem vaga": ele nao perdeu o lugar.
+  r = await postar('/api/inscricao', inscricao());
+  conferir('inscrito em sessão lotada continua reconhecido, não recusado',
+    r.status === 200 && (await r.json()).repetida === true, 'status ' + r.status);
+
+  for (const [nome, corpo] of [
+    ['recusa inscrição sem aceite', inscricao({ aceite: false })],
+    ['recusa inscrição sem nome', inscricao({ nome: '  ', email: 'x@exemplo.test' })],
+    ['recusa e-mail inválido', inscricao({ email: 'nao-e-email' })],
+    ['recusa CNPJ incompleto', inscricao({ email: 'z@exemplo.test', cnpj: '11.222' })],
+    ['recusa encontro que não é do evento', inscricao({ email: 'w@exemplo.test', sessaoId: 99999 })],
+    ['recusa evento inexistente', inscricao({ email: 'v@exemplo.test', evento: 'nao-existe' })],
+  ]) {
+    r = await postar('/api/inscricao', corpo);
+    conferir(nome, r.status === 422, 'status ' + r.status);
+  }
+
+  // CNPJ e opcional: exigir o numero de cor na porta da palestra custa inscrito.
+  r = await postar('/api/inscricao', inscricao({ email: 'sem-cnpj@exemplo.test',
+    nome: 'Sem Cnpj', cnpj: '', sessaoId: comSessoes.sessoes[0].id }));
+  conferir('inscrição sem CNPJ é aceita', r.status === 201, 'status ' + r.status);
+
+  await postar('/api/backoffice/eventos/alterar', { id: ev.id, inscricoes: 'encerradas' }, comSessao);
+  r = await postar('/api/inscricao', inscricao({ email: 'tarde@exemplo.test',
+    sessaoId: comSessoes.sessoes[0].id }));
+  conferir('encerradas as inscrições, a porta fecha no servidor', r.status === 422,
+    'status ' + r.status);
+  await postar('/api/backoffice/eventos/alterar', { id: ev.id, inscricoes: 'abertas' }, comSessao);
+
+  // Encontro com inscrito nao se apaga por descuido no painel.
+  r = await postar('/api/backoffice/eventos/alterar', { id: ev.id, sessoes: [] }, comSessao);
+  const apos = (await r.json()).evento;
+  conferir('encontro com inscrito não é apagado ao salvar sem ele',
+    apos.sessoes.length === 2, `${apos.sessoes.length} encontros`);
+
+  r = await postar('/api/backoffice/inscricoes/tratar',
+    { id: primeira.id, situacao: 'presente' }, comSessao);
+  conferir('marcar presença funciona', r.ok, 'status ' + r.status);
+  r = await postar('/api/backoffice/inscricoes/tratar',
+    { id: primeira.id, situacao: 'inventada' }, comSessao);
+  conferir('situação de inscrição inválida é recusada', r.status === 400, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/inscricoes.csv?evento=' + ev.id, { headers: comSessao });
+  const csvInscritos = await r.text();
+  const bytesInscritos = new Uint8Array(await (await fetch(
+    BASE + '/api/backoffice/inscricoes.csv?evento=' + ev.id, { headers: comSessao })).arrayBuffer());
+  conferir('a planilha de inscritos sai com BOM e ponto e vírgula',
+    bytesInscritos[0] === 0xEF && csvInscritos.includes('protocolo;'));
+  conferir('a planilha traz a hora em Brasília, não em UTC',
+    /\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2}/.test(csvInscritos) && !csvInscritos.includes('T05:'),
+    csvInscritos.split('\r\n')[1]?.slice(0, 60));
+
+  r = await fetch(BASE + '/eventos');
+  const listaPublica = await r.text();
+  conferir('o evento publicado aparece na lista', listaPublica.includes('conexao-tributaria'));
+  // A pagina da lista le `sessoes[0]` para mostrar a data. Quando a consulta
+  // nao trazia as sessoes, a lista quebrava no navegador e o teste de HTTP
+  // nao via nada: o HTML chegava certo, o desenho e que morria.
+  const injetado = JSON.parse(listaPublica.match(/window\.__LISTA__ = (\[.*?\]);/s)[1]
+    .replace(/\\u003C/g, '<').replace(/\\u003E/g, '>').replace(/\\u0026/g, '&'));
+  // Compara com o que o painel informa, em vez de um número escrito à mão:
+  // assim a asserção continua mordendo se a consulta mudar.
+  conferir('a lista leva as sessões de cada evento, que é o que a página desenha',
+    injetado.length > 0 && Array.isArray(injetado[0].sessoes)
+    && injetado[0].sessoes.length === apos.sessoes.length && apos.sessoes.length > 0,
+    `lista=${(injetado[0] || {}).sessoes?.length} painel=${apos.sessoes.length}`);
+
+  r = await fetch(BASE + '/api/inscricao', { method: 'POST', body: 'isso não é json' });
+  conferir('inscrição com corpo que não é JSON é recusada', r.status === 400,
+    'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/eventos');
+  conferir('o painel de eventos exige credencial', r.status === 401, 'status ' + r.status);
+
+  // O nome `eventos` e de DUAS coisas: a trilha de auditoria (tabela antiga) e
+  // a agenda. Se alguem reaproveitar o nome, `CREATE TABLE IF NOT EXISTS`
+  // ignora em silencio e a agenda para de gravar.
+  const fonteBanco = readFileSync('src/banco.mjs', 'utf8');
+  conferir('a agenda não disputa o nome da tabela de auditoria',
+    (fonteBanco.match(/CREATE TABLE IF NOT EXISTS eventos \(/g) || []).length === 1
+    && fonteBanco.includes('CREATE TABLE IF NOT EXISTS agenda ('));
 
   // ------------------------------- a pagina le o campo que o modulo devolve
   // Defeito real: a pagina lia `dados.razao_social`, o nome CRU do campo da

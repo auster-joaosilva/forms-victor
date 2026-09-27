@@ -276,6 +276,101 @@ function conferirAdesao(corpo, req) {
   } };
 }
 
+/* ---------------------------------------------------------------- eventos */
+
+/** Serve a lista de eventos ou a página de um deles. É o mesmo arquivo: o que
+ *  muda é qual variável o servidor injeta. */
+function paginaDeEvento({ evento, lista } = {}) {
+  const html = pagina('./evento.html');
+  if (!html) return null;
+  const trechos = [`window.__HOJE__ = ${jsonParaScript(new Date().toISOString())};`];
+  if (lista) trechos.push(`window.__LISTA__ = ${jsonParaScript(lista)};`);
+  if (evento) trechos.push(`window.__EVENTO__ = ${jsonParaScript(evento)};`);
+  let saida = html.replace('/*__PUBLICACAO__*/', trechos.join('\n'));
+  // Prévia no WhatsApp: sem isto o link chega sem título nem descrição.
+  const titulo = evento ? `${evento.titulo} — Auster Inteligência Contábil`
+                        : 'Eventos — Auster Inteligência Contábil';
+  const descricao = evento
+    ? (evento.conteudo.chamada || 'Inscrição gratuita.')
+    : 'Encontros da Auster sobre a Reforma Tributária. Inscrição gratuita.';
+  const endereco = ENDERECO_PUBLICO
+    + (evento ? `/eventos/${encodeURIComponent(evento.apelido)}` : '/eventos');
+  const meta = [
+    `<title>${escaparHtml(titulo)}</title>`,
+    `<meta name="description" content="${escaparHtml(descricao)}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="Auster Inteligência Contábil">`,
+    `<meta property="og:locale" content="pt_BR">`,
+    `<meta property="og:title" content="${escaparHtml(titulo)}">`,
+    `<meta property="og:description" content="${escaparHtml(descricao)}">`,
+    ENDERECO_PUBLICO ? `<meta property="og:url" content="${escaparHtml(endereco)}">` : '',
+    `<meta name="twitter:card" content="summary">`,
+  ].filter(Boolean).join('\n');
+  return saida.replace(/<title>[^<]*<\/title>/, '').replace('<!--__METADADOS__-->', meta);
+}
+
+const escaparHtml = s => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** Confere a inscrição. O CNPJ é opcional — quem vai à palestra nem sempre
+ *  sabe o da empresa de cor, e exigir isso custa inscrito. */
+function conferirInscricao(corpo, req) {
+  if (!corpo || typeof corpo !== 'object') return { erro: 'corpo inválido' };
+  if (corpo.aceite !== true) return { erro: 'sem o aceite de privacidade' };
+  const evento = banco.evento(String(corpo.evento || ''));
+  if (!evento) return { erro: 'evento não encontrado' };
+  if (evento.situacao !== 'publicado') return { erro: 'evento não está publicado' };
+  if (evento.inscricoes !== 'abertas') return { erro: 'as inscrições estão encerradas' };
+  const sessao = evento.sessoes.find(s => s.id === Number(corpo.sessaoId));
+  if (!sessao) return { erro: 'escolha um dos encontros' };
+  for (const [campo, rotulo] of [['nome', 'o seu nome'], ['email', 'o e-mail']]) {
+    if (!String(corpo[campo] || '').trim()) return { erro: `falta ${rotulo}` };
+  }
+  if (!/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(String(corpo.email).trim())) {
+    return { erro: 'e-mail inválido' };
+  }
+  const cnpj = String(corpo.cnpj || '').trim();
+  if (cnpj && soDigitos(cnpj).length !== 14) return { erro: 'CNPJ incompleto' };
+  return { dados: {
+    eventoId: evento.id, sessaoId: sessao.id,
+    nome: String(corpo.nome).trim().slice(0, 120),
+    email: String(corpo.email).trim().slice(0, 160),
+    telefone: String(corpo.telefone || '').trim().slice(0, 40) || null,
+    empresa: String(corpo.empresa || '').trim().slice(0, 160) || null,
+    cnpj: cnpj || null,
+    cargo: String(corpo.cargo || '').trim().slice(0, 60) || null,
+    aceiteLgpd: true,
+    ...origemDoPedido(req),
+    agente: String(req.headers['user-agent'] || '').slice(0, 300) || null,
+  } };
+}
+
+/** Planilha de inscritos: uma linha por inscrição, para a lista de presença. */
+function planilhaDeInscricoes(linhas) {
+  const cabecalho = ['protocolo', 'inscrito em (Brasilia)', 'situacao', 'evento', 'encontro',
+    'data do encontro', 'hora', 'formato', 'nome', 'e-mail', 'telefone', 'empresa', 'CNPJ',
+    'cargo', 'diagnostico vinculado', 'origem do acesso', 'tratado por', 'nota interna'];
+  const celula = v => {
+    const texto = v === undefined || v === null ? '' : String(v);
+    return /[";\n]/.test(texto) ? '"' + texto.replace(/"/g, '""') + '"' : texto;
+  };
+  const corpo = linhas.map(l => [
+    l.protocolo, emBrasilia(l.criado_em), l.situacao, l.evento_titulo, l.sessao_titulo,
+    l.sessao_data, l.sessao_hora, l.sessao_formato, l.nome, l.email, l.telefone,
+    l.empresa, l.cnpj, l.cargo, l.resposta_id ? `resposta ${l.resposta_id}` : '',
+    l.origem, l.tratado_por || '', l.nota_interna || '',
+  ].map(celula).join(';'));
+  return '﻿' + [cabecalho.map(celula).join(';'), ...corpo].join('\r\n') + '\r\n';
+}
+
+/** O banco guarda em UTC; quem lê a planilha trabalha em Brasília. */
+const emBrasilia = iso => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? String(iso)
+    : d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+};
+
 const MODALIDADE_LEGIVEL = {
   padrao: 'Simples Nacional Puro (Padrão)',
   hibrido: 'Simples Nacional Híbrido (CBS fora do DAS)',
@@ -580,6 +675,43 @@ const servidor = createServer(async (req, res) => {
       return json(res, 201, { ok: true, id, protocolo: pacote.protocolo });
     }
 
+    // ------------------------------------------------------------- eventos
+    if (req.method === 'GET' && (rota === '/eventos' || rota.startsWith('/eventos/'))) {
+      const apelido = rota === '/eventos' ? null : decodeURIComponent(rota.slice(9));
+      if (!apelido) {
+        const html = paginaDeEvento({ lista: banco.eventosDoPortal({ apenasPublicados: true }) });
+        return html
+          ? responder(res, 200, html, 'text/html; charset=utf-8', { 'Cache-Control': 'no-store' })
+          : responder(res, 500, 'evento.html não encontrado. Rode node construir.mjs.');
+      }
+      const evento = banco.evento(apelido);
+      // Rascunho não é público: só quem tem sessão vê, para conferir antes de
+      // divulgar o endereço.
+      if (!evento || (evento.situacao === 'rascunho' && !autenticado(req))) {
+        return responder(res, 404, 'Evento não encontrado.', 'text/plain; charset=utf-8');
+      }
+      const html = paginaDeEvento({ evento });
+      return html
+        ? responder(res, 200, html, 'text/html; charset=utf-8', { 'Cache-Control': 'no-store' })
+        : responder(res, 500, 'evento.html não encontrado. Rode node construir.mjs.');
+    }
+
+    if (req.method === 'POST' && rota === '/api/inscricao') {
+      let corpo;
+      try { corpo = JSON.parse(await lerCorpo(req)); }
+      catch (e) {
+        return e && e.grande
+          ? json(res, 413, { ok: false, erro: 'corpo grande demais' })
+          : json(res, 400, { ok: false, erro: 'corpo inválido' });
+      }
+      const { erro, dados } = conferirInscricao(corpo, req);
+      if (erro) return json(res, 422, { ok: false, erro });
+      const r = banco.gravarInscricao(dados);
+      if (!r.ok) return json(res, 409, { ok: false, erro: r.motivo });
+      return json(res, r.repetida ? 200 : 201,
+                  { ok: true, id: r.id, protocolo: r.protocolo, repetida: r.repetida === true });
+    }
+
     // ------------------------------------------------------ termo de opção
     if (req.method === 'GET' && rota === '/adesao') {
       const token = url.searchParams.get('c');
@@ -836,8 +968,62 @@ const servidor = createServer(async (req, res) => {
           : responder(res, 500, 'adesao.html não encontrado. Rode node construir.mjs.');
       }
 
+      // ------------------------------------------------------------ eventos
       if (req.method === 'GET' && rota === '/api/backoffice/eventos') {
-        return json(res, 200, { ok: true, eventos: banco.eventos() });
+        const id = Number(url.searchParams.get('id'));
+        if (id) {
+          const evento = banco.evento(id);
+          return evento
+            ? json(res, 200, { ok: true, evento, base: ENDERECO_PUBLICO,
+                               contagem: banco.contagemInscricoes(id),
+                               inscricoes: banco.inscricoes({ eventoId: id }) })
+            : json(res, 404, { ok: false, erro: 'evento não encontrado' });
+        }
+        return json(res, 200, { ok: true, base: ENDERECO_PUBLICO,
+                                eventos: banco.eventosDoPortal() });
+      }
+
+      if (req.method === 'POST' && rota === '/api/backoffice/eventos') {
+        const corpo = JSON.parse(await lerCorpo(req) || '{}');
+        if (!String(corpo.titulo || '').trim()) {
+          return json(res, 400, { ok: false, motivo: 'o evento precisa de um título' });
+        }
+        const evento = banco.criarEvento({
+          titulo: String(corpo.titulo).trim(), conteudo: corpo.conteudo || {},
+          sessoes: Array.isArray(corpo.sessoes) ? corpo.sessoes : [], criadoPor: quem,
+        });
+        return json(res, 201, { ok: true, evento });
+      }
+
+      if (req.method === 'POST' && rota === '/api/backoffice/eventos/alterar') {
+        const corpo = JSON.parse(await lerCorpo(req) || '{}');
+        const r = banco.alterarEvento(Number(corpo.id), { ...corpo, quem });
+        return json(res, r.ok ? 200 : 400, r);
+      }
+
+      if (req.method === 'POST' && rota === '/api/backoffice/inscricoes/tratar') {
+        const corpo = JSON.parse(await lerCorpo(req) || '{}');
+        const r = banco.tratarInscricao(Number(corpo.id),
+          { situacao: corpo.situacao, nota: corpo.nota, quem });
+        return json(res, r.ok ? 200 : 400, r);
+      }
+
+      if (req.method === 'GET' && rota === '/api/backoffice/inscricoes.csv') {
+        const linhas = banco.inscricoes({
+          eventoId: Number(url.searchParams.get('evento')) || undefined,
+          sessaoId: Number(url.searchParams.get('sessao')) || undefined,
+          situacao: url.searchParams.get('situacao') || undefined,
+          busca: url.searchParams.get('busca') || undefined,
+          limite: 5000,
+        });
+        banco.registrar(quem, 'planilha_inscricoes_exportada', String(linhas.length));
+        const hoje = new Date().toISOString().slice(0, 10);
+        return responder(res, 200, planilhaDeInscricoes(linhas), 'text/csv; charset=utf-8',
+          { 'Content-Disposition': `attachment; filename="inscritos-${hoje}.csv"` });
+      }
+
+      if (req.method === 'GET' && rota === '/api/backoffice/auditoria') {
+        return json(res, 200, { ok: true, eventos: banco.auditoria() });
       }
 
       return json(res, 404, { ok: false, erro: 'rota desconhecida' });

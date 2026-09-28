@@ -527,10 +527,9 @@ window.marcarAdesao = async (id, situacao) => {
 /* Os quatro fundos de capa. A lista vive aqui e na pagina publica; se as
    duas divergirem, o painel oferece um fundo que a pagina nao conhece e a
    capa cai no padrao sem avisar. O teste de invariante compara as duas. */
-const TEMAS_DE_CAPA = [['aurora', 'Aurora — luz em diagonal'],
-                       ['malha', 'Malha — grade fina'],
-                       ['onda', 'Onda — faixas curvas'],
-                       ['foto', 'Foto — imagem de fundo']];
+const TEMAS_DE_CAPA = [['marca', 'Marca — o símbolo, grande, na borda'],
+                       ['solido', 'Sólido — azul-escuro e nada mais'],
+                       ['foto', 'Foto — imagem ao lado do texto']];
 const SITUACOES_EVENTO = { rascunho:'Rascunho', publicado:'Publicado', encerrado:'Encerrado' };
 const SITUACOES_INSCRICAO = { inscrita:'Inscrita', confirmada:'Confirmada',
   presente:'Presente', ausente:'Ausente', cancelada:'Cancelada' };
@@ -707,7 +706,7 @@ async function verEvento(id) {
                placeholder="Se quiser ser avisado do próximo encontro, fale com a Auster."></div>
 
       <h3 style="margin:22px 0 8px">Aparência da capa</h3>
-      <p class="nota" style="margin:0 0 10px">São quatro fundos prontos, todos na paleta
+      <p class="nota" style="margin:0 0 10px">São três fundos prontos, todos na linguagem
         da casa. A escolha muda só o visual da capa: o conteúdo é o mesmo.</p>
       <div class="campos-bo">
         <div class="campo-bo"><label for="evTema">Fundo da capa</label>
@@ -719,7 +718,7 @@ async function verEvento(id) {
           <input type="text" id="evRotulo" value="${esc(c.rotulo || '')}"
                  placeholder="Encontro gratuito · Uberlândia-MG"></div>
       </div>
-      <div class="campo-bo"><label>Imagem de fundo (só para o fundo “Foto”)</label>
+      <div class="campo-bo"><label>Imagem da capa (só para o fundo “Foto”)</label>
         ${galeria('capa', c.capa && c.capa.startsWith('/imagens/') ? c.capa : '',
                   /^(fachada|recepcao)/)}
         <input type="file" id="evCapa" accept="image/*" onchange="window.carregarCapa(this)">

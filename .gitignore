@@ -34,3 +34,9 @@ evento.html
 
 # Gerado pelo build (a fonte e modelo_principal.html).
 principal.html
+
+# Originais das fotos: ficam na maquina, nao no repositorio.
+07_Originais_Fotos/
+
+# Derivado: o motivo e gerado por ferramentas/gerar_motivo.py e colado no CSS.
+ativos/motivo.txt

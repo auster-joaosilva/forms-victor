@@ -1039,6 +1039,18 @@ try {
       fonteEstilo.includes(`.tema-${t}{`));
   }
 
+  // O sistema de design da casa proibe sombra e canto arredondado. As duas
+  // unicas excecoes sao contorno por `inset` (que e uma borda, nao sombra) e
+  // o circulo do numeral de etapa. Sem esta assercao, a primeira pressa
+  // devolve a pagina ao visual de cartao flutuante.
+  const folha = readFileSync('ativos/estilo_publico.css', 'utf8');
+  const sombras = [...folha.matchAll(/box-shadow:([^;}]*)/g)]
+    .map(m => m[1].trim()).filter(v => !v.startsWith('inset'));
+  conferir('a folha não usa sombra solta', sombras.length === 0, sombras.join(' | '));
+  const raios = [...folha.matchAll(/border-radius:([^;}]*)/g)]
+    .map(m => m[1].trim()).filter(v => v !== '0' && v !== '50%');
+  conferir('a folha só arredonda o numeral de etapa', raios.length === 0, raios.join(' | '));
+
   // Cor fora da marca em pagina de cliente e erro de identidade, nao de gosto.
   // O dourado da peca de referencia e o azul errado ja apareceram antes.
   const proibidas = ['#C9A84C', '#c9a84c', '#0D1B3E', '#0d1b3e'];

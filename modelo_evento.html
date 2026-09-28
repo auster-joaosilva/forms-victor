@@ -81,7 +81,7 @@ function diasAte(iso) {
 }
 
 const FORMATO = { online: 'Online', presencial: 'Presencial' };
-const TEMAS = ['aurora', 'malha', 'onda', 'foto'];
+const TEMAS = ['marca', 'solido', 'foto'];
 
 function estadoDaSessao(s) {
   if (s.vagas === null || s.vagas === undefined) return null;
@@ -107,13 +107,13 @@ const icone = i => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[i % ICO
 
 // ===================================================== lista de eventos
 function desenharLista() {
-  capa.className = 'capa tema-aurora';
-  capa.innerHTML = `
+  capa.className = 'capa tema-marca';
+  capa.innerHTML = `<div class="miolo">
     <div class="logo marca-auster" role="img" aria-label="auster"></div>
-    <span class="rotulo"><span class="pisca"></span>Agenda da Auster</span>
+    <span class="rotulo">Agenda da Auster</span>
     <h1>Encontros sobre a <b>Reforma Tributária</b></h1>
     <div class="chamada">O que muda na sua empresa, explicado por quem cuida dela todos
-    os dias. Inscrição gratuita.</div>`;
+    os dias. Inscrição gratuita.</div></div>`;
   const itens = LISTA.map(e => {
     // Sem sessão a página ainda tem de abrir: um evento em montagem não pode
     // derrubar a lista inteira.
@@ -161,16 +161,15 @@ const CARGOS = ['Sócio', 'Sócio Administrador', 'Administrador não Sócio', '
 
 function blocoCapa(e) {
   const c = e.conteudo;
-  const pedido = TEMAS.includes(c.tema) ? c.tema : 'aurora';
-  // Tema de foto sem foto seria um retângulo escuro vazio; cai na aurora.
-  const tema = pedido === 'foto' && !c.capa ? 'aurora' : pedido;
+  const pedido = TEMAS.includes(c.tema) ? c.tema : 'marca';
+  // Tema de foto sem foto seria uma coluna vazia ao lado do texto; cai no
+  // motivo da marca, que nao depende de arquivo nenhum.
+  const tema = pedido === 'foto' && !c.capa ? 'marca' : pedido;
   capa.className = 'capa tema-' + tema;
-  if (c.capa) capa.style.setProperty('--capa', `url("${c.capa}")`);
 
   const chips = e.sessoes.map(s => {
     const q = partesDaData(s.data);
     return `<div class="sessao-chip">
-      <span class="marcador"></span>
       <div class="quando">${esc(q.curta)} — ${esc(s.hora)}</div>
       <div class="oque">${esc(FORMATO[s.formato] || s.formato)}${s.titulo ? ': ' + esc(s.titulo) : ''}</div>
     </div>`;
@@ -184,25 +183,24 @@ function blocoCapa(e) {
     : `<div class="contagem">faltam <b>${faltam}</b> dias</div>`;
 
   const aberto = e.inscricoes === 'abertas' && e.situacao === 'publicado';
-  const ondas = tema === 'onda'
-    ? `<svg class="ondas" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
-         <path fill="rgba(113,207,235,.16)" d="M0,64 C240,110 480,10 720,40 C960,70 1200,120 1440,86 L1440,120 L0,120 Z"/>
-         <path fill="rgba(244,249,252,.10)" d="M0,88 C280,40 520,120 780,92 C1040,64 1240,30 1440,58 L1440,120 L0,120 Z"/>
-       </svg>` : '';
 
-  capa.innerHTML = `
-    ${ondas}
-    <div class="logo marca-auster" role="img" aria-label="auster"></div>
-    ${c.rotulo ? `<span class="rotulo"><span class="pisca"></span>${esc(c.rotulo)}</span>` : ''}
-    <h1>${esc(e.titulo)}</h1>
-    ${c.chamada ? `<div class="chamada">${esc(c.chamada)}</div>` : ''}
-    ${chips ? `<div class="sessoes-capa">${chips}</div>` : ''}
-    ${c.local ? `<div class="onde">${esc(c.local)}</div>` : ''}
-    ${aberto ? `<div class="acoes">
-        <button class="botao" onclick="window.irParaInscricao()">Quero me inscrever</button>
-        <button class="botao fantasma" onclick="window.irParaPrograma()">Ver a programação</button>
-      </div>${contagem}`
-      : `<div class="onde" style="margin-top:26px">As inscrições estão encerradas.</div>`}`;
+  capa.innerHTML = `<div class="miolo">
+    <div class="texto">
+      <div class="logo marca-auster" role="img" aria-label="auster"></div>
+      ${c.rotulo ? `<span class="rotulo">${esc(c.rotulo)}</span>` : ''}
+      <h1>${esc(e.titulo)}</h1>
+      ${c.chamada ? `<div class="chamada">${esc(c.chamada)}</div>` : ''}
+      ${chips ? `<div class="sessoes-capa">${chips}</div>` : ''}
+      ${c.local ? `<div class="onde">${esc(c.local)}</div>` : ''}
+      ${aberto ? `<div class="acoes">
+          <button class="botao" onclick="window.irParaInscricao()">Quero me inscrever</button>
+          <button class="botao fantasma" onclick="window.irParaPrograma()">Ver a programação</button>
+        </div>${contagem}`
+        : `<div class="onde">As inscrições estão encerradas.</div>`}
+    </div>
+    ${tema === 'foto'
+      ? `<figure class="retrato-capa"><img src="${esc(c.capa)}" alt=""></figure>` : ''}
+  </div>`;
 }
 
 function blocoPrograma(e) {
@@ -215,16 +213,20 @@ function blocoPrograma(e) {
       const q = partesDaData(s.data);
       const est = estadoDaSessao(s);
       return `<div class="item">
-        <div class="cabeca">
-          <span class="data">${esc(q.curta)}</span>
-          <span class="dia">${esc(q.diaDaSemana)} · ${esc(s.hora)}</span>
-          <span class="selo ${s.formato === 'online' ? 'online' : ''}">${
-            esc(FORMATO[s.formato] || s.formato)}</span>
-          ${est ? `<span class="selo ${est.classe}">${esc(est.texto)}</span>` : ''}
+        <div class="quando">
+          <div class="data">${esc(q.curta)}</div>
+          <div class="dia">${esc(q.diaDaSemana)}<br>${esc(s.hora)}</div>
         </div>
-        <div class="t">${esc(s.titulo)}</div>
-        ${s.descricao ? `<div class="d">${esc(s.descricao)}</div>` : ''}
-        ${s.local ? `<div class="d">${esc(s.local)}</div>` : ''}
+        <div>
+          <div class="t">${esc(s.titulo)}</div>
+          ${s.descricao ? `<div class="d">${esc(s.descricao)}</div>` : ''}
+          ${s.local ? `<div class="d">${esc(s.local)}</div>` : ''}
+          <div class="selos">
+            <span class="selo ${s.formato === 'online' ? 'online' : ''}">${
+              esc(FORMATO[s.formato] || s.formato)}</span>
+            ${est ? `<span class="selo ${est.classe}">${esc(est.texto)}</span>` : ''}
+          </div>
+        </div>
       </div>`;
     }).join('')}</div></div>
   </section>`;
@@ -243,7 +245,7 @@ function blocoOnde(e) {
     <div class="regua"></div>
     <div class="cartao lugar">
       <figure class="retrato" style="margin:0">
-        <img src="/imagens/fachada.jpg" alt="Fachada da Auster, em Uberlândia" loading="lazy">
+        <img src="/imagens/fachada-larga.jpg" alt="Fachada da Auster, em Uberlândia" loading="lazy">
       </figure>
       <div>
         <p>Os encontros presenciais são na nossa casa, em Uberlândia. É este prédio
@@ -410,8 +412,7 @@ function desenharEvento() {
       <div class="regua"></div>
       <div class="cartao palestrante">
         ${c.palestrante.foto
-          ? `<div class="moldura"><img src="${esc(c.palestrante.foto)}" alt="${esc(c.palestrante.nome)}"></div>`
-          : ''}
+          ? `<img src="${esc(c.palestrante.foto)}" alt="${esc(c.palestrante.nome)}">` : ''}
         <div>
           ${c.palestrante.cargo ? `<div class="cargo">${esc(c.palestrante.cargo)}</div>` : ''}
           ${c.palestrante.bio ? `<div class="bio">${esc(c.palestrante.bio)}</div>` : ''}

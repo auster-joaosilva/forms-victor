@@ -27,7 +27,10 @@ const cabecalhoSenha = (usuario = 'tester') =>
 const filho = spawn(process.execPath, ['servidor.mjs'], {
   env: { ...process.env, PORT: String(PORTA), AUSTER_SENHA_BACKOFFICE: SENHA,
          AUSTER_BANCO: join(pasta, 'teste.db'),
-         AUSTER_ENDERECO_PUBLICO: 'https://exemplo.test', NODE_ENV: 'test' },
+         AUSTER_ENDERECO_PUBLICO: 'https://exemplo.test', NODE_ENV: 'test',
+         // A bateria dispara dezenas de envios da mesma origem e bateria no
+         // proprio limite. O limite tem servidor proprio, mais abaixo.
+         AUSTER_SEM_LIMITE: '1' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 filho.stderr.on('data', d => process.stderr.write('[servidor] ' + d));
@@ -1105,6 +1108,38 @@ try {
     .map(m => m[1].trim()).filter(v => v !== '0' && v !== '50%');
   conferir('a folha só arredonda o numeral de etapa', raios.length === 0, raios.join(' | '));
 
+  // ------------------------------------------------- impressao do relatorio
+  const fontePortal = readFileSync('portal.html', 'utf8');
+
+  // D-03 — no papel a numeracao das acoes nao pode depender de fundo: o Chrome
+  // imprime sem fundos por padrao e o "1" sumia, embora o texto das acoes se
+  // refira a ele pelo numero.
+  const regraNumeral = (fontePortal.match(/@media print[\s\S]*?\.doc-acao \.n\{([^}]*)\}/) || [])[1] || '';
+  conferir('no papel o numeral da ação é contorno, não fundo',
+    /background:\s*none/.test(regraNumeral) && /border:/.test(regraNumeral)
+    && !/background:\s*#/.test(regraNumeral), regraNumeral || '(regra não encontrada)');
+
+  // D-01 — a bateria nao tem navegador e nao mede fonte carregada. O que ela
+  // prova e a FIACAO: existe um caminho de impressao so, e ele espera a fonte
+  // com teto. Duas chamadas de window.print() significam atalho aberto.
+  const chamadasPrint = (fontePortal.match(/window\.print\(\)/g) || []).length;
+  conferir('o portal imprime por um caminho só', chamadasPrint === 1,
+    chamadasPrint + ' chamadas de window.print()');
+  conferir('o caminho de impressão espera a fonte, com teto',
+    /Promise\.race\(\[document\.fonts\.ready,\s*teto\]\)/.test(fontePortal));
+  conferir('o teto da espera é um número declarado',
+    /TETO_DA_ESPERA_DA_FONTE\s*=\s*\d+/.test(fontePortal));
+  /* Sem expressao regular: montar uma com escape dentro de literal de gabarito
+     ja engoliu a barra invertida uma vez, e a assercao passou a testar outra
+     coisa. Distancia entre dois textos e o que importa, e isso se mede. */
+  for (const gatilho of ['imprimirRelatorio', 'baixarPlano']) {
+    const abre = fontePortal.indexOf(`window.${gatilho} = `);
+    const espera = fontePortal.indexOf('imprimirQuandoPronto();', abre);
+    conferir(`${gatilho} passa pela espera da fonte`,
+      abre >= 0 && espera > abre && espera - abre < 260,
+      `abre=${abre} espera=${espera}`);
+  }
+
   // A cerca do degrade: aurora e onda sao excecao do CONVITE. A capa
   // institucional e peca da marca e segue a regra ao pe da letra. Sem esta
   // assercao, o dia em que alguem achar a aurora bonita na /principal ela vai
@@ -1144,6 +1179,56 @@ try {
     .filter(m => !copiados.has(m));
   conferir('os modelos das páginas geradas estão no Dockerfile',
     modelosFora.length === 0, 'fora: ' + modelosFora.join(', '));
+
+  // ------------------------------------------------------------------ E-06
+  /* O limite precisa de servidor so dele: o principal roda com ele desligado
+     de proposito. Sobe um segundo processo com teto de 3 por minuto, bate ate
+     passar do teto, e derruba no fim. */
+  {
+    const PORTA_LIMITE = PORTA + 2;
+    const BASE_LIMITE = `http://127.0.0.1:${PORTA_LIMITE}`;
+    const limitado = spawn(process.execPath, ['servidor.mjs'], {
+      env: { ...process.env, PORT: String(PORTA_LIMITE), AUSTER_SENHA_BACKOFFICE: SENHA,
+             AUSTER_BANCO: join(pasta, 'limite.db'), NODE_ENV: 'test',
+             AUSTER_SEM_LIMITE: '0', AUSTER_LIMITE_MINUTO: '3', AUSTER_LIMITE_HORA: '100' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    try {
+      let subiu = false;
+      for (let i = 0; i < 60 && !subiu; i++) {
+        try { subiu = (await fetch(BASE_LIMITE + '/saude')).ok; } catch { }
+        if (!subiu) await new Promise(x => setTimeout(x, 120));
+      }
+      conferir('o servidor do teste de limite subiu', subiu);
+
+      const respostas = [];
+      for (let i = 0; i < 5; i++) {
+        respostas.push(await fetch(BASE_LIMITE + '/api/respostas', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pacoteDeTeste()),
+        }));
+      }
+      const codigos = respostas.map(x => x.status);
+      conferir('os três primeiros envios passam',
+        codigos.slice(0, 3).every(x => x === 201), codigos.join(','));
+      conferir('o quarto e o quinto envio da mesma origem recebem 429',
+        codigos[3] === 429 && codigos[4] === 429, codigos.join(','));
+      conferir('a recusa diz quanto esperar',
+        !!respostas[3].headers.get('retry-after'),
+        'Retry-After=' + respostas[3].headers.get('retry-after'));
+      conferir('a recusa devolve JSON com motivo',
+        String((await respostas[3].json()).erro).includes('muitos envios'));
+      // O limite nao pode fechar a porta de leitura: quem so abre a pagina passa.
+      conferir('a página segue abrindo depois do limite', (await fetch(BASE_LIMITE + '/')).ok);
+      // E nao pode alcancar rota que a casa deixou de fora.
+      const fonteLimite = readFileSync('servidor.mjs', 'utf8');
+      const lista = (fonteLimite.match(/const ROTAS_LIMITADAS = \[([^\]]*)\]/) || [])[1] || '';
+      conferir('/api/adesao ficou fora da lista limitada',
+        !lista.includes('/api/adesao'), lista.trim());
+    } finally {
+      limitado.kill();
+    }
+  }
 
 } catch (e) {
   falhou++;

@@ -397,7 +397,10 @@ button:disabled{opacity:.35;cursor:default}
   .doc-decisao{border:1px solid #666;border-left:5px solid #000}
   .doc-abertos{border:1px solid #999;background:#f6f6f6}
   .doc-acao{border:1px solid #bbb}
-  .doc-acao .n{background:#000}
+  /* Contorno, não fundo: o Chrome imprime sem fundos por padrão e o numeral
+     sumia — e o texto das ações se refere a ele pelo número. Regra geral do
+     documento: nada essencial pode depender de `background` no papel. */
+  .doc-acao .n{background:none;color:#000;border:1.5px solid #000}
   .doc-rodape{position:static}
 }
 
@@ -873,10 +876,34 @@ window.voltarDoRelatorio = () => {
   document.title = TITULO_DA_ABA;
   etapa = RESULTADO; desenharDoTopo();
 };
+/* Imprimir antes de a Kanit chegar entrega o documento em Arial — e a Arial não
+   tem Light nem Medium: corpo e título saem no mesmo peso, e o PDF fica sem
+   nenhum negrito. Esperar por tempo fixo (120 ms, 400 ms) era chute: em rede
+   lenta a fonte não tinha chegado, e em rede rápida a espera era perdida.
+   Espera-se o evento certo, com teto — rede caída não pode prender o botão. */
+const TETO_DA_ESPERA_DA_FONTE = 1500;
+
+function doisQuadros() {
+  return new Promise(ok => {
+    if (typeof requestAnimationFrame !== 'function') return ok();
+    requestAnimationFrame(() => requestAnimationFrame(ok));
+  });
+}
+
+async function imprimirQuandoPronto() {
+  const teto = new Promise(ok => setTimeout(ok, TETO_DA_ESPERA_DA_FONTE));
+  // Dois quadros: o desenho da folha precisa estar no lugar quando a caixa de
+  // impressão abrir, senão o Chrome mede a página pelo estado anterior.
+  await doisQuadros();
+  await (document.fonts && document.fonts.ready
+    ? Promise.race([document.fonts.ready, teto]) : teto);
+  window.print();
+}
+
 window.imprimirRelatorio = () => {
   if (etapa !== RELATORIO) { etapa = RELATORIO; desenhar(); }
   document.title = nomeDoArquivo();
-  setTimeout(() => window.print(), 120);
+  imprimirQuandoPronto();
 };
 
 /** Leva ao relatório e já abre a janela de salvar. É o mais próximo de
@@ -886,7 +913,7 @@ window.baixarPlano = () => {
   etapa = RELATORIO;
   desenharDoTopo();
   document.title = nomeDoArquivo();
-  setTimeout(() => window.print(), 400);
+  imprimirQuandoPronto();
 };
 
 /* Dispara uma vez por preenchimento. Sem esta trava, `desenhar()` chamado pelo
@@ -1383,12 +1410,22 @@ function salvarRascunho() {
   }, 600);
 }
 
+/* Rascunho velho e dado de outra pessoa. Em computador compartilhado — balcao
+   do escritorio, maquina do contador, recepcao — o rascunho sem prazo
+   reoferecia nome, e-mail, telefone e CNPJ do visitante anterior, fora do
+   banco e fora dos 24 meses que o aviso promete. Sete dias cobre "termino
+   amanha" e nao cobre mais que isso. */
+const VALIDADE_DO_RASCUNHO_MS = 7 * 24 * 3600 * 1000;
+
 function lerRascunho() {
   try {
     const bruto = localStorage.getItem(CHAVE_RASCUNHO);
     if (!bruto) return null;
     const d = JSON.parse(bruto);
     if (!d || !d.respostas || !Object.keys(d.respostas).length) return null;
+    const idade = Date.now() - new Date(d.salvoEm || 0).getTime();
+    // `idade` NaN significa carimbo ilegivel: trata como vencido, nao como novo.
+    if (!(idade >= 0) || idade > VALIDADE_DO_RASCUNHO_MS) { apagarRascunho(); return null; }
     return d;
   } catch { return null; }
 }

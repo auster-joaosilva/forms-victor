@@ -231,6 +231,17 @@ function paginaDeAdesao({ previo, vinculo, soTermo } = {}) {
     `window.__TERMO__ = ${jsonParaScript(TERMO)};`,
     `window.__HOJE__ = ${jsonParaScript(new Date().toISOString())};`,
   ];
+  /* Depois do corte a página não recebe mais confirmação. Tirar a rota do ar
+   * seria pior: quem abre um link antigo veria "não encontrado" e ficaria
+   * sem saber se perdeu o prazo ou se o portal quebrou. Ela abre e explica.
+   * `soTermo` é a via de uma adesão JÁ registrada, que o backoffice reabre
+   * para imprimir — essa continua funcionando depois do prazo. */
+  if (!soTermo && estadoDaJanela() === 'encerrada') {
+    trechos.push(`window.__JANELA_ENCERRADA__ = ${jsonParaScript({
+      fim: FIM_DA_JANELA,
+      contato: 'contato@austercontabil.com.br',
+    })};`);
+  }
   if (previo) trechos.push(`window.__PREVIO__ = ${jsonParaScript(previo)};`);
   if (vinculo) trechos.push(`window.__VINCULO__ = ${jsonParaScript(vinculo)};`);
   if (soTermo) trechos.push(`window.__SO_TERMO__ = ${jsonParaScript(soTermo)};`);
@@ -242,6 +253,12 @@ function paginaDeAdesao({ previo, vinculo, soTermo } = {}) {
  *  autorização sem autor. */
 function conferirAdesao(corpo, req) {
   if (!corpo || typeof corpo !== 'object') return { erro: 'corpo inválido' };
+  // A porta fecha aqui, e não só na tela: a página pode estar aberta desde
+  // ontem, e um envio depois do prazo viraria adesão que ninguém protocola.
+  if (estadoDaJanela() === 'encerrada') {
+    return { erro: `a janela de opção encerrou em ${diaBrasileiro(FIM_DA_JANELA)}; `
+                 + 'fale com a equipe da Auster' };
+  }
   if (corpo.declara !== true) return { erro: 'sem a declaração final marcada' };
   if (!MODALIDADES_ADESAO.includes(corpo.modalidade)) return { erro: 'modalidade inválida' };
   if (corpo.modalidade === 'hibrido' && !SEM_MANIFESTACAO.includes(corpo.semManifestacao)) {
@@ -309,16 +326,26 @@ function imagensDaCasa() {
 
 /* -------------------------------------------------------------- principal */
 
-/** A janela de opção, vista pela capa institucional.
+/** A janela de opção.
  *
- *  `AUSTER_FIM_DA_JANELA` é uma data (AAAA-MM-DD) e é OPCIONAL: sem ela, a
- *  capa segue oferecendo o termo, que é o comportamento de hoje. Quando a
- *  data da casa estiver decidida, uma variável no painel fecha a porta na
- *  capa — sem tocar em código e sem esperar publicação nova.
+ *  O ÚLTIMO DIA é 30/09/2026, decidido por Victor em 28/09 — é a data que o
+ *  recibo promete ("a Auster fará a opção até 30/09/2026"). O texto do termo
+ *  fala em 29/09 para a confirmação; a diferença entre os dois está anotada
+ *  e vale um acerto no texto, mas quem manda no sistema é o recibo, porque é
+ *  ele que vai para a mão do cliente como prova.
  *
- *  Isto NÃO fecha a rota `/adesao`: quem tem o link direto continua entrando.
- *  Fechar de verdade é outra decisão, ainda pendente (achado F-04). */
-const FIM_DA_JANELA = (process.env.AUSTER_FIM_DA_JANELA || '').trim();
+ *  `AUSTER_FIM_DA_JANELA` sobrepõe a data sem publicação nova — serve para
+ *  adiar ou antecipar o corte pelo painel, se a Receita mexer no prazo.
+ *
+ *  O corte é em Brasília: às 21h de 30/09 o servidor em UTC já acha que é
+ *  dia 1º, e fecharia a porta três horas antes da hora. */
+const FIM_DA_JANELA = (process.env.AUSTER_FIM_DA_JANELA || '2026-09-30').trim();
+
+/** AAAA-MM-DD -> DD/MM/AAAA. Ninguém no Brasil lê a primeira forma. */
+const diaBrasileiro = iso => {
+  const [a, m, d] = String(iso || '').split('-');
+  return a && m && d ? `${d}/${m}/${a}` : String(iso || '');
+};
 
 function estadoDaJanela(agora = new Date()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(FIM_DA_JANELA)) return 'aberta';
@@ -929,6 +956,7 @@ const servidor = createServer(async (req, res) => {
         if (!html) return responder(res, 500, 'backoffice.html não encontrado.');
         return responder(res, 200, html.replace('/*__LOGO__*/', LOGO_NEGATIVA).replace('/*__QUEM__*/',
           `window.__QUEM__ = ${jsonParaScript(quem)};\n`
+          + `window.__JANELA__ = ${jsonParaScript(estadoDaJanela())};\n`
           + `window.__PAPEL__ = ${jsonParaScript(sessao.papel)};\n`
           + `window.__IMPLANTACAO__ = ${sessao.implantacao === true};`),
           'text/html; charset=utf-8', { 'Cache-Control': 'no-store' });

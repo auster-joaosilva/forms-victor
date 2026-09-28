@@ -458,7 +458,11 @@ async function verAdesoes() {
       ? `<div class="aviso-prazo"><b>${contagem.aProtocolar}</b>
           ${contagem.aProtocolar === 1 ? 'empresa autorizou' : 'empresas autorizaram'} a opção
           pelo Híbrido e ainda não ${contagem.aProtocolar === 1 ? 'foi feita' : 'foram feitas'}
-          no Portal do Simples Nacional. <b>O prazo é 30/09/2026.</b></div>`
+          no Portal do Simples Nacional. ${janelaEncerrada()
+            ? '<b>O prazo terminou em 30/09/2026.</b> Estas não podem mais ser '
+              + 'protocoladas: trate uma a uma e registre o que foi combinado com '
+              + 'cada empresa.'
+            : '<b>O prazo é 30/09/2026.</b>'}</div>`
       : ''}
     <div class="filtros">
       <input type="text" id="buscaAdesao" placeholder="Empresa, CNPJ, protocolo ou representante"
@@ -532,6 +536,13 @@ const TEMAS_DE_CAPA = [['marca', 'Marca — o símbolo, grande, na borda'],
                        ['aurora', 'Aurora — luz em diagonal'],
                        ['onda', 'Onda — faixas curvas'],
                        ['solido', 'Sólido — azul-escuro e nada mais']];
+/* O aviso do prazo muda de texto depois do corte. A data vem do SERVIDOR,
+   injetada em `window.__JANELA__`: o relogio da maquina de quem confere pode
+   estar errado, e um aviso que diz "ainda da tempo" depois do prazo e pior
+   que nenhum aviso. */
+const janelaEncerrada = () =>
+  (typeof window !== 'undefined' && window.__JANELA__ === 'encerrada');
+
 const SITUACOES_EVENTO = { rascunho:'Rascunho', publicado:'Publicado', encerrado:'Encerrado' };
 const SITUACOES_INSCRICAO = { inscrita:'Inscrita', confirmada:'Confirmada',
   presente:'Presente', ausente:'Ausente', cancelada:'Cancelada' };

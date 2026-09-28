@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/*__FAVICON__*/">
+<title>Eventos — Auster Inteligência Contábil</title>
+<!--__METADADOS__-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/*__ESTILO__*/
+</style>
+</head>
+<body>
+
+<div class="barra" id="barra">
+  <div class="logo marca-auster" role="img" aria-label="auster"></div>
+  <nav id="atalhos"></nav>
+  <button class="botao" style="padding:9px 20px;font-size:14px"
+          onclick="window.irParaInscricao()">Inscrever-se</button>
+</div>
+
+<header class="capa" id="capa"></header>
+
+<main id="corpo">carregando…</main>
+
+<footer>
+  Auster Inteligência Contábil · CRC MG-007231/O-8 · Uberlândia-MG<br>
+  Dúvidas sobre os seus dados: <a href="mailto:contato@austercontabil.com.br">contato@austercontabil.com.br</a>
+</footer>
+
+<script type="module">
+/*__MODULOS__*/
+/*__PUBLICACAO__*/
+
+const EVENTO = (typeof window !== 'undefined' && window.__EVENTO__) || null;
+const LISTA = (typeof window !== 'undefined' && window.__LISTA__) || null;
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const capa = document.getElementById('capa');
+const corpo = document.getElementById('corpo');
+const barra = document.getElementById('barra');
+
+const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira',
+              'sexta-feira', 'sábado'];
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+               'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+/** Data de sessão é dia civil, não instante: `new Date('2026-10-20')` cai no
+ *  fuso UTC e, no Brasil, volta um dia. Por isso a data é partida à mão. */
+function partesDaData(iso) {
+  const [a, m, d] = String(iso || '').split('-').map(Number);
+  if (!a || !m || !d) return { curta: String(iso || ''), diaDaSemana: '', dia: '', mes: '' };
+  const data = new Date(a, m - 1, d);
+  return {
+    curta: `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`,
+    diaDaSemana: DIAS[data.getDay()],
+    dia: String(d).padStart(2, '0'),
+    mes: MESES[m - 1],
+  };
+}
+
+/** O hoje vem do servidor, não do relógio de quem visita: máquina com data
+ *  errada anunciaria "faltam 400 dias" para o encontro da semana que vem. As
+ *  3 horas põem o instante em Brasília antes de cortar o dia. */
+function hojeEmBrasilia() {
+  const cru = (typeof window !== 'undefined' && window.__HOJE__) || null;
+  const agora = cru ? new Date(cru) : new Date();
+  const brasilia = new Date(agora.getTime() - 3 * 3600 * 1000);
+  return Date.UTC(brasilia.getUTCFullYear(), brasilia.getUTCMonth(), brasilia.getUTCDate());
+}
+
+function diasAte(iso) {
+  const [a, m, d] = String(iso || '').split('-').map(Number);
+  if (!a || !m || !d) return null;
+  return Math.round((Date.UTC(a, m - 1, d) - hojeEmBrasilia()) / 86400000);
+}
+
+const FORMATO = { online: 'Online', presencial: 'Presencial' };
+const TEMAS = ['marca', 'solido', 'foto'];
+
+function estadoDaSessao(s) {
+  if (s.vagas === null || s.vagas === undefined) return null;
+  const restam = Math.max(0, s.vagas - (s.inscritos || 0));
+  if (restam === 0) return { texto: 'Sem vagas', classe: 'esgotado', restam };
+  if (restam === 1) return { texto: 'Última vaga', classe: 'restam', restam };
+  if (restam <= 5) return { texto: `Últimas ${restam} vagas`, classe: 'restam', restam };
+  return { texto: `${restam} vagas`, classe: '', restam };
+}
+
+/* Traços desenhados aqui, e não buscados fora: a página tem de abrir inteira
+   sem depender de outro servidor, e um pacote de ícones para seis desenhos
+   seria dependência nova. Giram por posição — o destaque não escolhe o seu. */
+const ICONES = [
+  '<path d="M3 12h4l3 8 4-16 3 8h4"/>',
+  '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  '<path d="M4 20V9m5 11V4m5 16v-7m5 7V7"/>',
+  '<path d="M20 7 9 18l-5-5"/>',
+  '<path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="M3 14l9 5 9-5"/>',
+  '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6h5M16 10h5M16 14h5"/>',
+];
+const icone = i => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[i % ICONES.length]}</svg>`;
+
+// ===================================================== lista de eventos
+function desenharLista() {
+  capa.className = 'capa tema-marca';
+  capa.innerHTML = `<div class="miolo">
+    <div class="logo marca-auster" role="img" aria-label="auster"></div>
+    <span class="rotulo">Agenda da Auster</span>
+    <h1>Encontros sobre a <b>Reforma Tributária</b></h1>
+    <div class="chamada">O que muda na sua empresa, explicado por quem cuida dela todos
+    os dias. Inscrição gratuita.</div></div>`;
+  const itens = LISTA.map(e => {
+    // Sem sessão a página ainda tem de abrir: um evento em montagem não pode
+    // derrubar a lista inteira.
+    const s = (e.sessoes || [])[0];
+    const q = s ? partesDaData(s.data) : null;
+    const quantos = (e.sessoes || []).length;
+    return `<a class="evento" href="/eventos/${esc(e.apelido)}">
+      <div class="capa-cartao"><div class="dia">
+        ${q ? `<b>${esc(q.dia)}</b><i>${esc(q.mes)} ${esc(String(q.curta).slice(6))}</i>`
+            : '<i>data a definir</i>'}
+      </div></div>
+      <div class="miolo">
+        <h3>${esc(e.titulo)}</h3>
+        ${e.conteudo.chamada ? `<div class="resumo">${esc(e.conteudo.chamada)}</div>` : ''}
+        <div class="rodape">${quantos > 1 ? `${quantos} encontros · ` : ''}${
+          e.inscricoes === 'encerradas' ? 'inscrições encerradas' : 'inscrição aberta'} →</div>
+      </div>
+    </a>`;
+  }).join('');
+  corpo.innerHTML = `
+    <section>
+      <div class="grade">
+        ${itens || `<div class="vazio"><b>Nenhum encontro marcado no momento.</b><br>
+          Assim que a próxima data sair, ela aparece aqui.</div>`}
+      </div>
+    </section>
+    <section class="fecho rev">
+      <span class="olho">enquanto isso</span>
+      <h2>Já sabe o que a reforma faz com a sua empresa?</h2>
+      <div class="regua"></div>
+      <p class="linha-fina">Se ela é do Simples Nacional, o diagnóstico do portal mostra em
+      minutos se vale permanecer na guia única ou recolher IBS e CBS por fora dela.</p>
+      <a class="botao escura" href="/">Fazer o diagnóstico</a>
+    </section>`;
+}
+
+// ====================================================== página do evento
+const R = { nome: '', email: '', telefone: '', empresa: '', cnpj: '', cargo: '',
+            sessaoId: '', aceite: false };
+let enviando = false, recibo = null, avisoCnpj = '';
+
+const CARGOS = ['Sócio', 'Sócio Administrador', 'Administrador não Sócio', 'Diretor',
+                'Empresário', 'Gerente', 'Administrativo', 'Financeiro', 'Contador',
+                'Consultor', 'Outro'];
+
+function blocoCapa(e) {
+  const c = e.conteudo;
+  const pedido = TEMAS.includes(c.tema) ? c.tema : 'marca';
+  // Tema de foto sem foto seria uma coluna vazia ao lado do texto; cai no
+  // motivo da marca, que nao depende de arquivo nenhum.
+  const tema = pedido === 'foto' && !c.capa ? 'marca' : pedido;
+  capa.className = 'capa tema-' + tema;
+
+  const chips = e.sessoes.map(s => {
+    const q = partesDaData(s.data);
+    return `<div class="sessao-chip">
+      <div class="quando">${esc(q.curta)} — ${esc(s.hora)}</div>
+      <div class="oque">${esc(FORMATO[s.formato] || s.formato)}${s.titulo ? ': ' + esc(s.titulo) : ''}</div>
+    </div>`;
+  }).join('');
+
+  const primeira = e.sessoes[0];
+  const faltam = primeira ? diasAte(primeira.data) : null;
+  const contagem = faltam === null || faltam < 0 ? ''
+    : faltam === 0 ? '<div class="contagem"><b>É hoje.</b></div>'
+    : faltam === 1 ? '<div class="contagem"><b>É amanhã.</b></div>'
+    : `<div class="contagem">faltam <b>${faltam}</b> dias</div>`;
+
+  const aberto = e.inscricoes === 'abertas' && e.situacao === 'publicado';
+
+  capa.innerHTML = `<div class="miolo">
+    <div class="texto">
+      <div class="logo marca-auster" role="img" aria-label="auster"></div>
+      ${c.rotulo ? `<span class="rotulo">${esc(c.rotulo)}</span>` : ''}
+      <h1>${esc(e.titulo)}</h1>
+      ${c.chamada ? `<div class="chamada">${esc(c.chamada)}</div>` : ''}
+      ${chips ? `<div class="sessoes-capa">${chips}</div>` : ''}
+      ${c.local ? `<div class="onde">${esc(c.local)}</div>` : ''}
+      ${aberto ? `<div class="acoes">
+          <button class="botao" onclick="window.irParaInscricao()">Quero me inscrever</button>
+          <button class="botao fantasma" onclick="window.irParaPrograma()">Ver a programação</button>
+        </div>${contagem}`
+        : `<div class="onde">As inscrições estão encerradas.</div>`}
+    </div>
+    ${tema === 'foto'
+      ? `<figure class="retrato-capa"><img src="${esc(c.capa)}" alt=""></figure>` : ''}
+  </div>`;
+}
+
+function blocoPrograma(e) {
+  return `<section class="rev" id="programa">
+    <span class="olho">programação</span>
+    <h2>${e.sessoes.length === 1 ? 'Um encontro' : `${e.sessoes.length} encontros`}</h2>
+    <div class="regua"></div>
+    <p class="linha-fina">A inscrição é por encontro: escolha o que couber na sua agenda.</p>
+    <div class="cartao"><div class="linhatempo">${e.sessoes.map(s => {
+      const q = partesDaData(s.data);
+      const est = estadoDaSessao(s);
+      return `<div class="item">
+        <div class="quando">
+          <div class="data">${esc(q.curta)}</div>
+          <div class="dia">${esc(q.diaDaSemana)}<br>${esc(s.hora)}</div>
+        </div>
+        <div>
+          <div class="t">${esc(s.titulo)}</div>
+          ${s.descricao ? `<div class="d">${esc(s.descricao)}</div>` : ''}
+          ${s.local ? `<div class="d">${esc(s.local)}</div>` : ''}
+          <div class="selos">
+            <span class="selo ${s.formato === 'online' ? 'online' : ''}">${
+              esc(FORMATO[s.formato] || s.formato)}</span>
+            ${est ? `<span class="selo ${est.classe}">${esc(est.texto)}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('')}</div></div>
+  </section>`;
+}
+
+/* "Onde acontece" só existe quando há encontro PRESENCIAL e a equipe escreveu
+   o local. Numa série só de transmissão, uma foto da recepção seria enfeite —
+   e pior, sugeriria que alguém precisa sair de casa. */
+function blocoOnde(e) {
+  const local = (e.conteudo || {}).local;
+  const temPresencial = e.sessoes.some(s => s.formato === 'presencial');
+  if (!local || !temPresencial) return '';
+  return `<section class="rev" id="onde">
+    <span class="olho">onde acontece</span>
+    <h2>Na casa da Auster</h2>
+    <div class="regua"></div>
+    <div class="cartao lugar">
+      <figure class="retrato" style="margin:0">
+        <img src="/imagens/fachada-larga.jpg" alt="Fachada da Auster, em Uberlândia" loading="lazy">
+      </figure>
+      <div>
+        <p>Os encontros presenciais são na nossa casa, em Uberlândia. É este prédio
+        que você procura — a recepção fica logo na entrada, e é lá que a equipe
+        recebe quem chega.</p>
+        <div class="endereco">${esc(local)}</div>
+        <p class="nota" style="margin-top:8px">Chegue com alguns minutos de folga: dá
+        tempo de um café antes de começar.</p>
+      </div>
+    </div>
+  </section>`;
+}
+
+function blocoInformacoes(e) {
+  const c = e.conteudo;
+  const dias = [...new Set(e.sessoes.map(s => partesDaData(s.data).curta))];
+  const horarios = e.sessoes.map(s =>
+    `${partesDaData(s.data).curta} às ${s.hora} — ${FORMATO[s.formato] || s.formato}`);
+  if (!dias.length && !c.local && !(c.avisos || []).length) return '';
+  return `<section class="rev" id="participar">
+    <span class="olho">informações gerais</span>
+    <h2>Para participar</h2>
+    <div class="regua"></div>
+    <div class="infos">
+      ${dias.length ? `<div class="info"><div class="r">Quando</div>
+        <div class="v">${dias.map(esc).join('<br>')}</div></div>` : ''}
+      ${horarios.length ? `<div class="info"><div class="r">Horários</div>
+        <div class="v">${horarios.map(esc).join('<br>')}</div></div>` : ''}
+      ${c.local ? `<div class="info"><div class="r">Onde</div>
+        <div class="v">${esc(c.local)}</div></div>` : ''}
+    </div>
+    ${(c.avisos || []).length ? `<div class="aviso">
+      <div class="r">Importante</div>
+      <ul class="avisos">${c.avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+    </div>` : ''}
+  </section>`;
+}
+
+function blocoInscricao(e) {
+  if (e.inscricoes !== 'abertas' || e.situacao !== 'publicado') {
+    return `<section id="inscricao" class="rev"><span class="olho">inscrição</span>
+      <h2>As inscrições estão encerradas</h2><div class="regua"></div>
+      <div class="encerrado">${e.conteudo.aposEncerrar ? esc(e.conteudo.aposEncerrar)
+        : 'Se quiser ser avisado do próximo encontro, fale com a Auster.'}</div></section>`;
+  }
+  const abertas = e.sessoes.filter(s => {
+    const est = estadoDaSessao(s);
+    return !est || est.restam > 0;
+  });
+  if (!abertas.length) {
+    return `<section id="inscricao" class="rev"><span class="olho">inscrição</span>
+      <h2>Todas as vagas foram preenchidas</h2><div class="regua"></div>
+      <div class="encerrado">Fale com a Auster para entrar na lista de espera.</div></section>`;
+  }
+  return `<section id="inscricao" class="faixa rev">
+    <span class="olho">inscrição</span>
+    <h2>Garanta a sua vaga</h2>
+    <div class="regua"></div>
+    <p class="linha-fina">Gratuita. A equipe da Auster confirma a sua vaga por e-mail e
+    manda as instruções antes do encontro.</p>
+    <div class="cartao">
+      <div class="campos">
+        <div class="campo largo">
+          <label for="cSessao">Qual encontro</label>
+          <select id="cSessao" onchange="window.anotar('sessaoId', this.value)">
+            <option value="">Selecione…</option>
+            ${abertas.map(s => {
+              const q = partesDaData(s.data);
+              const est = estadoDaSessao(s);
+              return `<option value="${s.id}" ${String(R.sessaoId) === String(s.id) ? 'selected' : ''}>${
+                esc(q.curta)} ${esc(s.hora)} — ${esc(FORMATO[s.formato] || s.formato)}${
+                s.titulo ? ': ' + esc(s.titulo) : ''}${est ? ` (${esc(est.texto.toLowerCase())})` : ''}</option>`;
+            }).join('')}
+          </select>
+          <span class="erro" id="eSessao"></span>
+        </div>
+        <div class="campo largo">
+          <label for="cNome">Seu nome</label>
+          <input id="cNome" type="text" value="${esc(R.nome)}" autocomplete="name"
+                 oninput="window.anotar('nome', this.value)">
+          <span class="erro" id="eNome"></span>
+        </div>
+        <div class="campo">
+          <label for="cEmail">E-mail</label>
+          <input id="cEmail" type="email" value="${esc(R.email)}" autocomplete="email"
+                 oninput="window.anotar('email', this.value)">
+          <span class="erro" id="eEmail"></span>
+        </div>
+        <div class="campo">
+          <label for="cTel">Telefone (WhatsApp)</label>
+          <input id="cTel" type="text" value="${esc(R.telefone)}" inputmode="numeric"
+                 oninput="window.anotar('telefone', this.value)">
+          <span class="erro" id="eTel"></span>
+        </div>
+        <div class="campo largo">
+          <label for="cCnpj">CNPJ da empresa <span style="text-transform:none">(opcional)</span></label>
+          <input id="cCnpj" class="curto" type="text" value="${esc(R.cnpj)}"
+                 oninput="window.anotar('cnpj', this.value)" onblur="window.consultarEmpresa()">
+          <div class="aviso-cnpj" id="aviso">${esc(avisoCnpj)
+            || 'digite o CNPJ e saia do campo: a razão social vem da Receita'}</div>
+          <span class="erro" id="eCnpj"></span>
+        </div>
+        <div class="campo">
+          <label for="cEmpresa">Empresa</label>
+          <input id="cEmpresa" type="text" value="${esc(R.empresa)}" autocomplete="organization"
+                 oninput="window.anotar('empresa', this.value)">
+        </div>
+        <div class="campo">
+          <label for="cCargo">Seu cargo</label>
+          <select id="cCargo" onchange="window.anotar('cargo', this.value)">
+            <option value="">Selecione…</option>
+            ${CARGOS.map(c => `<option value="${esc(c)}" ${R.cargo === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <label class="marca">
+        <input type="checkbox" ${R.aceite ? 'checked' : ''}
+               onchange="window.anotar('aceite', this.checked)">
+        <span>Concordo que a Auster use meus dados para organizar este evento e falar
+        comigo sobre ele. Guardamos por 24 meses; para sair ou pedir exclusão, escreva
+        para contato@austercontabil.com.br.</span>
+      </label>
+      <span class="erro" id="eAceite"></span>
+      <div><button class="enviar" id="btnInscrever" onclick="window.inscrever()"
+                   ${enviando ? 'disabled' : ''}>${enviando ? 'Inscrevendo…' : 'Confirmar inscrição'}</button></div>
+      <div class="erro-envio" id="erroEnvio"></div>
+    </div>
+  </section>`;
+}
+
+function desenharEvento() {
+  const e = EVENTO, c = e.conteudo || {};
+  blocoCapa(e);
+  if (recibo) { mostrarRecibo(); return; }
+
+  const destaques = (c.destaques || []).map((d, i) =>
+    `<div class="destaque"><div class="icone">${icone(i)}</div>
+      <div class="t">${esc(d.titulo)}</div>
+      <div class="d">${esc(d.texto)}</div></div>`).join('');
+
+  corpo.innerHTML = `
+    ${c.intro || destaques ? `<section class="rev" id="sobre">
+      <span class="olho">o encontro</span>
+      <h2>O que você vai ver</h2>
+      <div class="regua"></div>
+      ${c.intro ? `<p class="linha-fina">${esc(c.intro)}</p>` : ''}
+      ${destaques ? `<div class="destaques">${destaques}</div>` : ''}
+    </section>` : ''}
+
+    ${(c.temas || []).length ? `<section class="rev" id="temas">
+      <span class="olho">conteúdo</span>
+      <h2>Temas abordados</h2>
+      <div class="regua"></div>
+      <div class="cartao"><ol class="temas">
+        ${c.temas.map(t => `<li><span>${esc(t)}</span></li>`).join('')}
+      </ol></div>
+    </section>` : ''}
+
+    ${blocoPrograma(e)}
+
+    ${c.palestrante && c.palestrante.nome ? `<section class="rev" id="quem">
+      <span class="olho">quem apresenta</span>
+      <h2>${esc(c.palestrante.nome)}</h2>
+      <div class="regua"></div>
+      <div class="cartao palestrante">
+        ${c.palestrante.foto
+          ? `<img src="${esc(c.palestrante.foto)}" alt="${esc(c.palestrante.nome)}">` : ''}
+        <div>
+          ${c.palestrante.cargo ? `<div class="cargo">${esc(c.palestrante.cargo)}</div>` : ''}
+          ${c.palestrante.bio ? `<div class="bio">${esc(c.palestrante.bio)}</div>` : ''}
+        </div>
+      </div>
+    </section>` : ''}
+
+    ${blocoOnde(e)}
+
+    ${blocoInformacoes(e)}
+
+    ${blocoInscricao(e)}`;
+
+  montarAtalhos();
+  revelar();
+}
+
+/* Os atalhos da barra saem do que a página realmente tem: evento sem
+   palestrante não pode oferecer um link para uma seção que não existe. */
+function montarAtalhos() {
+  const nav = document.getElementById('atalhos');
+  if (!nav) return;
+  nav.innerHTML = [['sobre', 'O encontro'], ['temas', 'Temas'], ['programa', 'Programação'],
+                   ['quem', 'Quem apresenta'], ['onde', 'Onde acontece'],
+                   ['participar', 'Como participar']]
+    .filter(([id]) => document.getElementById(id))
+    .map(([id, rotulo]) => `<a href="#${id}">${rotulo}</a>`).join('');
+}
+
+function revelar() {
+  const alvos = document.querySelectorAll('.rev');
+  if (!('IntersectionObserver' in window)) {
+    alvos.forEach(a => a.classList.add('vista'));
+    return;
+  }
+  const olho = new IntersectionObserver(entradas => {
+    for (const e of entradas) {
+      if (e.isIntersecting) { e.target.classList.add('vista'); olho.unobserve(e.target); }
+    }
+  }, { rootMargin: '0px 0px -8% 0px' });
+  alvos.forEach(a => olho.observe(a));
+}
+
+// ------------------------------------------------------------ interação
+window.anotar = (campo, valor) => { R[campo] = valor; };
+
+const rolarAte = id => {
+  const alvo = document.getElementById(id);
+  if (alvo) alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.irParaInscricao = () => rolarAte('inscricao');
+window.irParaPrograma = () => rolarAte('programa');
+window.voltarAosEventos = () => { window.location = '/eventos'; };
+
+window.consultarEmpresa = async () => {
+  if (!String(R.cnpj || '').trim()) return;
+  R.cnpj = mascararCnpj(R.cnpj);
+  const campo = document.getElementById('cCnpj');
+  if (campo) campo.value = R.cnpj;
+  if (!cnpjValido(R.cnpj)) return;
+  const fora = document.getElementById('aviso');
+  if (fora) fora.textContent = 'consultando…';
+  const r = await consultarCnpj(R.cnpj);
+  // `razaoSocial`, e não `razao_social`: o módulo já traduz o campo cru da
+  // Receita. Ler o nome errado fazia a consulta funcionar e o resultado ser
+  // descartado calado, com a página dizendo que a API estava fora.
+  if (r.ok && r.dados && r.dados.razaoSocial) {
+    if (!String(R.empresa || '').trim()) {
+      R.empresa = r.dados.razaoSocial;
+      const c = document.getElementById('cEmpresa');
+      if (c) c.value = R.empresa;
+    }
+    avisoCnpj = '';
+  } else {
+    avisoCnpj = 'não consegui consultar o cadastro agora — escreva a empresa à mão.';
+  }
+  if (fora) fora.textContent = avisoCnpj;
+};
+
+function conferir() {
+  const faltas = {};
+  if (!R.sessaoId) faltas.eSessao = 'escolha o encontro';
+  if (!nomeValido(R.nome, 3)) faltas.eNome = 'informe o seu nome';
+  if (!emailValido(R.email)) faltas.eEmail = 'e-mail inválido';
+  if (!telefoneValido(R.telefone)) faltas.eTel = 'telefone inválido';
+  // CNPJ é opcional; se preenchido, tem de ser válido.
+  if (String(R.cnpj || '').trim() && !cnpjValido(R.cnpj)) faltas.eCnpj = 'CNPJ inválido';
+  if (!R.aceite) faltas.eAceite = 'é preciso concordar para se inscrever';
+  return faltas;
+}
+
+window.inscrever = async () => {
+  const faltas = conferir();
+  for (const id of ['eSessao', 'eNome', 'eEmail', 'eTel', 'eCnpj', 'eAceite']) {
+    const e = document.getElementById(id);
+    if (e) e.textContent = faltas[id] || '';
+  }
+  const erro = document.getElementById('erroEnvio');
+  const pendentes = Object.keys(faltas);
+  if (pendentes.length) {
+    if (erro) erro.textContent = 'Faltam campos acima.';
+    const primeiro = document.getElementById(pendentes[0]);
+    if (primeiro) primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (erro) erro.textContent = '';
+  enviando = true;
+  desenharEvento();
+
+  try {
+    const resposta = await fetch('/api/inscricao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        evento: EVENTO.apelido, sessaoId: Number(R.sessaoId),
+        nome: R.nome, email: R.email, telefone: R.telefone,
+        empresa: R.empresa, cnpj: R.cnpj, cargo: R.cargo, aceite: R.aceite === true,
+      }),
+    });
+    const dados = await resposta.json();
+    if (!resposta.ok || !dados.ok) throw new Error(dados.erro || 'não foi possível inscrever');
+    recibo = dados;
+    enviando = false;
+    desenharEvento();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (e) {
+    enviando = false;
+    desenharEvento();
+    const x = document.getElementById('erroEnvio');
+    if (x) {
+      x.textContent = e instanceof TypeError
+        ? 'Não foi possível falar com o servidor. Confira a conexão e tente de novo.'
+        : 'Não foi possível inscrever: ' + e.message;
+    }
+  }
+};
+
+function mostrarRecibo() {
+  const sessao = EVENTO.sessoes.find(s => String(s.id) === String(R.sessaoId));
+  const q = sessao ? partesDaData(sessao.data) : null;
+  corpo.innerHTML = `
+    <div class="recibo">
+      <div class="visto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7 9 18l-5-5"/></svg></div>
+      <h2>${recibo.repetida ? 'Você já estava inscrito' : 'Inscrição confirmada'}</h2>
+      <div class="protocolo">${esc(recibo.protocolo)}</div>
+      ${sessao ? `<div class="linha"><b>Encontro:</b> ${esc(q.curta)}, ${esc(sessao.hora)} —
+        ${esc(FORMATO[sessao.formato] || sessao.formato)}${sessao.titulo ? ': ' + esc(sessao.titulo) : ''}</div>` : ''}
+      <div class="linha"><b>Em nome de:</b> ${esc(R.nome)} · ${esc(R.email)}</div>
+      <div class="linha">A equipe da Auster confirma a sua vaga por e-mail e manda as
+        instruções antes do encontro. Guarde o protocolo: é por ele que encontramos a
+        sua inscrição.</div>
+    </div>
+    <section class="fecho" style="margin-top:22px">
+      <span class="olho">enquanto isso</span>
+      <h2>Chegue ao encontro com a sua conta feita</h2>
+      <div class="regua"></div>
+      <p class="linha-fina">Se a sua empresa é do Simples Nacional, o diagnóstico do portal
+      mostra em minutos se ela deve permanecer na guia única ou recolher IBS e CBS por fora.</p>
+      <div class="acoes">
+        <a class="botao escura" href="/">Fazer o diagnóstico</a>
+        <button class="botao clara-borda" onclick="window.voltarAosEventos()">Ver outros encontros</button>
+      </div>
+    </section>`;
+  montarAtalhos();
+}
+
+/* A barra só entra depois que o botão da capa some da tela. Enquanto ele está
+   visível, duas chamadas para a mesma ação disputariam o mesmo olhar. */
+function ligarBarra() {
+  const marca = () => barra.classList.toggle('vista',
+    window.scrollY > (capa.offsetHeight || 400) - 90);
+  marca();
+  window.addEventListener('scroll', marca, { passive: true });
+}
+
+if (LISTA) { desenharLista(); revelar(); ligarBarra(); }
+else if (EVENTO) { desenharEvento(); ligarBarra(); }
+else corpo.innerHTML = '<div class="cartao">Evento não encontrado.</div>';
+</script>
+</body>
+</html>

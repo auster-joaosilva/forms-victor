@@ -19,7 +19,7 @@
 
 import { createServer } from 'node:http';
 import { createHmac, createHash, scryptSync, timingSafeEqual } from 'node:crypto';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { abrirBanco, senhaConfere, MINIMO_SENHA, VERSAO_DO_ESQUEMA,
          MODALIDADES_ADESAO, SEM_MANIFESTACAO } from './src/banco.mjs';
 import { PERGUNTAS, BLOCOS } from './src/perguntas.js';
@@ -32,6 +32,17 @@ const CAMINHO_BANCO = process.env.AUSTER_BANCO || './dados/portal.db';
 const SENHA = process.env.AUSTER_SENHA_BACKOFFICE || '';
 const ENDERECO_PUBLICO = (process.env.AUSTER_ENDERECO_PUBLICO || '').replace(/\/$/, '');
 const LIMITE_CORPO = 256 * 1024;   // um preenchimento cabe folgado em 30 KB
+
+/** Quem atende a raiz do domínio.
+ *
+ *  `diagnostico` (padrão) é o que está no ar hoje. `principal` entrega a capa
+ *  institucional na raiz — a virada combinada para depois de 01/10.
+ *
+ *  A virada NÃO alcança quem chega por convite. Todo link já enviado tem a
+ *  forma `/?c=TOKEN`, e cair na capa perderia o vínculo do convite com a
+ *  resposta: a empresa preencheria de novo, do zero, sem que ninguém notasse.
+ *  Com token, a raiz continua entregando o formulário. */
+const HOME = (process.env.AUSTER_HOME || 'diagnostico').trim();
 
 if (!SENHA) {
   console.error('ERRO: defina AUSTER_SENHA_BACKOFFICE. Sem senha, o backoffice');
@@ -275,6 +286,158 @@ function conferirAdesao(corpo, req) {
     agente: String(req.headers['user-agent'] || '').slice(0, 300) || null,
   } };
 }
+
+/* ---------------------------------------------------------------- imagens */
+
+/** As fotos da casa, lidas da pasta — e não de uma lista escrita à mão, que
+ *  envelheceria no dia em que alguém acrescentasse um arquivo. O rótulo é o
+ *  nome do arquivo em linguagem de gente; a miniatura no painel é que diz de
+ *  verdade qual é qual. */
+function imagensDaCasa() {
+  const pasta = './ativos/imagens';
+  if (!existsSync(pasta)) return [];
+  return readdirSync(pasta)
+    .filter(a => /^[a-z0-9_-]+\.(jpg|png|svg|webp)$/.test(a))
+    .sort()
+    .map(arquivo => ({
+      arquivo,
+      caminho: `/imagens/${arquivo}`,
+      rotulo: arquivo.replace(/\.[a-z]+$/, '').replace(/[-_]/g, ' ')
+        .replace(/^./, c => c.toUpperCase()),
+    }));
+}
+
+/* -------------------------------------------------------------- principal */
+
+/** A janela de opção, vista pela capa institucional.
+ *
+ *  `AUSTER_FIM_DA_JANELA` é uma data (AAAA-MM-DD) e é OPCIONAL: sem ela, a
+ *  capa segue oferecendo o termo, que é o comportamento de hoje. Quando a
+ *  data da casa estiver decidida, uma variável no painel fecha a porta na
+ *  capa — sem tocar em código e sem esperar publicação nova.
+ *
+ *  Isto NÃO fecha a rota `/adesao`: quem tem o link direto continua entrando.
+ *  Fechar de verdade é outra decisão, ainda pendente (achado F-04). */
+const FIM_DA_JANELA = (process.env.AUSTER_FIM_DA_JANELA || '').trim();
+
+function estadoDaJanela(agora = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(FIM_DA_JANELA)) return 'aberta';
+  // O corte é em Brasília, não em UTC: às 21h de 30/09 o servidor em UTC já
+  // acha que é dia 1º, e fecharia a porta três horas antes da hora.
+  const brasilia = new Date(agora.getTime() - 3 * 3600 * 1000);
+  const hoje = brasilia.toISOString().slice(0, 10);
+  return hoje > FIM_DA_JANELA ? 'encerrada' : 'aberta';
+}
+
+/** Capa institucional: as portas do portal. Recebe do servidor só o que ela
+ *  não pode adivinhar — se há encontro aberto e se a janela segue de pé. */
+function paginaPrincipal() {
+  const html = pagina('./principal.html');
+  if (!html) return null;
+  const eventos = banco.eventosDoPortal({ apenasPublicados: true }).map(e => ({
+    titulo: e.titulo,
+    apelido: e.apelido,
+    data: (e.sessoes || []).length ? e.sessoes[0].data : null,
+  }));
+  const dados = { eventos, janela: estadoDaJanela() };
+  return html.replace('/*__PUBLICACAO__*/',
+    `window.__PRINCIPAL__ = ${jsonParaScript(dados)};`);
+}
+
+/* ---------------------------------------------------------------- eventos */
+
+/** Serve a lista de eventos ou a página de um deles. É o mesmo arquivo: o que
+ *  muda é qual variável o servidor injeta. */
+function paginaDeEvento({ evento, lista } = {}) {
+  const html = pagina('./evento.html');
+  if (!html) return null;
+  const trechos = [`window.__HOJE__ = ${jsonParaScript(new Date().toISOString())};`];
+  if (lista) trechos.push(`window.__LISTA__ = ${jsonParaScript(lista)};`);
+  if (evento) trechos.push(`window.__EVENTO__ = ${jsonParaScript(evento)};`);
+  let saida = html.replace('/*__PUBLICACAO__*/', trechos.join('\n'));
+  // Prévia no WhatsApp: sem isto o link chega sem título nem descrição.
+  const titulo = evento ? `${evento.titulo} — Auster Inteligência Contábil`
+                        : 'Eventos — Auster Inteligência Contábil';
+  const descricao = evento
+    ? (evento.conteudo.chamada || 'Inscrição gratuita.')
+    : 'Encontros da Auster sobre a Reforma Tributária. Inscrição gratuita.';
+  const endereco = ENDERECO_PUBLICO
+    + (evento ? `/eventos/${encodeURIComponent(evento.apelido)}` : '/eventos');
+  const meta = [
+    `<title>${escaparHtml(titulo)}</title>`,
+    `<meta name="description" content="${escaparHtml(descricao)}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="Auster Inteligência Contábil">`,
+    `<meta property="og:locale" content="pt_BR">`,
+    `<meta property="og:title" content="${escaparHtml(titulo)}">`,
+    `<meta property="og:description" content="${escaparHtml(descricao)}">`,
+    ENDERECO_PUBLICO ? `<meta property="og:url" content="${escaparHtml(endereco)}">` : '',
+    `<meta name="twitter:card" content="summary">`,
+  ].filter(Boolean).join('\n');
+  return saida.replace(/<title>[^<]*<\/title>/, '').replace('<!--__METADADOS__-->', meta);
+}
+
+const escaparHtml = s => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** Confere a inscrição. O CNPJ é opcional — quem vai à palestra nem sempre
+ *  sabe o da empresa de cor, e exigir isso custa inscrito. */
+function conferirInscricao(corpo, req) {
+  if (!corpo || typeof corpo !== 'object') return { erro: 'corpo inválido' };
+  if (corpo.aceite !== true) return { erro: 'sem o aceite de privacidade' };
+  const evento = banco.evento(String(corpo.evento || ''));
+  if (!evento) return { erro: 'evento não encontrado' };
+  if (evento.situacao !== 'publicado') return { erro: 'evento não está publicado' };
+  if (evento.inscricoes !== 'abertas') return { erro: 'as inscrições estão encerradas' };
+  const sessao = evento.sessoes.find(s => s.id === Number(corpo.sessaoId));
+  if (!sessao) return { erro: 'escolha um dos encontros' };
+  for (const [campo, rotulo] of [['nome', 'o seu nome'], ['email', 'o e-mail']]) {
+    if (!String(corpo[campo] || '').trim()) return { erro: `falta ${rotulo}` };
+  }
+  if (!/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(String(corpo.email).trim())) {
+    return { erro: 'e-mail inválido' };
+  }
+  const cnpj = String(corpo.cnpj || '').trim();
+  if (cnpj && soDigitos(cnpj).length !== 14) return { erro: 'CNPJ incompleto' };
+  return { dados: {
+    eventoId: evento.id, sessaoId: sessao.id,
+    nome: String(corpo.nome).trim().slice(0, 120),
+    email: String(corpo.email).trim().slice(0, 160),
+    telefone: String(corpo.telefone || '').trim().slice(0, 40) || null,
+    empresa: String(corpo.empresa || '').trim().slice(0, 160) || null,
+    cnpj: cnpj || null,
+    cargo: String(corpo.cargo || '').trim().slice(0, 60) || null,
+    aceiteLgpd: true,
+    ...origemDoPedido(req),
+    agente: String(req.headers['user-agent'] || '').slice(0, 300) || null,
+  } };
+}
+
+/** Planilha de inscritos: uma linha por inscrição, para a lista de presença. */
+function planilhaDeInscricoes(linhas) {
+  const cabecalho = ['protocolo', 'inscrito em (Brasilia)', 'situacao', 'evento', 'encontro',
+    'data do encontro', 'hora', 'formato', 'nome', 'e-mail', 'telefone', 'empresa', 'CNPJ',
+    'cargo', 'diagnostico vinculado', 'origem do acesso', 'tratado por', 'nota interna'];
+  const celula = v => {
+    const texto = v === undefined || v === null ? '' : String(v);
+    return /[";\n]/.test(texto) ? '"' + texto.replace(/"/g, '""') + '"' : texto;
+  };
+  const corpo = linhas.map(l => [
+    l.protocolo, emBrasilia(l.criado_em), l.situacao, l.evento_titulo, l.sessao_titulo,
+    l.sessao_data, l.sessao_hora, l.sessao_formato, l.nome, l.email, l.telefone,
+    l.empresa, l.cnpj, l.cargo, l.resposta_id ? `resposta ${l.resposta_id}` : '',
+    l.origem, l.tratado_por || '', l.nota_interna || '',
+  ].map(celula).join(';'));
+  return '﻿' + [cabecalho.map(celula).join(';'), ...corpo].join('\r\n') + '\r\n';
+}
+
+/** O banco guarda em UTC; quem lê a planilha trabalha em Brasília. */
+const emBrasilia = iso => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? String(iso)
+    : d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+};
 
 const MODALIDADE_LEGIVEL = {
   padrao: 'Simples Nacional Puro (Padrão)',
@@ -544,11 +707,36 @@ function telaDeEntrada(erro) {
 const servidor = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://local');
   const rota = url.pathname.replace(/\/+$/, '') || '/';
+  /* `url.pathname` chega PERCENT-ENCODED: quem digita `/diagnóstico-simples`
+   * bate aqui como `/diagn%C3%B3stico-simples`, e comparar com o texto
+   * acentuado dava 404. Entrada malformada (`%zz`) faz `decodeURIComponent`
+   * lançar, e por isso a versão legível é opcional, não obrigatória. */
+  let rotaLegivel = rota;
+  try { rotaLegivel = decodeURIComponent(rota); } catch { }
 
   try {
     // ---------------------------------------------------------- formulário
-    if (req.method === 'GET' && (rota === '/' || rota === '/index.html')) {
+    /* Três endereços para a mesma tela: a raiz (que é o que está no ar e o que
+     * está em todo convite já enviado), o endereço próprio do diagnóstico e a
+     * grafia com acento. Acento em endereço vira `%C3%B3` quando alguém copia
+     * para o WhatsApp — feio e frágil; ela existe só para não dar 404 em quem
+     * digitar, e manda para a grafia limpa. */
+    if (req.method === 'GET' && rotaLegivel === '/diagnóstico-simples') {
+      return responder(res, 302, 'Endereço sem acento: /diagnostico-simples',
+        'text/plain; charset=utf-8',
+        { Location: '/diagnostico-simples' + (url.search || '') });
+    }
+
+    if (req.method === 'GET'
+        && (rota === '/' || rota === '/index.html' || rota === '/diagnostico-simples')) {
       const token = url.searchParams.get('c');
+      // Só a raiz muda de dono, e só sem convite. Ver a nota em HOME.
+      if (HOME === 'principal' && rota !== '/diagnostico-simples' && !token) {
+        const capa = paginaPrincipal();
+        if (!capa) return responder(res, 500, 'principal.html não encontrado. Rode node construir.mjs.');
+        return responder(res, 200, capa, 'text/html; charset=utf-8',
+          { 'Cache-Control': 'no-store' });
+      }
       const convite = token ? banco.convite(token) : null;
       if (token && convite) banco.marcarAbertura(token);
       const html = portalConfigurado(convite);
@@ -578,6 +766,75 @@ const servidor = createServer(async (req, res) => {
       const token = url.searchParams.get('c') || pacote.convite || null;
       const id = banco.gravarResposta(pacote, banco.convite(token) ? token : null);
       return json(res, 201, { ok: true, id, protocolo: pacote.protocolo });
+    }
+
+    // ------------------------------------------------------------ imagens
+    /* A única coisa que o servidor entrega de disco sem inlinar. Uma foto de
+     * 100 KB em base64 dentro do HTML viajaria de novo a cada visita, sem
+     * cache; servida assim, o navegador guarda.
+     *
+     * O nome é conferido contra um molde SEM ponto e SEM barra antes de virar
+     * caminho. Concatenar o que o visitante escreve com um diretório é como se
+     * lê `../../dados/portal.db` por engano. */
+    if (req.method === 'GET' && rota.startsWith('/imagens/')) {
+      const nome = rota.slice(9);
+      const tipos = { jpg: 'image/jpeg', png: 'image/png', svg: 'image/svg+xml',
+                      webp: 'image/webp' };
+      const parte = /^([a-z0-9_-]+)\.(jpg|png|svg|webp)$/.exec(nome);
+      const caminho = parte ? `./ativos/imagens/${nome}` : null;
+      if (!caminho || !existsSync(caminho)) {
+        return responder(res, 404, 'Imagem não encontrada.', 'text/plain; charset=utf-8');
+      }
+      return responder(res, 200, readFileSync(caminho), tipos[parte[2]],
+        { 'Cache-Control': 'public, max-age=86400' });
+    }
+
+    // ----------------------------------------------------------- principal
+    /* `/Principal` com maiúscula responde igual: endereço é escrito à mão em
+     * e-mail e em cartão, e um 404 por causa de uma tecla não se explica ao
+     * cliente. A grafia que a casa divulga é a minúscula. */
+    if (req.method === 'GET' && (rota === '/principal' || rota === '/Principal')) {
+      const html = paginaPrincipal();
+      if (!html) return responder(res, 500, 'principal.html não encontrado. Rode node construir.mjs.');
+      return responder(res, 200, html, 'text/html; charset=utf-8',
+        { 'Cache-Control': 'no-store' });
+    }
+
+    // ------------------------------------------------------------- eventos
+    if (req.method === 'GET' && (rota === '/eventos' || rota.startsWith('/eventos/'))) {
+      const apelido = rota === '/eventos' ? null : decodeURIComponent(rota.slice(9));
+      if (!apelido) {
+        const html = paginaDeEvento({ lista: banco.eventosDoPortal({ apenasPublicados: true }) });
+        return html
+          ? responder(res, 200, html, 'text/html; charset=utf-8', { 'Cache-Control': 'no-store' })
+          : responder(res, 500, 'evento.html não encontrado. Rode node construir.mjs.');
+      }
+      const evento = banco.evento(apelido);
+      // Rascunho não é público: só quem tem sessão vê, para conferir antes de
+      // divulgar o endereço.
+      if (!evento || (evento.situacao === 'rascunho' && !autenticado(req))) {
+        return responder(res, 404, 'Evento não encontrado.', 'text/plain; charset=utf-8');
+      }
+      const html = paginaDeEvento({ evento });
+      return html
+        ? responder(res, 200, html, 'text/html; charset=utf-8', { 'Cache-Control': 'no-store' })
+        : responder(res, 500, 'evento.html não encontrado. Rode node construir.mjs.');
+    }
+
+    if (req.method === 'POST' && rota === '/api/inscricao') {
+      let corpo;
+      try { corpo = JSON.parse(await lerCorpo(req)); }
+      catch (e) {
+        return e && e.grande
+          ? json(res, 413, { ok: false, erro: 'corpo grande demais' })
+          : json(res, 400, { ok: false, erro: 'corpo inválido' });
+      }
+      const { erro, dados } = conferirInscricao(corpo, req);
+      if (erro) return json(res, 422, { ok: false, erro });
+      const r = banco.gravarInscricao(dados);
+      if (!r.ok) return json(res, 409, { ok: false, erro: r.motivo });
+      return json(res, r.repetida ? 200 : 201,
+                  { ok: true, id: r.id, protocolo: r.protocolo, repetida: r.repetida === true });
     }
 
     // ------------------------------------------------------ termo de opção
@@ -836,8 +1093,70 @@ const servidor = createServer(async (req, res) => {
           : responder(res, 500, 'adesao.html não encontrado. Rode node construir.mjs.');
       }
 
+      // ------------------------------------------------- imagens da casa
+      /* As fotos que já estão na pasta do projeto, para a equipe escolher no
+       * painel em vez de subir a mesma imagem toda vez. Foto nova continua
+       * podendo ser enviada; isto só evita repetir o que já existe. */
+      if (req.method === 'GET' && rota === '/api/backoffice/imagens') {
+        return json(res, 200, { ok: true, imagens: imagensDaCasa() });
+      }
+
+      // ------------------------------------------------------------ eventos
       if (req.method === 'GET' && rota === '/api/backoffice/eventos') {
-        return json(res, 200, { ok: true, eventos: banco.eventos() });
+        const id = Number(url.searchParams.get('id'));
+        if (id) {
+          const evento = banco.evento(id);
+          return evento
+            ? json(res, 200, { ok: true, evento, base: ENDERECO_PUBLICO,
+                               contagem: banco.contagemInscricoes(id),
+                               inscricoes: banco.inscricoes({ eventoId: id }) })
+            : json(res, 404, { ok: false, erro: 'evento não encontrado' });
+        }
+        return json(res, 200, { ok: true, base: ENDERECO_PUBLICO,
+                                eventos: banco.eventosDoPortal() });
+      }
+
+      if (req.method === 'POST' && rota === '/api/backoffice/eventos') {
+        const corpo = JSON.parse(await lerCorpo(req) || '{}');
+        if (!String(corpo.titulo || '').trim()) {
+          return json(res, 400, { ok: false, motivo: 'o evento precisa de um título' });
+        }
+        const evento = banco.criarEvento({
+          titulo: String(corpo.titulo).trim(), conteudo: corpo.conteudo || {},
+          sessoes: Array.isArray(corpo.sessoes) ? corpo.sessoes : [], criadoPor: quem,
+        });
+        return json(res, 201, { ok: true, evento });
+      }
+
+      if (req.method === 'POST' && rota === '/api/backoffice/eventos/alterar') {
+        const corpo = JSON.parse(await lerCorpo(req) || '{}');
+        const r = banco.alterarEvento(Number(corpo.id), { ...corpo, quem });
+        return json(res, r.ok ? 200 : 400, r);
+      }
+
+      if (req.method === 'POST' && rota === '/api/backoffice/inscricoes/tratar') {
+        const corpo = JSON.parse(await lerCorpo(req) || '{}');
+        const r = banco.tratarInscricao(Number(corpo.id),
+          { situacao: corpo.situacao, nota: corpo.nota, quem });
+        return json(res, r.ok ? 200 : 400, r);
+      }
+
+      if (req.method === 'GET' && rota === '/api/backoffice/inscricoes.csv') {
+        const linhas = banco.inscricoes({
+          eventoId: Number(url.searchParams.get('evento')) || undefined,
+          sessaoId: Number(url.searchParams.get('sessao')) || undefined,
+          situacao: url.searchParams.get('situacao') || undefined,
+          busca: url.searchParams.get('busca') || undefined,
+          limite: 5000,
+        });
+        banco.registrar(quem, 'planilha_inscricoes_exportada', String(linhas.length));
+        const hoje = new Date().toISOString().slice(0, 10);
+        return responder(res, 200, planilhaDeInscricoes(linhas), 'text/csv; charset=utf-8',
+          { 'Content-Disposition': `attachment; filename="inscritos-${hoje}.csv"` });
+      }
+
+      if (req.method === 'GET' && rota === '/api/backoffice/auditoria') {
+        return json(res, 200, { ok: true, eventos: banco.auditoria() });
       }
 
       return json(res, 404, { ok: false, erro: 'rota desconhecida' });

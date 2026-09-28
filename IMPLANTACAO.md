@@ -103,6 +103,38 @@ o único administrador ativo. Crie ou promova outro antes — a mensagem diz iss
    certificado. A aplicação fala HTTP puro na 8080 e não deve ser exposta direto.
 5. **Healthcheck**: já configurado, bate em `/saude` a cada 30 segundos.
 
+### Subir um ambiente de TESTE ao lado do que está no ar
+
+Serve para conferir versão nova sem tocar no portal que os clientes já usam.
+São os mesmos cinco passos, com três diferenças que não são detalhe:
+
+1. **Aplicação NOVA no Dokploy**, apontando para o mesmo repositório mas para a
+   **branch de teste** (hoje, `eventos`). Não reaproveitar a aplicação de produção:
+   mudar a branch dela é publicar em produção.
+2. **Volume PRÓPRIO.** O nome do volume é `dados`; em aplicação separada o Dokploy
+   cria um volume separado, mas **confirme na tela**. Se o teste montar o volume de
+   produção, um evento de brincadeira entra no banco que vale, e uma inscrição de
+   teste vira inscrito de verdade na planilha da equipe.
+3. **Senha do backoffice diferente** da de produção. `AUSTER_SENHA_BACKOFFICE` é
+   também a chave que assina o cookie de sessão: senha igual em dois ambientes
+   significa sessão de um valendo no outro.
+
+Variáveis do ambiente de teste:
+
+| Variável | Valor |
+|---|---|
+| `AUSTER_SENHA_BACKOFFICE` | senha própria do teste, nunca a de produção |
+| `AUSTER_ENDERECO_PUBLICO` | o endereço do teste, ex. `https://eventos-reforma-simples.austercontabil.com.br` |
+| `AUSTER_FIM_DA_JANELA` | opcional; data (AAAA-MM-DD) que fecha a porta do termo na capa |
+
+Fora do Dokploy falta **uma coisa só**: o registro no Cloudflare apontando o nome
+escolhido para o IP da VPS (registro A, ou CNAME para o host que já responde). Sem
+ele o Traefik não consegue emitir o certificado e o endereço não abre.
+
+Depois de subir, conferir nesta ordem: `/saude` responde com `esquema` igual a
+`esquemaEsperado`; `/principal` abre; `/eventos` abre; `/backoffice` pede senha — e
+é a senha do teste, não a de produção.
+
 ### Por que o `file://` importava
 
 A consulta automática de CNPJ chama a BrasilAPI pelo navegador. Aberto como

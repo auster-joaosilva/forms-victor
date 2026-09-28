@@ -132,11 +132,87 @@ CREATE INDEX IF NOT EXISTS idx_adesoes_modalidade ON adesoes(modalidade);
 CREATE INDEX IF NOT EXISTS idx_adesoes_cnpj       ON adesoes(cnpj);
 `;
 
+/* Eventos e inscrições.
+ *
+ * O conteúdo da página de cada evento vive em `conteudo` (JSON), não em
+ * código: quem monta um evento novo é a equipe, pelo painel, sem esperar
+ * alteração de programa. O que vira coluna é só o que a lista precisa
+ * filtrar ou ordenar.
+ *
+ * Sessões em tabela própria porque a inscrição é POR SESSÃO — na série de
+ * setembro havia uma transmissão e dois encontros presenciais com público
+ * diferente, e a vaga é de cada um. */
+const ESQUEMA_EVENTOS = `
+CREATE TABLE IF NOT EXISTS agenda (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  apelido      TEXT NOT NULL UNIQUE,
+  titulo       TEXT NOT NULL,
+  situacao     TEXT NOT NULL DEFAULT 'rascunho',
+  inscricoes   TEXT NOT NULL DEFAULT 'abertas',
+  conteudo     TEXT NOT NULL,
+  criado_em    TEXT NOT NULL,
+  criado_por   TEXT,
+  alterado_em  TEXT,
+  alterado_por TEXT
+);
+
+CREATE TABLE IF NOT EXISTS agenda_sessoes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  evento_id  INTEGER NOT NULL REFERENCES agenda(id) ON DELETE CASCADE,
+  ordem      INTEGER NOT NULL DEFAULT 0,
+  data       TEXT NOT NULL,
+  hora       TEXT NOT NULL,
+  formato    TEXT NOT NULL DEFAULT 'presencial',
+  titulo     TEXT NOT NULL,
+  descricao  TEXT,
+  local      TEXT,
+  vagas      INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS inscricoes (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  protocolo    TEXT NOT NULL,
+  evento_id    INTEGER NOT NULL REFERENCES agenda(id),
+  sessao_id    INTEGER NOT NULL REFERENCES agenda_sessoes(id),
+  resposta_id  INTEGER,
+  criado_em    TEXT NOT NULL,
+  nome         TEXT NOT NULL,
+  email        TEXT NOT NULL,
+  telefone     TEXT,
+  empresa      TEXT,
+  cnpj         TEXT,
+  cargo        TEXT,
+  aceite_lgpd  INTEGER NOT NULL DEFAULT 0,
+  origem       TEXT,
+  agente       TEXT,
+  pacote       TEXT NOT NULL,
+  situacao     TEXT NOT NULL DEFAULT 'inscrita',
+  nota_interna TEXT,
+  tratado_por  TEXT,
+  tratado_em   TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessoes_evento    ON agenda_sessoes(evento_id);
+CREATE INDEX IF NOT EXISTS idx_inscricoes_evento ON inscricoes(evento_id);
+CREATE INDEX IF NOT EXISTS idx_inscricoes_sessao ON inscricoes(sessao_id);
+CREATE INDEX IF NOT EXISTS idx_inscricoes_cnpj   ON inscricoes(cnpj);
+CREATE INDEX IF NOT EXISTS idx_inscricoes_email  ON inscricoes(email);
+`;
+
 export const SITUACOES = ['nova', 'em_analise', 'validada', 'descartada'];
 export const PAPEIS = ['admin', 'equipe'];
 
 /** Situação da adesão. `protocolada` só faz sentido no híbrido — é o registro
  *  de que alguém entrou no Portal do Simples Nacional e fez. */
+/** Um evento só aparece em `/eventos` quando publicado. `encerrado` guarda o
+ *  que já passou: a página continua de pé, sem formulário. */
+export const SITUACOES_EVENTO = ['rascunho', 'publicado', 'encerrado'];
+export const INSCRICOES = ['abertas', 'encerradas'];
+export const FORMATOS_SESSAO = ['presencial', 'online'];
+/** `presente` e `ausente` só depois do evento; é o que dá lista de presença. */
+export const SITUACOES_INSCRICAO = ['inscrita', 'confirmada', 'presente',
+                                    'ausente', 'cancelada'];
+
 export const SITUACOES_ADESAO = ['recebida', 'protocolada', 'cancelada'];
 export const MODALIDADES_ADESAO = ['padrao', 'hibrido'];
 export const SEM_MANIFESTACAO = ['cancelar', 'manter'];
@@ -168,6 +244,9 @@ const MIGRACOES = [
   { versao: 2,
     descricao: 'adesoes: termo de opcao confirmado pelo cliente',
     aplicar: db => db.exec(ESQUEMA_ADESOES) },
+  { versao: 3,
+    descricao: 'eventos, sessoes e inscricoes',
+    aplicar: db => db.exec(ESQUEMA_EVENTOS) },
 ];
 
 /** Versão máxima que este código conhece. */
@@ -436,7 +515,205 @@ function criarApi(db) {
       return fora;
     },
 
-    eventos(limite = 200) {
+    // -------------------------------------------------- eventos e inscrições
+    /** Apelido do endereço: `/eventos/conexao-tributaria`. Sem acento, sem
+     *  espaço — é parte de link que vai para o WhatsApp. */
+    apelidoDe(titulo) {
+      const base = String(titulo || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50)
+        || 'evento';
+      let apelido = base, n = 2;
+      while (db.prepare('SELECT 1 FROM agenda WHERE apelido = ?').get(apelido)) {
+        apelido = `${base}-${n++}`;
+      }
+      return apelido;
+    },
+
+    criarEvento({ titulo, conteudo, sessoes, criadoPor }) {
+      const apelido = this.apelidoDe(titulo);
+      const info = db.prepare(`INSERT INTO agenda
+        (apelido, titulo, situacao, inscricoes, conteudo, criado_em, criado_por)
+        VALUES (?, ?, 'rascunho', 'abertas', ?, ?, ?)`)
+        .run(apelido, titulo, JSON.stringify(conteudo || {}), agora(), criadoPor || null);
+      const id = Number(info.lastInsertRowid);
+      this.gravarSessoes(id, sessoes || []);
+      registrar(criadoPor, 'evento_criado', apelido, { id, titulo });
+      return this.evento(id);
+    },
+
+    /** Substitui as sessões do evento, preservando as que já têm inscrição:
+     *  apagar uma sessão com gente inscrita cortaria o vínculo. */
+    gravarSessoes(eventoId, sessoes) {
+      const comInscritos = new Set(db.prepare(
+        'SELECT DISTINCT sessao_id AS s FROM inscricoes WHERE evento_id = ?')
+        .all(eventoId).map(l => l.s));
+      const mantidos = new Set();
+      sessoes.forEach((s, i) => {
+        const dados = [i, s.data, s.hora, FORMATOS_SESSAO.includes(s.formato) ? s.formato : 'presencial',
+                       s.titulo || '', s.descricao || null, s.local || null,
+                       Number.isInteger(s.vagas) && s.vagas > 0 ? s.vagas : null];
+        if (s.id && db.prepare('SELECT 1 FROM agenda_sessoes WHERE id = ? AND evento_id = ?')
+            .get(s.id, eventoId)) {
+          db.prepare(`UPDATE agenda_sessoes SET ordem=?, data=?, hora=?, formato=?, titulo=?,
+                      descricao=?, local=?, vagas=? WHERE id = ?`).run(...dados, s.id);
+          mantidos.add(s.id);
+        } else {
+          const r = db.prepare(`INSERT INTO agenda_sessoes
+            (evento_id, ordem, data, hora, formato, titulo, descricao, local, vagas)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(eventoId, ...dados);
+          mantidos.add(Number(r.lastInsertRowid));
+        }
+      });
+      for (const l of db.prepare('SELECT id FROM agenda_sessoes WHERE evento_id = ?').all(eventoId)) {
+        if (!mantidos.has(l.id) && !comInscritos.has(l.id)) {
+          db.prepare('DELETE FROM agenda_sessoes WHERE id = ?').run(l.id);
+        }
+      }
+    },
+
+    alterarEvento(id, { titulo, conteudo, sessoes, situacao, inscricoes, quem }) {
+      const atual = db.prepare('SELECT * FROM agenda WHERE id = ?').get(id);
+      if (!atual) return { ok: false, motivo: 'evento não encontrado' };
+      if (situacao && !SITUACOES_EVENTO.includes(situacao)) {
+        return { ok: false, motivo: 'situação inválida' };
+      }
+      if (inscricoes && !INSCRICOES.includes(inscricoes)) {
+        return { ok: false, motivo: 'estado de inscrições inválido' };
+      }
+      db.prepare(`UPDATE agenda SET titulo = COALESCE(?, titulo),
+                  conteudo = COALESCE(?, conteudo), situacao = COALESCE(?, situacao),
+                  inscricoes = COALESCE(?, inscricoes), alterado_em = ?, alterado_por = ?
+                  WHERE id = ?`)
+        .run(titulo || null, conteudo ? JSON.stringify(conteudo) : null,
+             situacao || null, inscricoes || null, agora(), quem || null, id);
+      if (Array.isArray(sessoes)) this.gravarSessoes(id, sessoes);
+      registrar(quem, 'evento_alterado', atual.apelido,
+                { situacao: situacao || atual.situacao, inscricoes: inscricoes || atual.inscricoes });
+      return { ok: true, evento: this.evento(id) };
+    },
+
+    evento(idOuApelido) {
+      const linha = typeof idOuApelido === 'number'
+        ? db.prepare('SELECT * FROM agenda WHERE id = ?').get(idOuApelido)
+        : db.prepare('SELECT * FROM agenda WHERE apelido = ?').get(String(idOuApelido));
+      if (!linha) return null;
+      const sessoes = db.prepare(`SELECT s.*,
+          (SELECT COUNT(*) FROM inscricoes i
+            WHERE i.sessao_id = s.id AND i.situacao <> 'cancelada') AS inscritos
+        FROM agenda_sessoes s WHERE s.evento_id = ? ORDER BY s.ordem, s.id`).all(linha.id);
+      return { ...linha, conteudo: JSON.parse(linha.conteudo), sessoes };
+    },
+
+    /** A lista leva as sessões junto: a página mostra a data e conta os
+     *  encontros, e sem elas quebrava ao ler `sessoes[0]` de `undefined`. */
+    eventosDoPortal({ apenasPublicados = false } = {}) {
+      const filtro = apenasPublicados ? "WHERE situacao = 'publicado'" : '';
+      return db.prepare(`SELECT e.*,
+          (SELECT COUNT(*) FROM inscricoes i
+            WHERE i.evento_id = e.id AND i.situacao <> 'cancelada') AS inscritos,
+          (SELECT MIN(s.data) FROM agenda_sessoes s WHERE s.evento_id = e.id) AS primeira_data
+        FROM agenda e ${filtro} ORDER BY primeira_data DESC, e.id DESC`).all()
+        .map(l => ({
+          ...l,
+          conteudo: JSON.parse(l.conteudo),
+          sessoes: db.prepare(`SELECT id, ordem, data, hora, formato, titulo, local, vagas
+            FROM agenda_sessoes WHERE evento_id = ? ORDER BY ordem, id`).all(l.id),
+        }));
+    },
+
+    /** Vaga é por sessão. `null` em `vagas` significa sem limite. */
+    vagasRestantes(sessaoId) {
+      const s = db.prepare('SELECT vagas FROM agenda_sessoes WHERE id = ?').get(sessaoId);
+      if (!s || s.vagas === null) return null;
+      const usadas = db.prepare(`SELECT COUNT(*) AS n FROM inscricoes
+        WHERE sessao_id = ? AND situacao <> 'cancelada'`).get(sessaoId).n;
+      return Math.max(0, s.vagas - usadas);
+    },
+
+    gravarInscricao(dados) {
+      // A repetição é conferida ANTES da vaga, e a ordem não é detalhe: quem já
+      // está inscrito numa sessão lotada e recarrega a página ouviria "sessão
+      // sem vaga" — como se tivesse perdido o lugar que já tem.
+      const repetida = db.prepare(`SELECT * FROM inscricoes
+        WHERE sessao_id = ? AND lower(email) = lower(?) AND situacao <> 'cancelada'`)
+        .get(dados.sessaoId, dados.email);
+      if (repetida) {
+        return { ok: true, repetida: true, id: repetida.id, protocolo: repetida.protocolo };
+      }
+      if (this.vagasRestantes(dados.sessaoId) === 0) {
+        return { ok: false, motivo: 'sessão sem vaga' };
+      }
+
+      const protocolo = `INS-${agora().slice(0, 10).replace(/-/g, '')}-${novoToken().slice(0, 5)}`;
+      const soDigitos = String(dados.cnpj || '').replace(/[^0-9A-Za-z]/g, '');
+      const resposta = soDigitos
+        ? db.prepare(`SELECT id FROM respostas WHERE replace(replace(replace(cnpj,'.',''),'/',''),'-','') = ?
+                      ORDER BY id DESC LIMIT 1`).get(soDigitos) : null;
+      const info = db.prepare(`INSERT INTO inscricoes
+        (protocolo, evento_id, sessao_id, resposta_id, criado_em, nome, email, telefone,
+         empresa, cnpj, cargo, aceite_lgpd, origem, agente, pacote)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(protocolo, dados.eventoId, dados.sessaoId, resposta ? resposta.id : null,
+             agora(), dados.nome, dados.email, dados.telefone || null,
+             dados.empresa || null, dados.cnpj || null, dados.cargo || null,
+             dados.aceiteLgpd ? 1 : 0, dados.origem || null, dados.agente || null,
+             JSON.stringify(dados));
+      registrar(null, 'inscricao_recebida', protocolo,
+                { evento: dados.eventoId, sessao: dados.sessaoId });
+      return { ok: true, id: Number(info.lastInsertRowid), protocolo };
+    },
+
+    inscricoes({ eventoId, sessaoId, situacao, busca, limite = 1000 } = {}) {
+      const onde = [], params = [];
+      if (eventoId) { onde.push('i.evento_id = ?'); params.push(eventoId); }
+      if (sessaoId) { onde.push('i.sessao_id = ?'); params.push(sessaoId); }
+      if (situacao && SITUACOES_INSCRICAO.includes(situacao)) {
+        onde.push('i.situacao = ?'); params.push(situacao);
+      }
+      if (busca) {
+        onde.push('(i.nome LIKE ? OR i.email LIKE ? OR i.empresa LIKE ? OR i.cnpj LIKE ? OR i.protocolo LIKE ?)');
+        const alvo = `%${busca}%`;
+        params.push(alvo, alvo, alvo, alvo, alvo);
+      }
+      const filtro = onde.length ? 'WHERE ' + onde.join(' AND ') : '';
+      return db.prepare(`SELECT i.*, s.titulo AS sessao_titulo, s.data AS sessao_data,
+          s.hora AS sessao_hora, s.formato AS sessao_formato, e.titulo AS evento_titulo
+        FROM inscricoes i
+        JOIN agenda_sessoes s ON s.id = i.sessao_id
+        JOIN agenda e ON e.id = i.evento_id
+        ${filtro} ORDER BY i.criado_em DESC LIMIT ?`).all(...params, limite);
+    },
+
+    tratarInscricao(id, { situacao, nota, quem }) {
+      if (situacao && !SITUACOES_INSCRICAO.includes(situacao)) {
+        return { ok: false, motivo: 'situação inválida' };
+      }
+      const atual = db.prepare('SELECT situacao FROM inscricoes WHERE id = ?').get(id);
+      if (!atual) return { ok: false, motivo: 'inscrição não encontrada' };
+      db.prepare(`UPDATE inscricoes SET situacao = COALESCE(?, situacao),
+                  nota_interna = COALESCE(?, nota_interna), tratado_por = ?, tratado_em = ?
+                  WHERE id = ?`).run(situacao || null, nota ?? null, quem || null, agora(), id);
+      registrar(quem, 'inscricao_tratada', String(id),
+                { de: atual.situacao, para: situacao || atual.situacao });
+      return { ok: true };
+    },
+
+    contagemInscricoes(eventoId) {
+      const fora = { total: 0 };
+      for (const s of SITUACOES_INSCRICAO) fora[s] = 0;
+      for (const l of db.prepare(`SELECT situacao, COUNT(*) AS n FROM inscricoes
+                                  WHERE evento_id = ? GROUP BY situacao`).all(eventoId)) {
+        fora[l.situacao] = l.n;
+        if (l.situacao !== 'cancelada') fora.total += l.n;
+      }
+      return fora;
+    },
+
+    /** A trilha de auditoria. A TABELA continua `eventos`, nome que ela tem
+ *  desde a migração 1 — renomear tabela viva com registro de cliente é
+ *  risco sem ganho. O que se corrigiu foi o nome aqui, que agora bate com
+ *  o da aba na tela e não disputa com a agenda de eventos. */
+    auditoria(limite = 200) {
       return db.prepare('SELECT * FROM eventos ORDER BY id DESC LIMIT ?').all(limite);
     },
 

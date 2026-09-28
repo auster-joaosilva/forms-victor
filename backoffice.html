@@ -112,6 +112,18 @@ dialog::backdrop{background:rgba(5,44,71,.45)}
   background:#f1f5f8;padding:3px 7px;border-radius:5px;word-break:break-all}
 .nota{font-size:var(--t-meta);color:var(--cinza);line-height:1.6;margin:14px 0 0;max-width:80ch}
 /* Campos do painel de eventos: rótulo visível acima, nunca dentro do campo. */
+/* Galeria das fotos da casa. Miniatura, e nao lista de nomes: ninguem sabe
+   qual e "fachada-auster-lateral" sem ver. */
+.galeria{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 4px}
+.miniatura{padding:0;border:2px solid var(--borda);border-radius:8px;overflow:hidden;
+  background:#fff;cursor:pointer;width:96px}
+.miniatura:hover{border-color:var(--claro)}
+.miniatura.escolhida{border-color:var(--escuro);box-shadow:0 0 0 2px rgba(5,44,71,.18)}
+.miniatura img{display:block;width:100%;height:64px;object-fit:cover}
+.miniatura .nome{display:block;font-size:10.5px;color:var(--cinza);padding:3px 4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.miniatura.nenhuma{width:96px;height:88px;display:flex;align-items:center;
+  justify-content:center;font-size:11.5px;color:var(--cinza)}
 .campo-bo{margin-bottom:12px}
 .campo-bo label{display:block;font-size:var(--t-meta);color:var(--cinza);margin-bottom:4px;
   text-transform:uppercase;letter-spacing:.7px}
@@ -593,9 +605,31 @@ function campoSessao(s, i) {
   </tr>`;
 }
 
+let fotosDaCasa = [];
+
+/** Desenha a galeria de uma escolha. `alvo` e o mesmo nome usado em
+ *  `escolherImagem`; `atual` e o que ja esta gravado. */
+function galeria(alvo, atual, filtro) {
+  const itens = fotosDaCasa.filter(f => !filtro || filtro.test(f.arquivo));
+  if (!itens.length) return '';
+  const botao = (caminho, rotulo, miniatura) => `<button type="button" class="miniatura${
+    atual === caminho ? ' escolhida' : ''}${miniatura ? '' : ' nenhuma'}"
+    onclick="window.escolherImagem('${alvo}', '${caminho}')">${
+    miniatura ? `<img src="${esc(caminho)}" alt=""><span class="nome">${esc(rotulo)}</span>`
+              : rotulo}</button>`;
+  return `<div class="galeria" id="galeria-${alvo}">
+    ${itens.map(f => botao(f.caminho, f.rotulo, true)).join('')}
+    ${botao('', 'sem imagem', false)}
+  </div>`;
+}
+
 async function verEvento(id) {
   const { evento, contagem, inscricoes, base } =
     await pedir('/api/backoffice/eventos?id=' + id);
+  // A lista das fotos da casa e pedida uma vez por abertura de evento: e
+  // barata, e evita a tela oferecer uma foto que alguem ja tirou da pasta.
+  try { fotosDaCasa = (await pedir('/api/backoffice/imagens')).imagens || []; }
+  catch { fotosDaCasa = []; }
   const c = evento.conteudo || {};
   const p = c.palestrante || {};
   const endereco = `${base || ''}/eventos/${evento.apelido}`;
@@ -685,9 +719,14 @@ async function verEvento(id) {
           <input type="text" id="evRotulo" value="${esc(c.rotulo || '')}"
                  placeholder="Encontro gratuito · Uberlândia-MG"></div>
       </div>
-      <div class="campo-bo"><label for="evCapa">Imagem de fundo (só para o fundo “Foto”)</label>
+      <div class="campo-bo"><label>Imagem de fundo (só para o fundo “Foto”)</label>
+        ${galeria('capa', c.capa && c.capa.startsWith('/imagens/') ? c.capa : '',
+                  /^(fachada|recepcao)/)}
         <input type="file" id="evCapa" accept="image/*" onchange="window.carregarCapa(this)">
-        <span class="nota" id="capaEstado">${c.capa ? 'imagem carregada' : 'sem imagem'}</span></div>
+        <span class="nota" id="capaEstado">${c.capa
+          ? (c.capa.startsWith('/imagens/') ? 'usando a foto da casa: ' + esc(c.capa.slice(9))
+                                            : 'usando uma imagem enviada')
+          : 'sem imagem — escolha uma acima ou envie a sua'}</span></div>
 
       <h3 style="margin:22px 0 8px">Quem apresenta</h3>
       <div class="campos-bo">
@@ -698,9 +737,14 @@ async function verEvento(id) {
       </div>
       <div class="campo-bo"><label for="evPalBio">Apresentação</label>
         <textarea id="evPalBio">${esc(p.bio || '')}</textarea></div>
-      <div class="campo-bo"><label for="evPalFoto">Foto (opcional)</label>
+      <div class="campo-bo"><label>Foto (opcional)</label>
+        ${galeria('foto', p.foto && p.foto.startsWith('/imagens/') ? p.foto : '',
+                  /^palestrante/)}
         <input type="file" id="evPalFoto" accept="image/*" onchange="window.carregarFoto(this)">
-        <span class="nota" id="fotoEstado">${p.foto ? 'foto carregada' : 'sem foto'}</span></div>
+        <span class="nota" id="fotoEstado">${p.foto
+          ? (p.foto.startsWith('/imagens/') ? 'usando a foto da casa: ' + esc(p.foto.slice(9))
+                                            : 'usando uma foto enviada')
+          : 'sem foto — escolha uma acima ou envie a sua'}</span></div>
 
       <h3 style="margin:22px 0 8px">Encontros</h3>
       <p class="nota" style="margin:0 0 10px">A inscrição é por encontro. Deixe as vagas em
@@ -770,6 +814,29 @@ window.carregarFoto = async entrada => {
    monitor comum sem estourar o corpo que o servidor aceita — e a qualidade
    cai um pouco mais porque ela vai sob um véu escuro, onde ninguém procura
    detalhe. Acima de 200 KB o salvamento falharia; por isso o aviso. */
+/* Escolher uma foto da casa e o mesmo que enviar uma, do ponto de vista do
+   que fica gravado: muda so o valor — um caminho curto em vez de uma imagem
+   inteira dentro do banco. Por isso as duas coisas escrevem na MESMA variavel
+   e a ultima acao vence, que e o que a pessoa espera de um par de campos. */
+window.escolherImagem = (alvo, caminho) => {
+  if (alvo === 'capa') {
+    capaNova = caminho;
+    const e = document.getElementById('capaEstado');
+    if (e) e.textContent = caminho
+      ? 'foto da casa escolhida: ' + caminho.slice(9) + ' — salve para valer'
+      : 'sem imagem — o fundo “Foto” volta para a aurora';
+  } else {
+    fotoNova = caminho;
+    const e = document.getElementById('fotoEstado');
+    if (e) e.textContent = caminho
+      ? 'foto da casa escolhida: ' + caminho.slice(9) + ' — salve para valer'
+      : 'sem foto — o cartão fica só com o texto';
+  }
+  for (const b of document.querySelectorAll('#galeria-' + alvo + ' .miniatura')) {
+    b.classList.toggle('escolhida', b.getAttribute('onclick').includes(`'${caminho}')`));
+  }
+};
+
 let capaNova = null;
 window.carregarCapa = async entrada => {
   const arquivo = entrada.files && entrada.files[0];
@@ -832,11 +899,13 @@ window.salvarEvento = async () => {
     aposEncerrar: valor('evEncerrado').trim(),
     tema: valor('evTema'),
     rotulo: valor('evRotulo').trim(),
-    capa: capaNova || evento.conteudo.capa || '',
+    capa: capaNova ?? (evento.conteudo.capa || ''),
     palestrante: {
       nome: valor('evPalNome').trim(), cargo: valor('evPalCargo').trim(),
       bio: valor('evPalBio').trim(),
-      foto: fotoNova || (evento.conteudo.palestrante || {}).foto || '',
+      // `??`, e nao `||`: escolher "sem foto" grava '' — com `||`, o vazio
+      // caia para o valor antigo e a limpeza nao acontecia nunca.
+      foto: fotoNova ?? ((evento.conteudo.palestrante || {}).foto || ''),
     },
   };
   const ok = await gravarEvento({ titulo: valor('evTitulo').trim() || evento.titulo,

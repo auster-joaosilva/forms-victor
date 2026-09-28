@@ -982,6 +982,41 @@ try {
     conferir(`/imagens recusa "${tentativa}"`, r.status === 404, 'status ' + r.status);
   }
 
+  // ------------------------------------------------- fotos da casa no painel
+  r = await fetch(BASE + '/api/backoffice/imagens');
+  conferir('a lista de fotos da casa exige credencial', r.status === 401, 'status ' + r.status);
+
+  r = await fetch(BASE + '/api/backoffice/imagens', { headers: comSessao });
+  const galeria = (await r.json()).imagens || [];
+  conferir('o painel enxerga as fotos da pasta',
+    r.ok && galeria.length >= 3 && galeria.every(i => i.caminho.startsWith('/imagens/')),
+    galeria.map(i => i.arquivo).join(', '));
+
+  // Cada galeria do painel filtra por um molde de nome. Molde que nao casa com
+  // arquivo nenhum nao da erro: mostra uma fila VAZIA, e quem monta o evento
+  // conclui que nao ha foto da casa. Os dois lados precisam andar juntos.
+  const painelAgora = readFileSync('backoffice.html', 'utf8');
+  for (const [onde, molde] of [['capa', /\/\^\(fachada\|recepcao\)\//],
+                               ['foto', /\/\^palestrante\//]]) {
+    conferir(`o painel ainda filtra as fotos da ${onde}`, molde.test(painelAgora));
+  }
+  for (const [onde, prefixo] of [['capa', /^(fachada|recepcao)/], ['foto', /^palestrante/]]) {
+    const casam = galeria.filter(i => prefixo.test(i.arquivo));
+    conferir(`há foto da casa para a galeria da ${onde}`, casam.length > 0,
+      casam.map(i => i.arquivo).join(', '));
+  }
+
+  // Foto da casa e foto enviada viajam no MESMO campo: uma como caminho, a
+  // outra como imagem embutida. A pagina tem de aceitar as duas.
+  await postar('/api/backoffice/eventos/alterar', {
+    id: ev.id,
+    conteudo: { ...comSessoes.conteudo, tema: 'foto', capa: '/imagens/fachada.jpg',
+                palestrante: { nome: 'Quem Apresenta', foto: '/imagens/palestrante.jpg' } },
+  }, comSessao);
+  const comFoto = await (await fetch(`${BASE}/eventos/${ev.apelido}`)).text();
+  conferir('o evento guarda e devolve a foto da casa como caminho',
+    comFoto.includes('/imagens/fachada.jpg') && comFoto.includes('/imagens/palestrante.jpg'));
+
   // ------------------------------------------- desenho das paginas publicas
   // Os quatro fundos de capa estao escritos em DOIS lugares: no painel, que os
   // oferece, e na pagina, que os desenha. Divergir significa o painel oferecer

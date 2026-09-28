@@ -19,7 +19,7 @@
 
 import { createServer } from 'node:http';
 import { createHmac, createHash, scryptSync, timingSafeEqual } from 'node:crypto';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { abrirBanco, senhaConfere, MINIMO_SENHA, VERSAO_DO_ESQUEMA,
          MODALIDADES_ADESAO, SEM_MANIFESTACAO } from './src/banco.mjs';
 import { PERGUNTAS, BLOCOS } from './src/perguntas.js';
@@ -285,6 +285,26 @@ function conferirAdesao(corpo, req) {
     ...origemDoPedido(req),
     agente: String(req.headers['user-agent'] || '').slice(0, 300) || null,
   } };
+}
+
+/* ---------------------------------------------------------------- imagens */
+
+/** As fotos da casa, lidas da pasta — e não de uma lista escrita à mão, que
+ *  envelheceria no dia em que alguém acrescentasse um arquivo. O rótulo é o
+ *  nome do arquivo em linguagem de gente; a miniatura no painel é que diz de
+ *  verdade qual é qual. */
+function imagensDaCasa() {
+  const pasta = './ativos/imagens';
+  if (!existsSync(pasta)) return [];
+  return readdirSync(pasta)
+    .filter(a => /^[a-z0-9_-]+\.(jpg|png|svg|webp)$/.test(a))
+    .sort()
+    .map(arquivo => ({
+      arquivo,
+      caminho: `/imagens/${arquivo}`,
+      rotulo: arquivo.replace(/\.[a-z]+$/, '').replace(/[-_]/g, ' ')
+        .replace(/^./, c => c.toUpperCase()),
+    }));
 }
 
 /* -------------------------------------------------------------- principal */
@@ -1071,6 +1091,14 @@ const servidor = createServer(async (req, res) => {
         return html
           ? responder(res, 200, html, 'text/html; charset=utf-8', { 'Cache-Control': 'no-store' })
           : responder(res, 500, 'adesao.html não encontrado. Rode node construir.mjs.');
+      }
+
+      // ------------------------------------------------- imagens da casa
+      /* As fotos que já estão na pasta do projeto, para a equipe escolher no
+       * painel em vez de subir a mesma imagem toda vez. Foto nova continua
+       * podendo ser enviada; isto só evita repetir o que já existe. */
+      if (req.method === 'GET' && rota === '/api/backoffice/imagens') {
+        return json(res, 200, { ok: true, imagens: imagensDaCasa() });
       }
 
       // ------------------------------------------------------------ eventos

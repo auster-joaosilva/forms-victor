@@ -56,6 +56,13 @@ img{max-width:100%}
   background:var(--azul-escuro);padding:clamp(36px,6vw,72px) 24px clamp(44px,7vw,80px)}
 .capa > *{position:relative;z-index:2}
 .capa .miolo{max-width:1040px;margin:0 auto;position:relative;z-index:2}
+/* Nos temas sem foto, o texto ocupa pouco mais da metade: linha de 100
+   caracteres nao se le, e e o espaco vazio a direita que deixa o motivo
+   da marca respirar sem passar por tras das palavras. */
+.tema-marca .miolo > div, .tema-solido .miolo > div{max-width:62%}
+@media (max-width:900px){
+  .tema-marca .miolo > div, .tema-solido .miolo > div{max-width:none}
+}
 
 /* Tema "marca": o símbolo da casa, grande, sangrando pela borda direita, em
    azul-profundo sobre azul-escuro. Uma vez por página e nunca atrás de texto
@@ -93,7 +100,6 @@ img{max-width:100%}
   background:linear-gradient(90deg, var(--azul-escuro) 0%, rgba(5,44,71,.35) 53%,
              rgba(5,44,71,.10) 100%)}
 @media (max-width:860px){
-  .tema-foto{text-align:center}
   .tema-foto .miolo{grid-template-columns:1fr}
   .tema-foto .texto{padding:clamp(30px,6vw,48px) 24px var(--e3);order:2}
   .tema-foto .retrato-capa{min-height:0;order:1}
@@ -106,25 +112,20 @@ img{max-width:100%}
 }
 
 .capa .logo{height:clamp(34px,4vw,44px);width:clamp(95px,11.2vw,123px);
-  display:block;margin:0 auto var(--e3)}
-.tema-foto .logo{margin:0 0 var(--e3)}
-@media (max-width:860px){ .tema-foto .logo{margin:0 auto var(--e3)} }
+  display:block;margin:0 0 var(--e3)}
 
 /* Kicker: caixa alta, 3 px de entreletra, acima de todo título. */
 .rotulo{display:inline-block;color:var(--azul-claro);font-size:12px;font-weight:600;
   letter-spacing:3px;text-transform:uppercase;margin-bottom:var(--e2);
   border-left:2px solid var(--azul-claro);padding-left:10px}
-.capa h1{margin:0 auto var(--e2);font-size:clamp(30px,4.6vw,58px);font-weight:700;
+.capa h1{margin:0 0 var(--e2);font-size:clamp(30px,4.6vw,58px);font-weight:700;
   line-height:1.04;letter-spacing:-1.5px;max-width:18ch}
-.tema-foto h1{margin-left:0;margin-right:0}
 .capa h1 b{font-weight:700;color:var(--azul-claro)}
-.capa .chamada{color:var(--texto-sobre-escuro);max-width:52ch;margin:0 auto;
+.capa .chamada{color:var(--texto-sobre-escuro);max-width:52ch;margin:0;
   font-size:clamp(15px,1.4vw,17px);line-height:1.55;font-weight:300}
-.tema-foto .chamada{margin-left:0;margin-right:0}
 
-.sessoes-capa{display:flex;flex-wrap:wrap;justify-content:center;
-  margin:var(--e3) auto 0;max-width:900px;border-top:1px solid var(--linha-escura)}
-.tema-foto .sessoes-capa{justify-content:flex-start}
+.sessoes-capa{display:flex;flex-wrap:wrap;
+  margin:var(--e3) 0 0;max-width:900px;border-top:1px solid var(--linha-escura)}
 .sessao-chip{padding:14px 20px 14px 0;text-align:left;min-width:0;flex:1 1 200px;
   border-right:1px solid var(--linha-escura)}
 .sessao-chip:last-child{border-right:0}
@@ -133,8 +134,7 @@ img{max-width:100%}
 .sessao-chip .oque{color:var(--legenda-sobre-escuro);font-size:12px;margin-top:4px;
   line-height:1.45}
 .capa .onde{color:var(--legenda-sobre-escuro);font-size:13px;margin-top:var(--e3)}
-.acoes{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:var(--e3)}
-.tema-foto .acoes{justify-content:flex-start}
+.acoes{display:flex;gap:12px;flex-wrap:wrap;margin-top:var(--e3)}
 .contagem{display:block;margin-top:var(--e2);color:var(--legenda-sobre-escuro);font-size:13px}
 .contagem b{color:var(--azul-claro);font-weight:700}
 

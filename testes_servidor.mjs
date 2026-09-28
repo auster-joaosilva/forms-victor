@@ -1140,6 +1140,16 @@ try {
       `abre=${abre} espera=${espera}`);
   }
 
+  // U-01 — o dado na marcacao so serve se a consulta de midia existir para
+  // usa-lo. Sao os dois lados da mesma correcao, e nenhum vale sozinho.
+  conferir('abaixo de 560px a matriz deixa de ser tabela',
+    fontePortal.includes('@media (max-width: 560px)')
+    && fontePortal.includes('table.matriz thead{display:none}'));
+  conferir('no telefone o rótulo da faixa aparece',
+    fontePortal.includes('table.matriz td .f{display:inline'));
+  conferir('no telefone o alvo de toque tem 44px',
+    fontePortal.includes('min-height:44px'));
+
   // A cerca do degrade: aurora e onda sao excecao do CONVITE. A capa
   // institucional e peca da marca e segue a regra ao pe da letra. Sem esta
   // assercao, o dia em que alguem achar a aurora bonita na /principal ela vai

@@ -406,6 +406,38 @@ const resumo = r => {
 console.log(`\nBateria de preenchimento — ${(2 * n).toLocaleString('pt-BR')} casos`);
 console.log(`${INVARIANTES.length} invariantes · ${PERGUNTAS.length} perguntas no formulário\n`);
 
+// ------------------------------------------------------------------- U-01
+/* A matriz no telefone vira lista: cada opcao tem de carregar o proprio rotulo
+   de faixa e cada linha o proprio rotulo de tipo de cliente. Nao ha navegador
+   aqui; o que se prova e que a marcacao CARREGA o dado de que o CSS do
+   telefone depende. Sem ele, a consulta de midia nao teria o que mostrar. */
+{
+  const pMatriz = PERGUNTAS.find(p => p.tipo === 'matriz');
+  if (!pMatriz) { console.log('FALHA · nao ha pergunta do tipo matriz no formulario'); process.exit(1); }
+  for (const k of Object.keys(api.R)) delete api.R[k];
+  const html = api.campo(pMatriz);
+  const celulas = pMatriz.colunas.length * pMatriz.linhas.length;
+  const conta = re => (html.match(re) || []).length;
+  let ruim = 0;
+  const exigir = (nome, ok, detalhe) => {
+    if (ok) return;
+    ruim++;
+    console.log(`FALHA · ${nome}` + (detalhe ? ` · ${detalhe}` : ''));
+  };
+  exigir('cada celula da matriz carrega o rotulo da faixa',
+    conta(/<span class="f">/g) === celulas, `${conta(/<span class="f">/g)} de ${celulas}`);
+  exigir('cada radio da matriz tem nome acessivel com linha e coluna',
+    conta(/<input type="radio"[^>]*aria-label="/g) === celulas,
+    `${conta(/<input type="radio"[^>]*aria-label="/g)} de ${celulas}`);
+  exigir('cada linha da matriz e cabecalho de linha',
+    conta(/<th scope="row"/g) === pMatriz.linhas.length,
+    `${conta(/<th scope="row"/g)} de ${pMatriz.linhas.length}`);
+  exigir('a faixa "nao sei" chega desenhada como rotulo',
+    html.includes('>não sei</span>'));
+  if (ruim) process.exit(1);
+  console.log(`matriz: ${celulas} celulas, todas com rotulo de faixa e nome acessivel`);
+}
+
 // ------------------------------------------------------------------- L-14
 /* Rascunho guarda nome, e-mail, telefone e CNPJ no navegador. Em maquina
    compartilhada, sem prazo, ele reoferece o dado do visitante anterior. */

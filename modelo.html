@@ -88,16 +88,42 @@ textarea,input[type=text],input[type=email],input[type=tel],select{width:100%;pa
 textarea{resize:vertical;min-height:76px;line-height:1.55}
 textarea:focus,input[type=text]:focus,input[type=email]:focus,input[type=tel]:focus,select:focus{
   outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba(0,126,153,.16)}
-/* 7 colunas nao cabem em tela de telefone: a tabela rola dentro do proprio
-   quadro, e a coluna do rotulo fica presa a esquerda. */
+/* Sete colunas nao cabem no telefone. Em tela larga isto e tabela; abaixo de
+   560 px vira lista de blocos (a consulta de midia logo abaixo). O comentario
+   antigo prometia uma coluna presa a esquerda que NUNCA existiu: ao rolar, o
+   rotulo da linha saia da tela e sobravam cinco circulos sem nome. */
 .matriz-rolo{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table.matriz{width:100%;min-width:430px;border-collapse:collapse;font-size:12.5px}
 table.matriz th{font-weight:500;color:var(--tinta);padding:9px 4px;text-align:center;font-size:var(--t-meta)}
+table.matriz th.rot{text-align:left;font-size:var(--t-corpo);font-weight:400;color:var(--tinta)}
 table.matriz td{padding:9px 4px;text-align:center;border-top:1px solid var(--borda)}
-table.matriz td:first-child{text-align:left;font-size:var(--t-corpo)}
 table.matriz tbody tr:hover{background:#f7fafc}
+table.matriz label{display:block;cursor:pointer}
 table.matriz input{accent-color:var(--acento);width:17px;height:17px}
+table.matriz td .f{display:none}
 table.matriz .na{border-left:1px solid var(--borda-forte);color:var(--cinza)}
+
+/* U-01 — no telefone a tabela vira lista: cada tipo de cliente e um bloco,
+   cada faixa uma linha tocavel com o proprio rotulo. Antes, a 375 px, 125 px
+   da tabela ficavam fora da tela: "acima de 80%" e "nao sei" invisiveis. E a
+   dica manda marcar "nao sei", que era justamente a coluna escondida. */
+@media (max-width: 560px){
+  .matriz-rolo{overflow-x:visible}
+  table.matriz{min-width:0}
+  table.matriz,table.matriz tbody,table.matriz tr,
+  table.matriz th,table.matriz td{display:block;width:auto}
+  table.matriz thead{display:none}
+  table.matriz tr{border-top:1px solid var(--borda-forte);padding:12px 0 4px}
+  table.matriz tr:hover{background:none}
+  table.matriz th.rot{padding:0 0 6px;font-weight:500;color:var(--escuro)}
+  table.matriz td{border-top:0;padding:0;text-align:left}
+  table.matriz td.na{border-left:0;border-top:1px solid var(--borda);
+    margin-top:6px;padding-top:4px}
+  table.matriz label{display:flex;align-items:center;gap:10px;
+    padding:9px 2px;min-height:44px}
+  table.matriz td .f{display:inline;font-size:var(--t-corpo);color:var(--tinta)}
+  table.matriz input{width:20px;height:20px;flex:0 0 20px}
+}
 .soma{font-size:12.5px;color:var(--cinza);margin-top:8px}
 .soma.alerta{color:var(--medio)}
 .rodape-nav{display:flex;justify-content:space-between;margin-top:26px;padding-top:18px;border-top:1px solid var(--borda)}
@@ -614,12 +640,20 @@ function campo(p) {
   const dica = textoDica ? `<div class="dica">${esc(textoDica)}</div>` : '';
 
   if (p.tipo === 'matriz') {
-    const cols = p.colunas.map(c => `<th class="${c.valor === p.naoSei ? 'na' : ''}">${esc(c.rotulo)}</th>`).join('');
-    const rows = p.linhas.map(l => `<tr><td>${esc(l.rotulo)}</td>` + p.colunas.map(c => {
-      const sel = (R[p.chave] || {})[l.chave] === c.valor ? 'checked' : '';
-      return `<td class="${c.valor === p.naoSei ? 'na' : ''}"><input type="radio" name="${p.chave}__${l.chave}" value="${c.valor}" ${sel}
-        onchange="window.setMatriz('${p.chave}','${l.chave}',this.value)"></td>`;
-    }).join('') + '</tr>').join('');
+    /* Cada celula carrega o rotulo da propria faixa num `<span class="f">`,
+       escondido em tela larga. Abaixo de 560 px a tabela vira lista de blocos
+       e o rotulo aparece ao lado do radio: nenhuma coluna sai da tela e
+       nenhuma linha perde o nome. O radio mora dentro de um `<label>` — nome
+       acessivel de graca, e o alvo de toque deixa de ser os 17 px do circulo. */
+    const cols = p.colunas.map(c =>
+      `<th scope="col" class="${c.valor === p.naoSei ? 'na' : ''}">${esc(c.rotulo)}</th>`).join('');
+    const rows = p.linhas.map(l =>
+      `<tr><th scope="row" class="rot">${esc(l.rotulo)}</th>` + p.colunas.map(c => {
+        const sel = (R[p.chave] || {})[l.chave] === c.valor ? 'checked' : '';
+        return `<td class="${c.valor === p.naoSei ? 'na' : ''}"><label><input type="radio" name="${p.chave}__${l.chave}" value="${c.valor}" ${sel}
+          aria-label="${esc(l.rotulo)}: ${esc(c.rotulo)}"
+          onchange="window.setMatriz('${p.chave}','${l.chave}',this.value)"><span class="f">${esc(c.rotulo)}</span></label></td>`;
+      }).join('') + '</tr>').join('');
     const rod = rodapeMatriz(p.chave);
     return `<div class="campo" data-campo="${p.chave}"><label>${esc(p.enunciado)}${marca}</label>${dica}
       <div class="matriz-rolo"><table class="matriz"><thead><tr><th></th>${cols}</tr></thead><tbody>${rows}</tbody></table></div>

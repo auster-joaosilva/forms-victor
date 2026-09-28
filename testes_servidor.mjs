@@ -860,11 +860,119 @@ try {
   conferir('o servidor le pelo menos tres paginas do disco', lidos.length >= 3, lidos.join(','));
   // portal.html e adesao.html sao GERADOS dentro da imagem pelo construir.mjs;
   // o que precisa estar copiado sao os modelos deles.
-  const gerados = ['portal.html', 'adesao.html'];
+  const gerados = ['portal.html', 'adesao.html', 'evento.html', 'principal.html'];
+  // `includes` de texto cru dava falso OK: `evento.html` esta contido em
+  // `modelo_evento.html`, e o teste passava mesmo com o arquivo de fora. A
+  // conferencia agora e por PALAVRA da linha COPY, nao por trecho.
+  const copiados = new Set(dockerfile.split(/\s+/));
   const foraDaImagem = [...new Set(lidos)]
-    .filter(arquivo => !gerados.includes(arquivo) && !dockerfile.includes(arquivo));
+    .filter(arquivo => !gerados.includes(arquivo) && !copiados.has(arquivo));
   conferir('todo arquivo que o servidor le esta no Dockerfile',
     foraDaImagem.length === 0, 'fora: ' + foraDaImagem.join(', '));
+
+  // --------------------------------------------------------- capa principal
+  // A capa institucional e a porta de entrada depois de 01/10. O que se prova
+  // aqui: ela abre, sabe da agenda e obedece a janela de opcao.
+  r = await fetch(BASE + '/principal');
+  const capaHtml = await r.text();
+  conferir('GET /principal responde', r.ok, 'status ' + r.status);
+  conferir('a capa recebe o estado do servidor',
+    capaHtml.includes('window.__PRINCIPAL__'));
+  conferir('a capa leva as quatro portas',
+    ['/adesao', '/eventos', 'contato@austercontabil.com.br']
+      .every(t => capaHtml.includes(t)));
+  conferir('a capa nao mostra caminho do backoffice',
+    !capaHtml.includes('/backoffice'));
+
+  // A porta dos encontros se apoia no que o servidor manda. Se `eventosDoPortal`
+  // parar de trazer as sessoes, a capa volta a anunciar "encontro" sem data —
+  // foi exatamente o defeito que a lista de eventos ja teve.
+  const estadoDaCapa = JSON.parse(
+    capaHtml.match(/window\.__PRINCIPAL__ = (\{[\s\S]*?\});/)[1]
+      .replace(/\u003C/g, '<').replace(/\u003E/g, '>').replace(/\u0026/g, '&'));
+  conferir('a capa enxerga o evento publicado, com data',
+    estadoDaCapa.eventos.length === 1
+    && estadoDaCapa.eventos[0].titulo === 'Conexão Tributária'
+    && estadoDaCapa.eventos[0].data === '2026-10-15',
+    JSON.stringify(estadoDaCapa.eventos));
+  conferir('sem data de corte, a janela de opção fica aberta',
+    estadoDaCapa.janela === 'aberta', estadoDaCapa.janela);
+
+  // A data de corte e o unico botao que fecha a porta do termo na capa. Vale
+  // um servidor so para ela: e a alavanca que espera decisao da casa.
+  const PORTA_CORTE = PORTA + 1;
+  const outro = spawn(process.execPath, ['servidor.mjs'], {
+    env: { ...process.env, PORT: String(PORTA_CORTE), AUSTER_SENHA_BACKOFFICE: SENHA,
+           AUSTER_BANCO: join(pasta, 'corte.db'), AUSTER_FIM_DA_JANELA: '2020-01-01',
+           NODE_ENV: 'test' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  try {
+    let subiu = false;
+    for (let i = 0; i < 60 && !subiu; i++) {
+      try { subiu = (await fetch(`http://127.0.0.1:${PORTA_CORTE}/saude`)).ok; } catch { }
+      if (!subiu) await new Promise(x => setTimeout(x, 120));
+    }
+    conferir('o servidor da data de corte sobe', subiu);
+    const comCorte = await (await fetch(`http://127.0.0.1:${PORTA_CORTE}/principal`)).text();
+    conferir('data de corte no passado fecha a porta do termo na capa',
+      comCorte.includes('"janela":"encerrada"'),
+      (comCorte.match(/"janela":"\w+"/) || [''])[0]);
+  } finally {
+    outro.kill();
+  }
+
+  // ------------------------------------------- desenho das paginas publicas
+  // Os quatro fundos de capa estao escritos em DOIS lugares: no painel, que os
+  // oferece, e na pagina, que os desenha. Divergir significa o painel oferecer
+  // um fundo que a pagina nao conhece — e a capa cair no padrao, calada.
+  const fontePainel = readFileSync('backoffice.html', 'utf8');
+  const fonteEvento = readFileSync('modelo_evento.html', 'utf8');
+  const fonteEstilo = readFileSync('ativos/estilo_publico.css', 'utf8');
+  // A leitura e do BLOCO `TEMAS_DE_CAPA`, nao do arquivo inteiro: varrer todo
+  // o painel atras de pares entre colchetes pescava rotulos de outras telas.
+  const blocoTemas = fontePainel.match(/const TEMAS_DE_CAPA = \[([\s\S]*?)\];/)[1];
+  const temasDoPainel = [...blocoTemas.matchAll(/'([a-z]+)',/g)].map(m => m[1]);
+  const temasDaPagina = JSON.parse((fonteEvento.match(/const TEMAS = (\[[^\]]*\]);/) || [])[1]
+    .replace(/'/g, '"'));
+  conferir('o painel oferece exatamente os fundos que a página desenha',
+    temasDaPagina.every(t => temasDoPainel.includes(t))
+    && temasDoPainel.filter(t => temasDaPagina.includes(t)).length === temasDaPagina.length,
+    `pagina=${temasDaPagina} painel=${temasDoPainel}`);
+  for (const t of temasDaPagina) {
+    conferir(`o fundo "${t}" existe na folha de estilo`,
+      fonteEstilo.includes(`.tema-${t}{`));
+  }
+
+  // Cor fora da marca em pagina de cliente e erro de identidade, nao de gosto.
+  // O dourado da peca de referencia e o azul errado ja apareceram antes.
+  const proibidas = ['#C9A84C', '#c9a84c', '#0D1B3E', '#0d1b3e'];
+  for (const arquivo of ['evento.html', 'principal.html']) {
+    const fonte = readFileSync(arquivo, 'utf8');
+    const achadas = proibidas.filter(c => fonte.includes(c));
+    conferir(`${arquivo} não usa cor proibida`, achadas.length === 0, achadas.join(' '));
+  }
+
+  // A folha de estilo e UMA. Se uma pagina voltar a declarar a propria paleta,
+  // as duas comecam a divergir no dia seguinte.
+  for (const modelo of ['modelo_evento.html', 'modelo_principal.html']) {
+    const fonte = readFileSync(modelo, 'utf8');
+    conferir(`${modelo} usa a folha de estilo comum`,
+      fonte.includes('/*__ESTILO__*/') && !fonte.includes('--escuro:'));
+  }
+
+  // O logo tem 27 KB em base64. Se voltar a ser escrito a mao em cada lugar
+  // onde aparece, a pagina engorda sem ninguem notar.
+  for (const arquivo of ['evento.html', 'principal.html']) {
+    const fonte = readFileSync(arquivo, 'utf8');
+    const vezes = (fonte.match(/iVBORw0KGgo/g) || []).length;
+    conferir(`${arquivo} carrega o logo uma vez só`, vezes === 1, `${vezes} vezes`);
+  }
+
+  const modelosFora = ['modelo_evento.html', 'modelo_principal.html']
+    .filter(m => !copiados.has(m));
+  conferir('os modelos das páginas geradas estão no Dockerfile',
+    modelosFora.length === 0, 'fora: ' + modelosFora.join(', '));
 
 } catch (e) {
   falhou++;

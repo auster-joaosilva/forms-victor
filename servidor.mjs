@@ -276,6 +276,43 @@ function conferirAdesao(corpo, req) {
   } };
 }
 
+/* -------------------------------------------------------------- principal */
+
+/** A janela de opção, vista pela capa institucional.
+ *
+ *  `AUSTER_FIM_DA_JANELA` é uma data (AAAA-MM-DD) e é OPCIONAL: sem ela, a
+ *  capa segue oferecendo o termo, que é o comportamento de hoje. Quando a
+ *  data da casa estiver decidida, uma variável no painel fecha a porta na
+ *  capa — sem tocar em código e sem esperar publicação nova.
+ *
+ *  Isto NÃO fecha a rota `/adesao`: quem tem o link direto continua entrando.
+ *  Fechar de verdade é outra decisão, ainda pendente (achado F-04). */
+const FIM_DA_JANELA = (process.env.AUSTER_FIM_DA_JANELA || '').trim();
+
+function estadoDaJanela(agora = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(FIM_DA_JANELA)) return 'aberta';
+  // O corte é em Brasília, não em UTC: às 21h de 30/09 o servidor em UTC já
+  // acha que é dia 1º, e fecharia a porta três horas antes da hora.
+  const brasilia = new Date(agora.getTime() - 3 * 3600 * 1000);
+  const hoje = brasilia.toISOString().slice(0, 10);
+  return hoje > FIM_DA_JANELA ? 'encerrada' : 'aberta';
+}
+
+/** Capa institucional: as portas do portal. Recebe do servidor só o que ela
+ *  não pode adivinhar — se há encontro aberto e se a janela segue de pé. */
+function paginaPrincipal() {
+  const html = pagina('./principal.html');
+  if (!html) return null;
+  const eventos = banco.eventosDoPortal({ apenasPublicados: true }).map(e => ({
+    titulo: e.titulo,
+    apelido: e.apelido,
+    data: (e.sessoes || []).length ? e.sessoes[0].data : null,
+  }));
+  const dados = { eventos, janela: estadoDaJanela() };
+  return html.replace('/*__PUBLICACAO__*/',
+    `window.__PRINCIPAL__ = ${jsonParaScript(dados)};`);
+}
+
 /* ---------------------------------------------------------------- eventos */
 
 /** Serve a lista de eventos ou a página de um deles. É o mesmo arquivo: o que
@@ -673,6 +710,14 @@ const servidor = createServer(async (req, res) => {
       const token = url.searchParams.get('c') || pacote.convite || null;
       const id = banco.gravarResposta(pacote, banco.convite(token) ? token : null);
       return json(res, 201, { ok: true, id, protocolo: pacote.protocolo });
+    }
+
+    // ----------------------------------------------------------- principal
+    if (req.method === 'GET' && rota === '/principal') {
+      const html = paginaPrincipal();
+      if (!html) return responder(res, 500, 'principal.html não encontrado. Rode node construir.mjs.');
+      return responder(res, 200, html, 'text/html; charset=utf-8',
+        { 'Cache-Control': 'no-store' });
     }
 
     // ------------------------------------------------------------- eventos

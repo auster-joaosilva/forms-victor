@@ -31,6 +31,6 @@ adesao.html
 
 # Gerado pelo build (a fonte e modelo_evento.html).
 evento.html
-[INFO] Recording command outcome: printf
 
-[OK] Command outcome recorded
+# Gerado pelo build (a fonte e modelo_principal.html).
+principal.html

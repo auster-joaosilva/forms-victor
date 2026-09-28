@@ -512,6 +512,13 @@ window.marcarAdesao = async (id, situacao) => {
    de código. O conteúdo da página vive em JSON no banco; aqui é só formulário.
    Listas vão em caixa de texto, uma por linha — é o que a equipe consegue
    editar sem treinamento, e o que não quebra ao colar de um documento. */
+/* Os quatro fundos de capa. A lista vive aqui e na pagina publica; se as
+   duas divergirem, o painel oferece um fundo que a pagina nao conhece e a
+   capa cai no padrao sem avisar. O teste de invariante compara as duas. */
+const TEMAS_DE_CAPA = [['aurora', 'Aurora — luz em diagonal'],
+                       ['malha', 'Malha — grade fina'],
+                       ['onda', 'Onda — faixas curvas'],
+                       ['foto', 'Foto — imagem de fundo']];
 const SITUACOES_EVENTO = { rascunho:'Rascunho', publicado:'Publicado', encerrado:'Encerrado' };
 const SITUACOES_INSCRICAO = { inscrita:'Inscrita', confirmada:'Confirmada',
   presente:'Presente', ausente:'Ausente', cancelada:'Cancelada' };
@@ -665,6 +672,23 @@ async function verEvento(id) {
         <input type="text" id="evEncerrado" value="${esc(c.aposEncerrar || '')}"
                placeholder="Se quiser ser avisado do próximo encontro, fale com a Auster."></div>
 
+      <h3 style="margin:22px 0 8px">Aparência da capa</h3>
+      <p class="nota" style="margin:0 0 10px">São quatro fundos prontos, todos na paleta
+        da casa. A escolha muda só o visual da capa: o conteúdo é o mesmo.</p>
+      <div class="campos-bo">
+        <div class="campo-bo"><label for="evTema">Fundo da capa</label>
+          <select id="evTema">
+            ${TEMAS_DE_CAPA.map(([v, r]) => `<option value="${v}" ${
+              (c.tema || 'aurora') === v ? 'selected' : ''}>${r}</option>`).join('')}
+          </select></div>
+        <div class="campo-bo"><label for="evRotulo">Etiqueta acima do título</label>
+          <input type="text" id="evRotulo" value="${esc(c.rotulo || '')}"
+                 placeholder="Encontro gratuito · Uberlândia-MG"></div>
+      </div>
+      <div class="campo-bo"><label for="evCapa">Imagem de fundo (só para o fundo “Foto”)</label>
+        <input type="file" id="evCapa" accept="image/*" onchange="window.carregarCapa(this)">
+        <span class="nota" id="capaEstado">${c.capa ? 'imagem carregada' : 'sem imagem'}</span></div>
+
       <h3 style="margin:22px 0 8px">Quem apresenta</h3>
       <div class="campos-bo">
         <div class="campo-bo"><label for="evPalNome">Nome</label>
@@ -714,9 +738,19 @@ window.novaSessao = () => {
 
 window.tirarSessao = botao => { botao.closest('tr').remove(); };
 
-/* A foto é reduzida no navegador antes de subir: uma foto de celular tem
-   vários megabytes e o servidor recusa corpo acima de 256 KB. 360 px de lado
-   é o que a página mostra. */
+/* A imagem é reduzida no navegador antes de subir: uma foto de celular tem
+   vários megabytes e o servidor recusa corpo acima de 256 KB. O lado maior
+   vira `lado` px — o que a página realmente mostra, e nada além. */
+async function reduzirImagem(arquivo, lado, qualidade) {
+  const bitmap = await createImageBitmap(arquivo);
+  const escala = Math.min(1, lado / Math.max(bitmap.width, bitmap.height));
+  const tela = document.createElement('canvas');
+  tela.width = Math.round(bitmap.width * escala);
+  tela.height = Math.round(bitmap.height * escala);
+  tela.getContext('2d').drawImage(bitmap, 0, 0, tela.width, tela.height);
+  return tela.toDataURL('image/jpeg', qualidade);
+}
+
 let fotoNova = null;
 window.carregarFoto = async entrada => {
   const arquivo = entrada.files && entrada.files[0];
@@ -724,17 +758,32 @@ window.carregarFoto = async entrada => {
   if (!arquivo) return;
   estado.textContent = 'reduzindo…';
   try {
-    const bitmap = await createImageBitmap(arquivo);
-    const lado = 360;
-    const escala = Math.min(1, lado / Math.max(bitmap.width, bitmap.height));
-    const tela = document.createElement('canvas');
-    tela.width = Math.round(bitmap.width * escala);
-    tela.height = Math.round(bitmap.height * escala);
-    tela.getContext('2d').drawImage(bitmap, 0, 0, tela.width, tela.height);
-    fotoNova = tela.toDataURL('image/jpeg', 0.82);
+    fotoNova = await reduzirImagem(arquivo, 360, 0.82);
     estado.textContent = `foto pronta (${Math.round(fotoNova.length / 1024)} KB) — salve para valer`;
   } catch (e) {
     fotoNova = null;
+    estado.textContent = 'não consegui ler essa imagem: ' + e.message;
+  }
+};
+
+/* A capa é maior que o retrato: ela ocupa a largura da tela. 1280 px cobre
+   monitor comum sem estourar o corpo que o servidor aceita — e a qualidade
+   cai um pouco mais porque ela vai sob um véu escuro, onde ninguém procura
+   detalhe. Acima de 200 KB o salvamento falharia; por isso o aviso. */
+let capaNova = null;
+window.carregarCapa = async entrada => {
+  const arquivo = entrada.files && entrada.files[0];
+  const estado = document.getElementById('capaEstado');
+  if (!arquivo) return;
+  estado.textContent = 'reduzindo…';
+  try {
+    capaNova = await reduzirImagem(arquivo, 1280, 0.68);
+    const kb = Math.round(capaNova.length / 1024);
+    estado.textContent = kb > 200
+      ? `imagem pesada (${kb} KB) — escolha uma menor, ou o salvamento vai falhar`
+      : `imagem pronta (${kb} KB) — escolha o fundo “Foto” e salve`;
+  } catch (e) {
+    capaNova = null;
     estado.textContent = 'não consegui ler essa imagem: ' + e.message;
   }
 };
@@ -781,6 +830,9 @@ window.salvarEvento = async () => {
     temas: linhas(valor('evTemas')),
     avisos: linhas(valor('evAvisos')),
     aposEncerrar: valor('evEncerrado').trim(),
+    tema: valor('evTema'),
+    rotulo: valor('evRotulo').trim(),
+    capa: capaNova || evento.conteudo.capa || '',
     palestrante: {
       nome: valor('evPalNome').trim(), cargo: valor('evPalCargo').trim(),
       bio: valor('evPalBio').trim(),
@@ -790,7 +842,7 @@ window.salvarEvento = async () => {
   const ok = await gravarEvento({ titulo: valor('evTitulo').trim() || evento.titulo,
                                   conteudo, sessoes: sessoesDaTela() });
   estado.textContent = ok ? 'salvo' : '';
-  if (ok) { fotoNova = null; verAgenda(); }
+  if (ok) { fotoNova = null; capaNova = null; verAgenda(); }
 };
 
 window.marcarInscricao = async (id, situacao) => {

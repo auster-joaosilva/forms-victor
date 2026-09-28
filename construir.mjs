@@ -41,6 +41,13 @@ function faviconEmUri() {
     .replace(/%3C/g, '<').replace(/%3E/g, '>').replace(/%27/g, "'").replace(/%20/g, ' ');
 }
 
+/* A folha de estilo das páginas públicas é UMA. A de eventos e a principal
+ * partilham capa, botões, cartões e rodapé; se cada uma trouxesse a sua
+ * cópia, em três meses a marca teria dois azuis e dois raios de canto. */
+function estiloPublico() {
+  return readFileSync('ativos/estilo_publico.css', 'utf8').trim();
+}
+
 function abortar(...linhas) {
   for (const l of linhas) console.error(l);
   process.exit(1);
@@ -55,7 +62,11 @@ function inlinarLogos(html, nome, quais = Object.keys(LOGOS)) {
       abortar(`ERRO: o marcador ${marcador} desapareceu de ${nome}.`,
               'Sem ele o cabeçalho sai com a imagem quebrada.');
     }
-    html = html.replace(marcador, readFileSync(LOGOS[marcador], 'utf8').trim());
+    /* `replaceAll`, e não `replace`: a mesma marca aparece mais de uma vez na
+     * página (a barra do topo e a capa usam o logo). Com `replace` só a
+     * primeira era trocada e a segunda seguia no HTML como texto cru, dentro
+     * de um `src` — imagem quebrada, e sem erro de build. */
+    html = html.replaceAll(marcador, readFileSync(LOGOS[marcador], 'utf8').trim());
   }
   const sobrando = Object.keys(LOGOS).filter(m => !quais.includes(m) && html.includes(m));
   if (sobrando.length) {
@@ -151,14 +162,35 @@ writeFileSync('adesao.html', adesao, 'utf8');
 /* A página de eventos serve dois desenhos — a lista e o evento — porque os
  * dois compartilham capa, rodapé e folha de estilo; o servidor injeta um ou
  * outro. Um arquivo a menos para divergir. */
-let evento = readFileSync('modelo_evento.html', 'utf8')
+let evento = readFileSync('modelo_evento.html', 'utf8');
+exigirMarcador(evento, '/*__ESTILO__*/', 'modelo_evento.html',
+  'É por ele que entra a folha de estilo das páginas públicas. Sem ele a página '
+  + 'abre sem desenho nenhum.');
+evento = evento
   .replace('/*__MODULOS__*/', modulosDaAdesao)
+  .replace('/*__ESTILO__*/', estiloPublico())
   .replace('/*__FAVICON__*/', faviconEmUri());
 evento = inlinarLogos(evento, 'modelo_evento.html', ['/*__LOGO_TELA__*/']);
 exigirMarcador(evento, '/*__PUBLICACAO__*/', 'modelo_evento.html',
   'É por ele que o servidor injeta o evento ou a lista. Sem ele a página abre vazia.');
 guardar(evento, 'evento.html');
 writeFileSync('evento.html', evento, 'utf8');
+
+// ------------------------------------------------------------- principal
+/* A capa institucional: as portas do portal num lugar só. Não tem módulo de
+ * src/ — não valida CNPJ nem consulta cadastro, só encaminha. */
+let principal = readFileSync('modelo_principal.html', 'utf8');
+exigirMarcador(principal, '/*__ESTILO__*/', 'modelo_principal.html',
+  'É por ele que entra a folha de estilo das páginas públicas.');
+principal = principal
+  .replace('/*__ESTILO__*/', estiloPublico())
+  .replace('/*__FAVICON__*/', faviconEmUri());
+principal = inlinarLogos(principal, 'modelo_principal.html', ['/*__LOGO_TELA__*/']);
+exigirMarcador(principal, '/*__PUBLICACAO__*/', 'modelo_principal.html',
+  'É por ele que o servidor diz se há evento aberto e se a janela de opção segue '
+  + 'de pé. Sem ele a página promete encontro que não existe.');
+guardar(principal, 'principal.html');
+writeFileSync('principal.html', principal, 'utf8');
 
 // -------------------------------------------------------------- backoffice
 /* O backoffice não é montado pelo build — é servido como está. Mas as duas
@@ -169,3 +201,4 @@ guardar(readFileSync('backoffice.html', 'utf8'), 'backoffice.html');
 console.log(`portal.html gerado — ${(portal.length / 1024).toFixed(0)} KB`);
 console.log(`adesao.html gerado — ${(adesao.length / 1024).toFixed(0)} KB`);
 console.log(`evento.html gerado — ${(evento.length / 1024).toFixed(0)} KB`);
+console.log(`principal.html gerado — ${(principal.length / 1024).toFixed(0)} KB`);

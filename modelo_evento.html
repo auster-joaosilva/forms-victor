@@ -230,6 +230,32 @@ function blocoPrograma(e) {
   </section>`;
 }
 
+/* "Onde acontece" só existe quando há encontro PRESENCIAL e a equipe escreveu
+   o local. Numa série só de transmissão, uma foto da recepção seria enfeite —
+   e pior, sugeriria que alguém precisa sair de casa. */
+function blocoOnde(e) {
+  const local = (e.conteudo || {}).local;
+  const temPresencial = e.sessoes.some(s => s.formato === 'presencial');
+  if (!local || !temPresencial) return '';
+  return `<section class="rev" id="onde">
+    <span class="olho">onde acontece</span>
+    <h2>Na casa da Auster</h2>
+    <div class="regua"></div>
+    <div class="cartao lugar">
+      <figure class="retrato" style="margin:0">
+        <img src="/imagens/recepcao.jpg" alt="Recepção da Auster, em Uberlândia" loading="lazy">
+      </figure>
+      <div>
+        <p>Os encontros presenciais são na nossa casa, em Uberlândia. Esta é a
+        recepção — é por aqui que você entra, e é onde a equipe recebe quem chega.</p>
+        <div class="endereco">${esc(local)}</div>
+        <p class="nota" style="margin-top:8px">Chegue com alguns minutos de folga: dá
+        tempo de um café antes de começar.</p>
+      </div>
+    </div>
+  </section>`;
+}
+
 function blocoInformacoes(e) {
   const c = e.conteudo;
   const dias = [...new Set(e.sessoes.map(s => partesDaData(s.data).curta))];
@@ -392,6 +418,8 @@ function desenharEvento() {
       </div>
     </section>` : ''}
 
+    ${blocoOnde(e)}
+
     ${blocoInformacoes(e)}
 
     ${blocoInscricao(e)}`;
@@ -406,7 +434,8 @@ function montarAtalhos() {
   const nav = document.getElementById('atalhos');
   if (!nav) return;
   nav.innerHTML = [['sobre', 'O encontro'], ['temas', 'Temas'], ['programa', 'Programação'],
-                   ['quem', 'Quem apresenta'], ['participar', 'Como participar']]
+                   ['quem', 'Quem apresenta'], ['onde', 'Onde acontece'],
+                   ['participar', 'Como participar']]
     .filter(([id]) => document.getElementById(id))
     .map(([id, rotulo]) => `<a href="#${id}">${rotulo}</a>`).join('');
 }

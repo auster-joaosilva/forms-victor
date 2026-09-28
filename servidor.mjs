@@ -33,6 +33,17 @@ const SENHA = process.env.AUSTER_SENHA_BACKOFFICE || '';
 const ENDERECO_PUBLICO = (process.env.AUSTER_ENDERECO_PUBLICO || '').replace(/\/$/, '');
 const LIMITE_CORPO = 256 * 1024;   // um preenchimento cabe folgado em 30 KB
 
+/** Quem atende a raiz do domínio.
+ *
+ *  `diagnostico` (padrão) é o que está no ar hoje. `principal` entrega a capa
+ *  institucional na raiz — a virada combinada para depois de 01/10.
+ *
+ *  A virada NÃO alcança quem chega por convite. Todo link já enviado tem a
+ *  forma `/?c=TOKEN`, e cair na capa perderia o vínculo do convite com a
+ *  resposta: a empresa preencheria de novo, do zero, sem que ninguém notasse.
+ *  Com token, a raiz continua entregando o formulário. */
+const HOME = (process.env.AUSTER_HOME || 'diagnostico').trim();
+
 if (!SENHA) {
   console.error('ERRO: defina AUSTER_SENHA_BACKOFFICE. Sem senha, o backoffice');
   console.error('ficaria aberto na internet junto com dados de cliente.');
@@ -676,11 +687,36 @@ function telaDeEntrada(erro) {
 const servidor = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://local');
   const rota = url.pathname.replace(/\/+$/, '') || '/';
+  /* `url.pathname` chega PERCENT-ENCODED: quem digita `/diagnóstico-simples`
+   * bate aqui como `/diagn%C3%B3stico-simples`, e comparar com o texto
+   * acentuado dava 404. Entrada malformada (`%zz`) faz `decodeURIComponent`
+   * lançar, e por isso a versão legível é opcional, não obrigatória. */
+  let rotaLegivel = rota;
+  try { rotaLegivel = decodeURIComponent(rota); } catch { }
 
   try {
     // ---------------------------------------------------------- formulário
-    if (req.method === 'GET' && (rota === '/' || rota === '/index.html')) {
+    /* Três endereços para a mesma tela: a raiz (que é o que está no ar e o que
+     * está em todo convite já enviado), o endereço próprio do diagnóstico e a
+     * grafia com acento. Acento em endereço vira `%C3%B3` quando alguém copia
+     * para o WhatsApp — feio e frágil; ela existe só para não dar 404 em quem
+     * digitar, e manda para a grafia limpa. */
+    if (req.method === 'GET' && rotaLegivel === '/diagnóstico-simples') {
+      return responder(res, 302, 'Endereço sem acento: /diagnostico-simples',
+        'text/plain; charset=utf-8',
+        { Location: '/diagnostico-simples' + (url.search || '') });
+    }
+
+    if (req.method === 'GET'
+        && (rota === '/' || rota === '/index.html' || rota === '/diagnostico-simples')) {
       const token = url.searchParams.get('c');
+      // Só a raiz muda de dono, e só sem convite. Ver a nota em HOME.
+      if (HOME === 'principal' && rota !== '/diagnostico-simples' && !token) {
+        const capa = paginaPrincipal();
+        if (!capa) return responder(res, 500, 'principal.html não encontrado. Rode node construir.mjs.');
+        return responder(res, 200, capa, 'text/html; charset=utf-8',
+          { 'Cache-Control': 'no-store' });
+      }
       const convite = token ? banco.convite(token) : null;
       if (token && convite) banco.marcarAbertura(token);
       const html = portalConfigurado(convite);
@@ -712,8 +748,32 @@ const servidor = createServer(async (req, res) => {
       return json(res, 201, { ok: true, id, protocolo: pacote.protocolo });
     }
 
+    // ------------------------------------------------------------ imagens
+    /* A única coisa que o servidor entrega de disco sem inlinar. Uma foto de
+     * 100 KB em base64 dentro do HTML viajaria de novo a cada visita, sem
+     * cache; servida assim, o navegador guarda.
+     *
+     * O nome é conferido contra um molde SEM ponto e SEM barra antes de virar
+     * caminho. Concatenar o que o visitante escreve com um diretório é como se
+     * lê `../../dados/portal.db` por engano. */
+    if (req.method === 'GET' && rota.startsWith('/imagens/')) {
+      const nome = rota.slice(9);
+      const tipos = { jpg: 'image/jpeg', png: 'image/png', svg: 'image/svg+xml',
+                      webp: 'image/webp' };
+      const parte = /^([a-z0-9_-]+)\.(jpg|png|svg|webp)$/.exec(nome);
+      const caminho = parte ? `./ativos/imagens/${nome}` : null;
+      if (!caminho || !existsSync(caminho)) {
+        return responder(res, 404, 'Imagem não encontrada.', 'text/plain; charset=utf-8');
+      }
+      return responder(res, 200, readFileSync(caminho), tipos[parte[2]],
+        { 'Cache-Control': 'public, max-age=86400' });
+    }
+
     // ----------------------------------------------------------- principal
-    if (req.method === 'GET' && rota === '/principal') {
+    /* `/Principal` com maiúscula responde igual: endereço é escrito à mão em
+     * e-mail e em cartão, e um 404 por causa de uma tecla não se explica ao
+     * cliente. A grafia que a casa divulga é a minúscula. */
+    if (req.method === 'GET' && (rota === '/principal' || rota === '/Principal')) {
       const html = paginaPrincipal();
       if (!html) return responder(res, 500, 'principal.html não encontrado. Rode node construir.mjs.');
       return responder(res, 200, html, 'text/html; charset=utf-8',

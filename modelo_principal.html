@@ -26,24 +26,31 @@
     <a href="#como">Como funciona</a>
     <a href="#quem">Quem faz</a>
   </nav>
-  <a class="botao" style="padding:9px 20px;font-size:14px" href="/">Fazer o diagnóstico</a>
+  <a class="botao" style="padding:9px 20px;font-size:14px" href="/diagnostico-simples">Fazer o diagnóstico</a>
 </div>
 
-<header class="capa tema-aurora" id="capa">
-  <div class="logo marca-auster" role="img" aria-label="auster"></div>
-  <span class="rotulo"><span class="pisca"></span>Reforma Tributária</span>
-  <h1>A Reforma Tributária <b>na sua empresa</b></h1>
-  <div class="chamada">Diagnóstico, formalização da opção e encontros presenciais. Tudo o
-  que a Auster preparou para a sua empresa atravessar a mudança sabendo o que está
-  fazendo — e não descobrindo depois.</div>
-  <div class="tira">
-    <div class="dado"><b>4 a 10 min</b><span>o diagnóstico completo</span></div>
-    <div class="dado"><b>Com registro</b><span>o termo de opção assinado</span></div>
-    <div class="dado"><b>Presencial e online</b><span>os encontros da casa</span></div>
-  </div>
-  <div class="acoes">
-    <a class="botao" href="/">Fazer o diagnóstico</a>
-    <a class="botao fantasma" href="#portas">Ver tudo o que tem aqui</a>
+<header class="capa tema-aurora dupla" id="capa">
+  <div class="miolo">
+    <div>
+      <div class="logo marca-auster" role="img" aria-label="auster"></div>
+      <span class="rotulo"><span class="pisca"></span>Reforma Tributária</span>
+      <h1>A Reforma Tributária <b>na sua empresa</b></h1>
+      <div class="chamada">Diagnóstico, formalização da opção e encontros presenciais.
+      Tudo o que a Auster preparou para a sua empresa atravessar a mudança sabendo o
+      que está fazendo — e não descobrindo depois.</div>
+      <div class="tira">
+        <div class="dado"><b>4 a 10 min</b><span>o diagnóstico completo</span></div>
+        <div class="dado"><b>Com registro</b><span>o termo de opção assinado</span></div>
+      </div>
+      <div class="acoes">
+        <a class="botao" href="/diagnostico-simples">Fazer o diagnóstico</a>
+        <a class="botao fantasma" href="#portas">Ver tudo o que tem aqui</a>
+      </div>
+    </div>
+    <figure class="retrato" style="margin:0">
+      <img src="/imagens/recepcao.jpg" alt="Recepção da Auster, em Uberlândia" loading="lazy">
+      <figcaption class="legenda">A casa da Auster, em Uberlândia-MG</figcaption>
+    </figure>
   </div>
 </header>
 
@@ -178,7 +185,7 @@ const encontros = textoDosEncontros();
 const termo = textoDoTermo();
 
 const PORTAS = [
-  { href: '/', chave: 'diagnostico', t: 'Diagnóstico',
+  { href: '/diagnostico-simples', chave: 'diagnostico', t: 'Diagnóstico',
     d: 'Responda o questionário e descubra se a sua empresa do Simples Nacional deve '
      + 'recolher IBS e CBS dentro da guia única ou por fora dela.',
     ir: 'Começar o diagnóstico →' },

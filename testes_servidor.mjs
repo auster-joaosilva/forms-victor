@@ -904,7 +904,7 @@ try {
   const outro = spawn(process.execPath, ['servidor.mjs'], {
     env: { ...process.env, PORT: String(PORTA_CORTE), AUSTER_SENHA_BACKOFFICE: SENHA,
            AUSTER_BANCO: join(pasta, 'corte.db'), AUSTER_FIM_DA_JANELA: '2020-01-01',
-           NODE_ENV: 'test' },
+           AUSTER_HOME: 'principal', NODE_ENV: 'test' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   try {
@@ -918,8 +918,68 @@ try {
     conferir('data de corte no passado fecha a porta do termo na capa',
       comCorte.includes('"janela":"encerrada"'),
       (comCorte.match(/"janela":"\w+"/) || [''])[0]);
+
+    // ------------------- a virada da raiz nao pode atropelar convite enviado
+    // TODO link ja mandado tem a forma `/?c=TOKEN`. Se a capa tomasse a raiz
+    // tambem para eles, a empresa cairia numa pagina institucional, preencheria
+    // o diagnostico de novo do zero e o vinculo com o convite se perderia — sem
+    // erro nenhum na tela. E o unico jeito de provar e pedir as duas coisas ao
+    // MESMO servidor.
+    const OUTRA = `http://127.0.0.1:${PORTA_CORTE}`;
+    const raizSemToken = await (await fetch(OUTRA + '/')).text();
+    conferir('com AUSTER_HOME=principal, a raiz entrega a capa',
+      raizSemToken.includes('window.__PRINCIPAL__'));
+
+    const criadoLa = await (await fetch(OUTRA + '/api/backoffice/convites', {
+      method: 'POST',
+      headers: { Authorization: cabecalhoSenha(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nomeEmpresa: 'Empresa Convidada', cnpj: '12.345.678/0001-95' }),
+    })).json();
+    const tokenLa = criadoLa.convite && criadoLa.convite.token;
+    conferir('o servidor da virada cria convite', !!tokenLa);
+    const raizComToken = await (await fetch(`${OUTRA}/?c=${tokenLa}`)).text();
+    conferir('mesmo com a capa na raiz, quem chega por convite vê o formulário',
+      raizComToken.includes('Object.assign(CONFIG,')
+      && !raizComToken.includes('window.__PRINCIPAL__'));
+    conferir('e o convite continua pré-preenchendo a empresa',
+      raizComToken.includes('Empresa Convidada'));
+
+    const proprio = await (await fetch(OUTRA + '/diagnostico-simples')).text();
+    conferir('o endereço próprio do diagnóstico ignora a virada',
+      proprio.includes('Object.assign(CONFIG,'));
   } finally {
     outro.kill();
+  }
+
+  // ---------------------------------------------- enderecos novos e imagens
+  r = await fetch(BASE + '/diagnostico-simples');
+  const formNoEndereco = await r.text();
+  conferir('GET /diagnostico-simples entrega o formulário',
+    r.ok && formNoEndereco.includes('Object.assign(CONFIG,'), 'status ' + r.status);
+
+  r = await fetch(BASE + '/diagn%C3%B3stico-simples?c=abc', { redirect: 'manual' });
+  conferir('a grafia com acento manda para a grafia limpa, sem perder a consulta',
+    r.status === 302 && r.headers.get('location') === '/diagnostico-simples?c=abc',
+    r.status + ' ' + r.headers.get('location'));
+
+  r = await fetch(BASE + '/Principal');
+  conferir('/Principal com maiúscula responde igual',
+    r.ok && (await r.text()).includes('window.__PRINCIPAL__'), 'status ' + r.status);
+
+  r = await fetch(BASE + '/imagens/recepcao.jpg');
+  const foto = Buffer.from(await r.arrayBuffer());
+  conferir('a foto da casa é servida com o tipo e o cache certos',
+    r.ok && r.headers.get('content-type') === 'image/jpeg'
+    && (r.headers.get('cache-control') || '').includes('max-age')
+    && foto.length > 10000 && foto[0] === 0xFF && foto[1] === 0xD8,
+    `${r.status} ${r.headers.get('content-type')} ${foto.length}b`);
+
+  // Concatenar o que o visitante escreve com um diretorio e como se le o banco
+  // por engano. O molde do nome nao aceita ponto nem barra.
+  for (const tentativa of ['../servidor.mjs', '..%2Fservidor.mjs',
+                           '../../dados/portal.db', 'recepcao.jpg.mjs', 'nao-existe.jpg']) {
+    r = await fetch(BASE + '/imagens/' + tentativa);
+    conferir(`/imagens recusa "${tentativa}"`, r.status === 404, 'status ' + r.status);
   }
 
   // ------------------------------------------- desenho das paginas publicas

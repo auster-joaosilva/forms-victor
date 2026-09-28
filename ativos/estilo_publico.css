@@ -361,3 +361,45 @@ footer a{color:var(--claro)}
   border-radius:14px;padding:14px 20px;min-width:180px;backdrop-filter:blur(8px)}
 .tira .dado b{display:block;color:var(--claro);font-size:20px;font-weight:500;line-height:1.2}
 .tira .dado span{color:#AFCEDD;font-size:12.5px}
+
+/* =========================================================================
+   Fotografia da casa.
+
+   A foto que existe é VERTICAL e clara — a recepção. Posta como fundo de capa,
+   ela iria para baixo de um véu escuro e perderia justamente o que tem de bom:
+   a luz. Por isso entra ao lado do texto, no tamanho em que foi feita, e não
+   atrás dele.
+   ========================================================================= */
+.capa.dupla{text-align:left}
+.dupla .miolo{max-width:1120px;margin:0 auto;display:grid;
+  grid-template-columns:1.04fr .96fr;gap:clamp(26px,4vw,58px);align-items:center}
+.dupla .logo{margin:0 0 26px}
+.dupla h1{margin:0 0 18px;max-width:17ch}
+.dupla .chamada{margin:0;max-width:46ch}
+.dupla .tira,.dupla .acoes{justify-content:flex-start}
+.retrato{position:relative;border-radius:22px;overflow:hidden;
+  border:1px solid rgba(113,207,235,.26);box-shadow:0 30px 70px rgba(3,25,43,.45)}
+.retrato img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}
+/* Um fio de luz da marca no pé da foto, para ela pertencer à página e não
+   parecer colada de outro lugar. */
+.retrato::after{content:'';position:absolute;left:0;right:0;bottom:0;height:34%;
+  background:linear-gradient(180deg, transparent, rgba(5,44,71,.55))}
+.retrato .legenda{position:absolute;left:18px;right:18px;bottom:14px;z-index:2;
+  color:#DCEBF3;font-size:12.5px;letter-spacing:.3px}
+@media (max-width:860px){
+  .capa.dupla{text-align:center}
+  .dupla .miolo{grid-template-columns:1fr}
+  .dupla .logo{margin:0 auto 24px}
+  .dupla h1,.dupla .chamada{margin-left:auto;margin-right:auto}
+  .dupla .tira,.dupla .acoes{justify-content:center}
+  .retrato img{aspect-ratio:4/3}
+}
+
+/* "Onde acontece", na página do evento. */
+.lugar{display:grid;grid-template-columns:260px 1fr;gap:26px;align-items:center}
+@media (max-width:640px){ .lugar{grid-template-columns:1fr} }
+.lugar .retrato{box-shadow:var(--sombra)}
+/* Recorte deitado aqui: o retrato em pe deixava meio cartao vazio ao lado de
+   um texto de tres linhas. O 42%% do topo e onde esta a marca na parede. */
+.lugar .retrato img{aspect-ratio:4/3;object-position:center 42%}
+.lugar .endereco{font-weight:500;color:var(--escuro);margin-top:10px}

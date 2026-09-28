@@ -528,8 +528,10 @@ window.marcarAdesao = async (id, situacao) => {
    duas divergirem, o painel oferece um fundo que a pagina nao conhece e a
    capa cai no padrao sem avisar. O teste de invariante compara as duas. */
 const TEMAS_DE_CAPA = [['marca', 'Marca — o símbolo, grande, na borda'],
-                       ['solido', 'Sólido — azul-escuro e nada mais'],
-                       ['foto', 'Foto — imagem ao lado do texto']];
+                       ['foto', 'Foto — imagem ao lado do texto'],
+                       ['aurora', 'Aurora — luz em diagonal'],
+                       ['onda', 'Onda — faixas curvas'],
+                       ['solido', 'Sólido — azul-escuro e nada mais']];
 const SITUACOES_EVENTO = { rascunho:'Rascunho', publicado:'Publicado', encerrado:'Encerrado' };
 const SITUACOES_INSCRICAO = { inscrita:'Inscrita', confirmada:'Confirmada',
   presente:'Presente', ausente:'Ausente', cancelada:'Cancelada' };
@@ -686,8 +688,16 @@ async function verEvento(id) {
 
     <div class="painel" style="margin-bottom:18px">
       <h2 style="margin:0 0 14px;font-size:var(--t-titulo);font-weight:400">Conteúdo da página</h2>
-      <div class="campo-bo"><label for="evTitulo">Título</label>
-        <input type="text" id="evTitulo" value="${esc(evento.titulo)}"></div>
+      <div class="campos-bo">
+        <div class="campo-bo"><label for="evTitulo">Título</label>
+          <input type="text" id="evTitulo" value="${esc(evento.titulo)}"></div>
+        <div class="campo-bo"><label for="evApelido">Endereço da página</label>
+          <input type="text" id="evApelido" value="${esc(evento.apelido)}"
+                 oninput="window.conferirEndereco(this)">
+          <span class="nota" id="enderecoEstado">${evento.situacao === 'publicado'
+            ? 'este evento já está publicado: trocar o endereço quebra todo link já enviado'
+            : 'letras sem acento, números e hífen — é o que vem depois de /eventos/'}</span></div>
+      </div>
       <div class="campo-bo"><label for="evChamada">Chamada (o parágrafo abaixo do título)</label>
         <textarea id="evChamada">${esc(c.chamada || '')}</textarea></div>
       <div class="campo-bo"><label for="evLocal">Onde (linha sob as datas, na capa)</label>
@@ -706,8 +716,9 @@ async function verEvento(id) {
                placeholder="Se quiser ser avisado do próximo encontro, fale com a Auster."></div>
 
       <h3 style="margin:22px 0 8px">Aparência da capa</h3>
-      <p class="nota" style="margin:0 0 10px">São três fundos prontos, todos na linguagem
-        da casa. A escolha muda só o visual da capa: o conteúdo é o mesmo.</p>
+      <p class="nota" style="margin:0 0 10px">Cinco fundos prontos. “Marca”, “Foto” e “Sólido” seguem a regra da
+        casa ao pé da letra; “Aurora” e “Onda” usam degradê, que vale para
+        convite e não para peça institucional. A escolha muda só o visual da capa: o conteúdo é o mesmo.</p>
       <div class="campos-bo">
         <div class="campo-bo"><label for="evTema">Fundo da capa</label>
           <select id="evTema">
@@ -771,6 +782,22 @@ async function verEvento(id) {
 }
 
 window.abrirPagina = caminho => { window.open(caminho, '_blank'); };
+
+/* O mesmo molde que o servidor aplica, repetido aqui de proposito: a pessoa
+   descobre que o endereco e invalido ENQUANTO digita, e nao depois de
+   escrever a pagina inteira e clicar em salvar. O servidor continua sendo
+   quem decide — isto e cortesia, nao seguranca. */
+window.conferirEndereco = campo => {
+  const estado = document.getElementById('enderecoEstado');
+  const v = campo.value.trim().toLowerCase();
+  if (!estado) return;
+  if (!v) estado.textContent = 'o endereço não pode ficar em branco';
+  else if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(v)) {
+    estado.textContent = 'só letras sem acento, números e hífen entre palavras';
+  } else if (v.length < 3 || v.length > 50) {
+    estado.textContent = 'de 3 a 50 caracteres';
+  } else estado.textContent = 'a página vai ficar em /eventos/' + v;
+};
 
 window.novaSessao = () => {
   const corpo = document.getElementById('tabelaSessoes');
@@ -908,6 +935,7 @@ window.salvarEvento = async () => {
     },
   };
   const ok = await gravarEvento({ titulo: valor('evTitulo').trim() || evento.titulo,
+                                  apelido: valor('evApelido').trim() || evento.apelido,
                                   conteudo, sessoes: sessoesDaTela() });
   estado.textContent = ok ? 'salvo' : '';
   if (ok) { fotoNova = null; capaNova = null; verAgenda(); }

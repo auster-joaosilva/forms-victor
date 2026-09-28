@@ -571,7 +571,30 @@ function criarApi(db) {
       }
     },
 
-    alterarEvento(id, { titulo, conteudo, sessoes, situacao, inscricoes, quem }) {
+    /** Confere um apelido escrito à mão.
+     *
+     *  O apelido É o endereço da página. Letra maiúscula, acento e espaço
+     *  viram `%C3%A7` quando alguém copia o link para o WhatsApp, e a coluna
+     *  é UNIQUE — colisão derrubaria o salvamento com erro de banco em vez
+     *  de uma frase que a equipe entenda. */
+    conferirApelido(apelido, idDoDono) {
+      const limpo = String(apelido || '').trim().toLowerCase();
+      if (!limpo) return { ok: false, motivo: 'o endereço não pode ficar em branco' };
+      if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(limpo)) {
+        return { ok: false, motivo: 'o endereço aceita só letras sem acento, números e '
+                                  + 'hífen entre palavras' };
+      }
+      if (limpo.length < 3 || limpo.length > 50) {
+        return { ok: false, motivo: 'o endereço tem de ter de 3 a 50 caracteres' };
+      }
+      const dono = db.prepare('SELECT id FROM agenda WHERE apelido = ?').get(limpo);
+      if (dono && dono.id !== idDoDono) {
+        return { ok: false, motivo: `já existe um evento em /eventos/${limpo}` };
+      }
+      return { ok: true, apelido: limpo };
+    },
+
+    alterarEvento(id, { titulo, apelido, conteudo, sessoes, situacao, inscricoes, quem }) {
       const atual = db.prepare('SELECT * FROM agenda WHERE id = ?').get(id);
       if (!atual) return { ok: false, motivo: 'evento não encontrado' };
       if (situacao && !SITUACOES_EVENTO.includes(situacao)) {
@@ -580,12 +603,28 @@ function criarApi(db) {
       if (inscricoes && !INSCRICOES.includes(inscricoes)) {
         return { ok: false, motivo: 'estado de inscrições inválido' };
       }
+      let apelidoNovo = null;
+      if (apelido !== undefined && apelido !== null
+          && String(apelido).trim().toLowerCase() !== atual.apelido) {
+        const r = this.conferirApelido(apelido, id);
+        if (!r.ok) return r;
+        apelidoNovo = r.apelido;
+      }
       db.prepare(`UPDATE agenda SET titulo = COALESCE(?, titulo),
+                  apelido = COALESCE(?, apelido),
                   conteudo = COALESCE(?, conteudo), situacao = COALESCE(?, situacao),
                   inscricoes = COALESCE(?, inscricoes), alterado_em = ?, alterado_por = ?
                   WHERE id = ?`)
-        .run(titulo || null, conteudo ? JSON.stringify(conteudo) : null,
+        .run(titulo || null, apelidoNovo, conteudo ? JSON.stringify(conteudo) : null,
              situacao || null, inscricoes || null, agora(), quem || null, id);
+      // Trocar o endereco de um evento ja divulgado quebra todo link enviado.
+      // Nao impeco — a equipe pode estar consertando um erro de digitacao —,
+      // mas fica na trilha, com o endereco velho, que e o que ninguem lembra
+      // depois.
+      if (apelidoNovo) {
+        registrar(quem, 'evento_endereco_trocado', apelidoNovo,
+                  { de: atual.apelido, para: apelidoNovo, situacao: atual.situacao });
+      }
       if (Array.isArray(sessoes)) this.gravarSessoes(id, sessoes);
       registrar(quem, 'evento_alterado', atual.apelido,
                 { situacao: situacao || atual.situacao, inscricoes: inscricoes || atual.inscricoes });

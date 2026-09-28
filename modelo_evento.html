@@ -81,7 +81,10 @@ function diasAte(iso) {
 }
 
 const FORMATO = { online: 'Online', presencial: 'Presencial' };
-const TEMAS = ['marca', 'solido', 'foto'];
+/* A capa institucional NAO usa estes dois ultimos: o degrade decorativo e
+   excecao do convite, nao da marca. Quem oferece a lista e o painel, e o
+   painel so edita evento. */
+const TEMAS = ['marca', 'solido', 'foto', 'aurora', 'onda'];
 
 function estadoDaSessao(s) {
   if (s.vagas === null || s.vagas === undefined) return null;
@@ -183,8 +186,13 @@ function blocoCapa(e) {
     : `<div class="contagem">faltam <b>${faltam}</b> dias</div>`;
 
   const aberto = e.inscricoes === 'abertas' && e.situacao === 'publicado';
+  const ondas = tema === 'onda'
+    ? `<svg class="ondas" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+         <path fill="rgba(113,207,235,.16)" d="M0,64 C240,110 480,10 720,40 C960,70 1200,120 1440,86 L1440,120 L0,120 Z"/>
+         <path fill="rgba(247,251,253,.10)" d="M0,88 C280,40 520,120 780,92 C1040,64 1240,30 1440,58 L1440,120 L0,120 Z"/>
+       </svg>` : '';
 
-  capa.innerHTML = `<div class="miolo">
+  capa.innerHTML = `${ondas}<div class="miolo">
     <div class="texto">
       <div class="logo marca-auster" role="img" aria-label="auster"></div>
       ${c.rotulo ? `<span class="rotulo">${esc(c.rotulo)}</span>` : ''}

@@ -982,6 +982,60 @@ try {
     conferir(`/imagens recusa "${tentativa}"`, r.status === 404, 'status ' + r.status);
   }
 
+  // ------------------------------------------- endereco do evento editavel
+  // O apelido E o endereco da pagina, e a coluna e UNIQUE: sem conferencia,
+  // uma colisao derruba o salvamento com erro de banco em vez de uma frase
+  // que a equipe entenda.
+  r = await postar('/api/backoffice/eventos/alterar',
+    { id: ev.id, apelido: 'opcao-simples' }, comSessao);
+  const renomeado = await r.json();
+  conferir('o painel troca o endereço do evento',
+    r.ok && renomeado.evento.apelido === 'opcao-simples',
+    JSON.stringify(renomeado).slice(0, 80));
+
+  r = await fetch(`${BASE}/eventos/opcao-simples`);
+  conferir('o endereço novo responde', r.ok, 'status ' + r.status);
+
+  for (const [ruim, porque] of [['', 'em branco'], ['Opção Simples', 'com acento e espaço'],
+                                ['ab', 'curto demais'], ['-comeca-com-hifen', 'hífen na ponta'],
+                                ['dois--hifens', 'hífen dobrado']]) {
+    r = await postar('/api/backoffice/eventos/alterar', { id: ev.id, apelido: ruim }, comSessao);
+    const resposta = await r.json();
+    conferir(`recusa endereço ${porque}`,
+      r.status === 400 && !resposta.ok && typeof resposta.motivo === 'string',
+      `${r.status} ${resposta.motivo || ''}`);
+  }
+
+  // Maiuscula nao e erro, e descuido: o endereco desce para minuscula em
+  // silencio, porque recusar por isso seria implicancia com quem digitou.
+  r = await postar('/api/backoffice/eventos/alterar',
+    { id: ev.id, apelido: 'OPCAO-SIMPLES' }, comSessao);
+  conferir('maiúscula vira minúscula em vez de virar erro',
+    r.ok && (await r.json()).evento.apelido === 'opcao-simples');
+
+  // Colisao: um segundo evento nao pode tomar o endereco do primeiro.
+  const segundo = (await (await postar('/api/backoffice/eventos',
+    { titulo: 'Outro Encontro' }, comSessao)).json()).evento;
+  r = await postar('/api/backoffice/eventos/alterar',
+    { id: segundo.id, apelido: 'opcao-simples' }, comSessao);
+  conferir('recusa endereço já usado por outro evento', r.status === 400, 'status ' + r.status);
+  r = await fetch(`${BASE}/api/backoffice/eventos?id=${segundo.id}`, { headers: comSessao });
+  conferir('o segundo evento ficou com o endereço gerado do título',
+    (await r.json()).evento.apelido === 'outro-encontro');
+
+  // A troca fica na trilha, com o endereco velho — que e o que ninguem lembra
+  // depois de o link parar de abrir.
+  r = await fetch(BASE + '/api/backoffice/auditoria', { headers: comSessao });
+  const trilhaEndereco = (await r.json()).eventos || [];
+  conferir('a troca de endereço fica registrada na trilha, com o endereço velho',
+    trilhaEndereco.some(l => l.o_que === 'evento_endereco_trocado'
+      && String(l.detalhe || '').includes('conexao-tributaria')),
+    JSON.stringify(trilhaEndereco.slice(0, 2)).slice(0, 160));
+
+  // O resto da suite conhece o evento pelo apelido antigo.
+  await postar('/api/backoffice/eventos/alterar',
+    { id: ev.id, apelido: ev.apelido }, comSessao);
+
   // ------------------------------------------------- fotos da casa no painel
   r = await fetch(BASE + '/api/backoffice/imagens');
   conferir('a lista de fotos da casa exige credencial', r.status === 401, 'status ' + r.status);
@@ -1050,6 +1104,16 @@ try {
   const raios = [...folha.matchAll(/border-radius:([^;}]*)/g)]
     .map(m => m[1].trim()).filter(v => v !== '0' && v !== '50%');
   conferir('a folha só arredonda o numeral de etapa', raios.length === 0, raios.join(' | '));
+
+  // A cerca do degrade: aurora e onda sao excecao do CONVITE. A capa
+  // institucional e peca da marca e segue a regra ao pe da letra. Sem esta
+  // assercao, o dia em que alguem achar a aurora bonita na /principal ela vai
+  // para la e ninguem lembra por que nao podia.
+  const capaInstitucional = readFileSync('modelo_principal.html', 'utf8');
+  const decorativos = ['tema-aurora', 'tema-onda']
+    .filter(t => capaInstitucional.includes(t));
+  conferir('a capa institucional não usa os fundos com degradê',
+    decorativos.length === 0, decorativos.join(' '));
 
   // Cor fora da marca em pagina de cliente e erro de identidade, nao de gosto.
   // O dourado da peca de referencia e o azul errado ja apareceram antes.

@@ -1,15 +1,7 @@
 import { createMiddleware, createStart } from '@tanstack/react-start'
 import { redirect } from '@tanstack/react-router'
 import { resolveLegacyRedirect } from './app/legacy-redirects'
-
-const SECURITY_HEADERS: Record<string, string> = {
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'same-origin',
-  'X-Frame-Options': 'DENY',
-  'X-Robots-Tag': 'noindex, nofollow',
-  'Content-Security-Policy':
-    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
-}
+import { withSecurityHeaders } from './app/security-headers'
 
 const MAX_BODY_BYTES = 256 * 1024
 
@@ -32,9 +24,15 @@ const legacyRedirects = createMiddleware({ type: 'request' }).server(async ({ re
 })
 
 const securityHeaders = createMiddleware({ type: 'request' }).server(async ({ next }) => {
-  const result = await next()
-  for (const [name, value] of Object.entries(SECURITY_HEADERS)) result.response.headers.set(name, value)
-  return result
+  try {
+    const result = await next()
+    const response = withSecurityHeaders(result.response)
+    return response === result.response ? result : response
+  } catch (error) {
+    if (error instanceof Response) return withSecurityHeaders(error)
+    console.error(error)
+    return withSecurityHeaders(new Response('Erro interno.', { status: 500 }))
+  }
 })
 
 export const startInstance = createStart(() => ({ requestMiddleware: [securityHeaders, bodyLimit, legacyRedirects] }))

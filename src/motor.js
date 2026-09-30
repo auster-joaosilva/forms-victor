@@ -485,7 +485,7 @@ export const MODALIDADES = {
                    detalhe: 'A escolha entre as duas modalidades não existe neste caso.' },
 };
 
-const SAIDAS = {
+export const SAIDAS = {
   A: { codigo: 'A', titulo: 'Continue como está.',
        resumo: 'Siga recolhendo IBS e CBS dentro do DAS, na guia única.',
        // As frases "sairia mais caro" e "sai mais barato conceder" saíram em
@@ -751,8 +751,12 @@ function conflitoDaSaidaE(r, d, gatilhos, leitura) {
       conflito: 'Quase tudo o que você fatura vai para empresas que aproveitam crédito'
         + (paraEmpresa ? ` (${paraEmpresa} do faturamento)` : '')
         + ' — elas vão pedir desconto por um crédito que hoje você não entrega, e isso puxa '
-        + 'forte para tirar o imposto da guia. Só que as suas compras que geram crédito são '
-        + (compras ? `${compras} da receita` : 'pouco relevantes')
+        + 'forte para tirar o imposto da guia. Só que '
+        // A pergunta mede percentual das COMPRAS, não da receita. Devolver a
+        // faixa marcada como "% da receita" entregava ao respondente o próprio
+        // número com o sentido trocado — e quem conhece a empresa percebe.
+        + (compras ? `apenas ${compras} das suas compras vêm de fornecedores que geram crédito`
+                   : 'uma parte pouco relevante das suas compras vem de fornecedores que geram crédito')
         + ', e quem sai da guia única sem crédito próprio passa a recolher sobre quase toda a '
         + 'receita. Os dois lados da mesma conta apontam em direções opostas.',
       decide: 'quanto do desconto que os seus clientes vão pedir você consegue não dar, '
@@ -767,9 +771,10 @@ function conflitoDaSaidaE(r, d, gatilhos, leitura) {
         + (paraEmpresa ? ` (${paraEmpresa} do faturamento)` : '')
         + ', e essa parte puxa para tirar o imposto da guia. Mas a sua margem'
         + (margem ? ` (${margem})` : '')
-        + ' não dá espaço para absorver o desconto que esses clientes vão pedir, e as suas '
-        + 'compras que geram crédito são '
-        + (compras ? `${compras} da receita` : 'pouco relevantes') + '.',
+        + ' não dá espaço para absorver o desconto que esses clientes vão pedir, e '
+        + (compras ? `apenas ${compras} das suas compras vêm de fornecedores que geram crédito`
+                   : 'uma parte pouco relevante das suas compras vem de fornecedores que geram crédito')
+        + '.',
       decide: 'se o desconto negociado cabe na margem, ou se o crédito das suas compras paga '
         + 'a diferença. Nenhum dos dois se resolve por estimativa.',
       levantar: 'a margem real por linha de receita e as compras do último ano por fornecedor',
@@ -859,7 +864,11 @@ export function diagnosticar(respostas, hoje = new Date()) {
      variável está em conflito NESTE caso, o que vira a resposta para cada lado
      e o que precisa ser levantado. `saida` é constante compartilhada, então
      devolvo uma cópia — nunca altero o catálogo. */
-  const conflito = saida.codigo === 'E'
+  /* A comparação é por IDENTIDADE da saída, e não pelo código: `E_SEM_DADO`
+     também tem `codigo: 'E'` e caía aqui. Recebia o quadro de conflito, perdia
+     o próprio `significa` e informava a quem marcou "não sei" que as respostas
+     dela se contradizem. Falta de dado não é conflito. */
+  const conflito = saida === SAIDAS.E
     ? conflitoDoCaso(r, d, gatilhos, leitura, conf) : null;
   /* O `significa` da saida E vira CHAMADA, nao conteudo: o conflito inteiro e
      desenhado em tres blocos logo abaixo, na tela e na folha. Repetir o mesmo

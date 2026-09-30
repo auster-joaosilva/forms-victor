@@ -33,6 +33,57 @@ const SENHA = process.env.AUSTER_SENHA_BACKOFFICE || '';
 const ENDERECO_PUBLICO = (process.env.AUSTER_ENDERECO_PUBLICO || '').replace(/\/$/, '');
 const LIMITE_CORPO = 256 * 1024;   // um preenchimento cabe folgado em 30 KB
 
+/* Limite de envios por origem, em memória (achado E-06).
+ *
+ *  Os endpoints públicos de escrita não têm autenticação: um roteiro de dez
+ *  linhas enche de adesão e diagnóstico falso a fila que tem prazo, consome o
+ *  volume do disco e some no meio do tráfego real. O limite mora na memória
+ *  do processo — sem dependência nova, sem tabela — e por isso zera a cada
+ *  reinício. É de propósito: a defesa de verdade é na borda; isto é o piso que
+ *  existe mesmo sem ela.
+ *
+ *  Janela dupla: o minuto corta a rajada, a hora corta o gotejo.
+ *
+ *  RESSALVA (achado E-04, ainda aberto): com proxy à frente a origem vem de
+ *  cabeçalho, e cabeçalho é forjável por quem alcança o contêiner direto.
+ *  Enquanto E-04 não fechar, isto detém o roteiro ingênuo e o acidente, não o
+ *  ataque decidido. Não trate como proteção suficiente.
+ *
+ *  `AUSTER_SEM_LIMITE=1` desliga: a bateria dispara dezenas de envios da mesma
+ *  origem e bateria no próprio limite. `/api/adesao` fica FORA da lista por
+ *  decisão da casa — acrescente a rota aqui quando quiser fechá-la também. */
+const LIMITE_POR_MINUTO = Number(process.env.AUSTER_LIMITE_MINUTO || 5);
+const LIMITE_POR_HORA = Number(process.env.AUSTER_LIMITE_HORA || 30);
+const SEM_LIMITE = process.env.AUSTER_SEM_LIMITE === '1';
+const ROTAS_LIMITADAS = ['/api/respostas', '/api/inscricao'];
+const enviosPorOrigem = new Map();
+
+/** `null` quando pode passar; senão, quantos segundos faltam para poder. */
+function esperaPorExcessoDeEnvios(origem, agora = Date.now()) {
+  if (SEM_LIMITE) return null;
+  const chave = origem || 'sem-origem';
+  const marcas = (enviosPorOrigem.get(chave) || []).filter(t => agora - t < 3600000);
+  const noMinuto = marcas.filter(t => agora - t < 60000);
+  if (noMinuto.length >= LIMITE_POR_MINUTO || marcas.length >= LIMITE_POR_HORA) {
+    enviosPorOrigem.set(chave, marcas);
+    const libera = noMinuto.length >= LIMITE_POR_MINUTO
+      ? noMinuto[0] + 60000
+      : marcas[0] + 3600000;
+    return Math.max(1, Math.ceil((libera - agora) / 1000));
+  }
+  marcas.push(agora);
+  enviosPorOrigem.set(chave, marcas);
+  /* Sem esta poda o mapa cresce com o número de origens distintas e nunca
+     encolhe: vazamento lento, do tipo que só aparece em produção depois de
+     semanas de tráfego. */
+  if (enviosPorOrigem.size > 5000) {
+    for (const [k, v] of enviosPorOrigem) {
+      if (!v.some(t => agora - t < 3600000)) enviosPorOrigem.delete(k);
+    }
+  }
+  return null;
+}
+
 /** Quem atende a raiz do domínio.
  *
  *  `diagnostico` (padrão) é o que está no ar hoje. `principal` entrega a capa
@@ -742,6 +793,18 @@ const servidor = createServer(async (req, res) => {
   try { rotaLegivel = decodeURIComponent(rota); } catch { }
 
   try {
+    /* O limite vem ANTES de ler o corpo: ler 256 KB para só então recusar é
+       aceitar o custo do ataque e cobrar a conta do servidor. */
+    if (req.method === 'POST' && ROTAS_LIMITADAS.includes(rota)) {
+      const espera = esperaPorExcessoDeEnvios(origemDoPedido(req).origem);
+      if (espera !== null) {
+        return responder(res, 429,
+          JSON.stringify({ ok: false, erro: 'muitos envios seguidos; tente daqui a pouco' }),
+          'application/json; charset=utf-8',
+          { 'Retry-After': String(espera), 'Cache-Control': 'no-store' });
+      }
+    }
+
     // ---------------------------------------------------------- formulário
     /* Três endereços para a mesma tela: a raiz (que é o que está no ar e o que
      * está em todo convite já enviado), o endereço próprio do diagnóstico e a

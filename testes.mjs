@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs';
 import { PERGUNTAS, BLOCOS, TIPOS_CLIENTE, FAIXAS_PERCENTUAIS,
          perguntasVisiveis } from './src/perguntas.js';
-import { diagnosticar, POSICOES } from './src/motor.js';
+import { diagnosticar, POSICOES, SAIDAS } from './src/motor.js';
 import { planoDeAcao } from './src/acoes.js';
 
 // --------------------------------------------------------------------------
@@ -35,7 +35,16 @@ function abrirPortal() {
     addEventListener() {}, body: noEl() };
   globalThis.window = globalThis;
   globalThis.location = { search: '' };
-  globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+  /* Dublê COM ESTADO. O de antes devolvia null para tudo, e por isso a bateria
+     não conseguia exercitar nada do rascunho: uma asserção sobre validade
+     passaria verde mesmo com a regra apagada do código. */
+  const guardado = new Map();
+  globalThis.localStorage = {
+    getItem: k => (guardado.has(k) ? guardado.get(k) : null),
+    setItem: (k, v) => guardado.set(k, String(v)),
+    removeItem: k => guardado.delete(k),
+  };
+  globalThis.__guardado = guardado;
   globalThis.scrollTo = () => {};
   globalThis.fetch = () => Promise.reject(new Error('sem rede no teste'));
   globalThis.AbortController = class { constructor() { this.signal = {}; } abort() {} };
@@ -43,7 +52,7 @@ function abrirPortal() {
   globalThis.print = () => {};
   const api = new Function(script + `
     return { R, renderResultado, renderRevisao, campo, problemasNaEtapa,
-             respostaLegivel, renderRelatorio, resumoDoPreenchimento,
+             respostaLegivel, renderRelatorio, resumoDoPreenchimento, lerRascunho,
              app: document.getElementById('app') };`)();
   return { api, app };
 }
@@ -169,6 +178,17 @@ function afirmaMerito(texto) {
 const VAZAMENTO_DE_JARGAO = /\b(?:[a-z]+[A-Z][a-zA-Z]*|[a-z]{3,}_[a-z_]{3,})\b/;
 
 const INVARIANTES = [
+  { nome: 'saida de lacuna nao recebe o quadro de conflito',
+    porque: 'E_SEM_DADO divide o codigo "E" com a saida de conflito. Se o quadro aparecer, '
+      + 'quem marcou "nao sei" le que as proprias respostas se contradizem — e perde o '
+      + 'texto que explicava a lacuna',
+    checar: ({ d }) => d.saida.titulo !== SAIDAS.E_SEM_DADO.titulo
+      || (d.conflito === null && d.saida.significa === SAIDAS.E_SEM_DADO.significa) },
+  { nome: 'o conflito nunca mede as compras em percentual da receita',
+    porque: 'a pergunta mede percentual das COMPRAS. Devolver a faixa marcada como "% da '
+      + 'receita" entrega ao respondente o proprio numero com o sentido trocado',
+    checar: ({ d }) => !d.conflito
+      || !/compras que geram crédito são[^.]*da receita/.test(d.conflito.conflito) },
   { nome: 'aliquota fora do estimado nunca passa calada',
     porque: 'informar a nominal achando que e a efetiva contamina a comparacao inteira; '
       + 'se o motor detecta a divergencia, ela TEM de virar ponto em aberto na tela',
@@ -334,6 +354,11 @@ const hoje = new Date('2026-09-15T10:00:00');
 const falhas = new Map();
 let rodados = 0, erros = 0;
 
+/* Sem este contador, as invariantes acima passam verdes numa rodada em que o
+   gerador simplesmente nunca produziu o caso que elas guardam. Verde por
+   ausencia nao e verde. */
+const vistos = { saidaDeLacuna: 0, conflitoComCompras: 0 };
+
 function rodar(gerador, rotulo) {
   for (let i = 0; i < n; i++) {
     const r = gerador();
@@ -351,6 +376,10 @@ function rodar(gerador, rotulo) {
       continue;
     }
     rodados++;
+    if (caso.d.saida.titulo === SAIDAS.E_SEM_DADO.titulo) vistos.saidaDeLacuna++;
+    if (caso.d.conflito && /das suas compras vêm de fornecedores/.test(caso.d.conflito.conflito)) {
+      vistos.conflitoComCompras++;
+    }
     for (const inv of INVARIANTES) {
       let ok;
       try { ok = inv.checar(caso); }
@@ -377,8 +406,78 @@ const resumo = r => {
 console.log(`\nBateria de preenchimento — ${(2 * n).toLocaleString('pt-BR')} casos`);
 console.log(`${INVARIANTES.length} invariantes · ${PERGUNTAS.length} perguntas no formulário\n`);
 
+// ------------------------------------------------------------------- U-01
+/* A matriz no telefone vira lista: cada opcao tem de carregar o proprio rotulo
+   de faixa e cada linha o proprio rotulo de tipo de cliente. Nao ha navegador
+   aqui; o que se prova e que a marcacao CARREGA o dado de que o CSS do
+   telefone depende. Sem ele, a consulta de midia nao teria o que mostrar. */
+{
+  const pMatriz = PERGUNTAS.find(p => p.tipo === 'matriz');
+  if (!pMatriz) { console.log('FALHA · nao ha pergunta do tipo matriz no formulario'); process.exit(1); }
+  for (const k of Object.keys(api.R)) delete api.R[k];
+  const html = api.campo(pMatriz);
+  const celulas = pMatriz.colunas.length * pMatriz.linhas.length;
+  const conta = re => (html.match(re) || []).length;
+  let ruim = 0;
+  const exigir = (nome, ok, detalhe) => {
+    if (ok) return;
+    ruim++;
+    console.log(`FALHA · ${nome}` + (detalhe ? ` · ${detalhe}` : ''));
+  };
+  exigir('cada celula da matriz carrega o rotulo da faixa',
+    conta(/<span class="f">/g) === celulas, `${conta(/<span class="f">/g)} de ${celulas}`);
+  exigir('cada radio da matriz tem nome acessivel com linha e coluna',
+    conta(/<input type="radio"[^>]*aria-label="/g) === celulas,
+    `${conta(/<input type="radio"[^>]*aria-label="/g)} de ${celulas}`);
+  exigir('cada linha da matriz e cabecalho de linha',
+    conta(/<th scope="row"/g) === pMatriz.linhas.length,
+    `${conta(/<th scope="row"/g)} de ${pMatriz.linhas.length}`);
+  exigir('a faixa "nao sei" chega desenhada como rotulo',
+    html.includes('>não sei</span>'));
+  if (ruim) process.exit(1);
+  console.log(`matriz: ${celulas} celulas, todas com rotulo de faixa e nome acessivel`);
+}
+
+// ------------------------------------------------------------------- L-14
+/* Rascunho guarda nome, e-mail, telefone e CNPJ no navegador. Em maquina
+   compartilhada, sem prazo, ele reoferece o dado do visitante anterior. */
+{
+  const CHAVE = 'auster-decisao-simples-rascunho';
+  const comIdade = dias => JSON.stringify({
+    salvoEm: new Date(Date.now() - dias * 86400000).toISOString(),
+    etapa: 2, respostas: { nomeEmpresa: 'Empresa de Teste', email: 'a@b.test' },
+  });
+  let ruim = 0;
+  const exigir = (nome, ok, detalhe) => {
+    if (ok) return;
+    ruim++;
+    console.log(`FALHA · ${nome}` + (detalhe ? ` · ${detalhe}` : ''));
+  };
+  globalThis.__guardado.set(CHAVE, comIdade(1));
+  exigir('rascunho de ontem e reoferecido', api.lerRascunho() !== null);
+  globalThis.__guardado.set(CHAVE, comIdade(30));
+  exigir('rascunho de 30 dias e recusado', api.lerRascunho() === null);
+  exigir('rascunho vencido e apagado, nao so ignorado', !globalThis.__guardado.has(CHAVE));
+  globalThis.__guardado.set(CHAVE, JSON.stringify({ respostas: { a: 1 } }));
+  exigir('rascunho sem carimbo de data e recusado', api.lerRascunho() === null);
+  globalThis.__guardado.clear();
+  if (ruim) process.exit(1);
+  console.log('rascunho: validade conferida em quatro estados');
+}
+
 rodar(gerarUniforme, 'uniforme');
 rodar(gerarAdversarial, 'adversarial');
+
+for (const [chave, rotulo] of [
+  ['saidaDeLacuna', 'a saida de lacuna'],
+  ['conflitoComCompras', 'conflito que cite as compras'],
+]) {
+  if (!vistos[chave]) {
+    console.log(`FALHA · a bateria nunca produziu ${rotulo}; a invariante que guarda esse `
+      + 'caso passou por ausencia, nao por acerto.');
+    process.exit(1);
+  }
+}
 
 console.log(`casos completos: ${rodados.toLocaleString('pt-BR')}`);
 console.log(`exceções: ${erros}`);

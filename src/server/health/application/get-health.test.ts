@@ -11,4 +11,8 @@ describe('getHealth', () => {
     const down = await makeGetHealth({ applied: async () => { throw new Error('down') }, expected: async () => 'b' })()
     expect(down).toMatchObject({ ok: false, appliedMigration: null })
   })
+  it('is not ok instead of throwing when the expected migration cannot be read', async () => {
+    const missing = await makeGetHealth({ applied: async () => 'a', expected: async () => { throw new Error('ENOENT') } })()
+    expect(missing).toMatchObject({ ok: false, appliedMigration: 'a', expectedMigration: null })
+  })
 })

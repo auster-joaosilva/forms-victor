@@ -20,7 +20,7 @@
     "db:down": "docker compose down",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "auth:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
     "sweep": "tsx scripts/sweep.ts",
     "sweep:weighted": "tsx scripts/sweep-weighted.ts"

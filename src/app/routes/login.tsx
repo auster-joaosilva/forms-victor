@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/features/auth/api/session'
 import { LoginForm } from '@/features/auth/components/login-form'
 
 export const Route = createFileRoute('/login')({
-  validateSearch: z.object({ redirect: z.string().startsWith('/backoffice').optional() }),
+  validateSearch: z.object({ redirect: z.string().regex(/^\/backoffice(\/|\?|$)/).optional().catch(undefined) }),
   beforeLoad: async ({ search }) => {
     if (await getCurrentUser()) throw redirect({ to: search.redirect ?? '/backoffice' })
   },

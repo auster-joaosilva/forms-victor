@@ -11,38 +11,133 @@ export default tseslint.config(
       'import/resolver': { typescript: { alwaysTryTypes: true } },
       'boundaries/include': ['src/**/*'],
       'boundaries/elements': [
-        { type: 'app', pattern: 'src/app/**', mode: 'full' },
-        { type: 'entry', pattern: ['src/router.tsx', 'src/start.ts'], mode: 'full' },
-        { type: 'feature-api', pattern: 'src/features/*/api/**', capture: ['feature'], mode: 'full' },
-        { type: 'feature', pattern: 'src/features/*/**', capture: ['feature'], mode: 'full' },
-        { type: 'shared-ui', pattern: ['src/components/**', 'src/lib/**', 'src/hooks/**', 'src/config/**', 'src/styles/**'], mode: 'full' },
-        { type: 'shared-domain', pattern: 'src/server/shared/domain/**', mode: 'full' },
-        { type: 'server-shared', pattern: 'src/server/shared/**', mode: 'full' },
-        { type: 'domain', pattern: 'src/server/*/domain/**', capture: ['module'], mode: 'full' },
-        { type: 'application', pattern: 'src/server/*/application/**', capture: ['module'], mode: 'full' },
-        { type: 'ports', pattern: 'src/server/*/ports/**', capture: ['module'], mode: 'full' },
-        { type: 'adapters', pattern: 'src/server/*/adapters/**', capture: ['module'], mode: 'full' },
-        { type: 'composition', pattern: 'src/server/*/composition.ts', capture: ['module'], mode: 'full' },
+        { type: 'app', pattern: 'src/app/**', partialMatch: false },
+        { type: 'entry', pattern: ['src/router.tsx', 'src/start.ts'], partialMatch: false },
+        { type: 'feature-api', pattern: 'src/features/*/api/**', capture: ['feature'], partialMatch: false },
+        { type: 'feature', pattern: 'src/features/*/**', capture: ['feature'], partialMatch: false },
+        { type: 'shared-ui', pattern: ['src/components/**', 'src/lib/**', 'src/hooks/**', 'src/config/**', 'src/styles/**'], partialMatch: false },
+        { type: 'shared-domain', pattern: 'src/server/shared/domain/**', partialMatch: false },
+        { type: 'server-shared', pattern: 'src/server/shared/**', partialMatch: false },
+        { type: 'domain', pattern: 'src/server/*/domain/**', capture: ['module'], partialMatch: false },
+        { type: 'application', pattern: 'src/server/*/application/**', capture: ['module'], partialMatch: false },
+        { type: 'ports', pattern: 'src/server/*/ports/**', capture: ['module'], partialMatch: false },
+        { type: 'adapters', pattern: 'src/server/*/adapters/**', capture: ['module'], partialMatch: false },
+        { type: 'composition', pattern: 'src/server/*/composition.ts', capture: ['module'], partialMatch: false },
       ],
     },
     rules: {
-      'boundaries/element-types': [
+      'boundaries/dependencies': [
         'error',
         {
           default: 'disallow',
-          rules: [
-            { from: 'app', allow: ['app', 'feature', 'feature-api', 'shared-ui', 'domain', 'shared-domain', 'composition', 'server-shared'] },
-            { from: 'entry', allow: ['app', 'shared-ui'] },
-            { from: 'feature-api', allow: [['feature', { feature: '${from.feature}' }], ['feature-api', { feature: '${from.feature}' }], 'composition', 'server-shared', 'domain', 'shared-domain', 'shared-ui'] },
-            { from: 'feature', allow: [['feature', { feature: '${from.feature}' }], ['feature-api', { feature: '${from.feature}' }], 'shared-ui', 'domain', 'shared-domain'] },
-            { from: 'shared-ui', allow: ['shared-ui'] },
-            { from: 'shared-domain', allow: ['shared-domain'] },
-            { from: 'domain', allow: [['domain', { module: '${from.module}' }], 'shared-domain'] },
-            { from: 'application', allow: [['domain', { module: '${from.module}' }], ['ports', { module: '${from.module}' }], ['application', { module: '${from.module}' }], 'shared-domain'] },
-            { from: 'ports', allow: [['domain', { module: '${from.module}' }], 'shared-domain'] },
-            { from: 'adapters', allow: [['ports', { module: '${from.module}' }], ['domain', { module: '${from.module}' }], ['adapters', { module: '${from.module}' }], 'server-shared', 'shared-domain'] },
-            { from: 'composition', allow: [['domain', { module: '${from.module}' }], ['application', { module: '${from.module}' }], ['ports', { module: '${from.module}' }], ['adapters', { module: '${from.module}' }], 'composition', 'server-shared', 'shared-domain'] },
-            { from: 'server-shared', allow: ['server-shared', 'shared-domain', 'composition'] },
+          policies: [
+            {
+              from: { element: { type: 'app' } },
+              allow: [
+                { to: { element: { type: 'app' } } },
+                { to: { element: { type: 'feature' } } },
+                { to: { element: { type: 'feature-api' } } },
+                { to: { element: { type: 'shared-ui' } } },
+                { to: { element: { type: 'domain' } } },
+                { to: { element: { type: 'shared-domain' } } },
+                { to: { element: { type: 'composition' } }, partialMatch: false },
+                { to: { element: { type: 'server-shared' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'entry' } },
+              allow: [
+                { to: { element: { type: 'app' } } },
+                { to: { element: { type: 'shared-ui' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'feature-api' } },
+              allow: [
+                { to: { element: { type: 'feature', captured: { feature: '{{ from.element.captured.feature }}' } } } },
+                { to: { element: { type: 'feature-api', captured: { feature: '{{ from.element.captured.feature }}' } } } },
+                { to: { element: { type: 'composition' } }, partialMatch: false },
+                { to: { element: { type: 'server-shared' } } },
+                { to: { element: { type: 'domain' } } },
+                { to: { element: { type: 'shared-domain' } } },
+                { to: { element: { type: 'shared-ui' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'feature' } },
+              allow: [
+                { to: { element: { type: 'feature', captured: { feature: '{{ from.element.captured.feature }}' } } } },
+                { to: { element: { type: 'feature-api', captured: { feature: '{{ from.element.captured.feature }}' } } } },
+                { to: { element: { type: 'shared-ui' } } },
+                { to: { element: { type: 'domain' } } },
+                { to: { element: { type: 'shared-domain' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'shared-ui' } },
+              allow: [
+                { to: { element: { type: 'shared-ui' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'shared-domain' } },
+              allow: [
+                { to: { element: { type: 'shared-domain' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'domain' } },
+              allow: [
+                { to: { element: { type: 'domain', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'shared-domain' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'application' } },
+              allow: [
+                { to: { element: { type: 'domain', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'ports', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'application', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'shared-domain' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'ports' } },
+              allow: [
+                { to: { element: { type: 'domain', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'shared-domain' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'adapters' } },
+              allow: [
+                { to: { element: { type: 'ports', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'domain', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'adapters', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'server-shared' } } },
+                { to: { element: { type: 'shared-domain' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'composition' }, partialMatch: false },
+              allow: [
+                { to: { element: { type: 'domain', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'application', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'ports', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'adapters', captured: { module: '{{ from.element.captured.module }}' } } } },
+                { to: { element: { type: 'composition' } }, partialMatch: false },
+                { to: { element: { type: 'server-shared' } } },
+                { to: { element: { type: 'shared-domain' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'server-shared' } },
+              allow: [
+                { to: { element: { type: 'server-shared' } } },
+                { to: { element: { type: 'shared-domain' } } },
+                { to: { element: { type: 'composition' } } }
+              ],
+            },
           ],
         },
       ],
@@ -59,5 +154,9 @@ export default tseslint.config(
       'no-restricted-imports': ['error', { patterns: ['node:*', '@prisma/*', '@aws-sdk/*', 'better-auth*'] }],
       'no-restricted-globals': ['error', 'process', 'fetch', 'localStorage', 'sessionStorage', 'indexedDB'],
     },
+  },
+  {
+    files: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    rules: { 'no-restricted-imports': 'off' },
   },
 )

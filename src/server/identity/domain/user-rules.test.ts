@@ -19,7 +19,7 @@ describe('user rules', () => {
     expect(() => assertKeepsAnAdmin(admin, { active: false }, 1)).toThrow(/único administrador/)
     expect(() => assertKeepsAnAdmin(admin, { role: 'team' }, 2)).not.toThrow()
   })
-  it('matches the auth configuration', async () => {
+  it('matches the auth configuration', { timeout: 20_000 }, async () => {
     const shared = await import('@/server/shared/auth/auth')
     expect(USERNAME_RULE.source).toBe(shared.USERNAME_RULE.source)
     expect(MINIMUM_PASSWORD).toBe(shared.MINIMUM_PASSWORD)

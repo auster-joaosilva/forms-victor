@@ -6,7 +6,7 @@ import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { prisma } from '../prisma/client'
 import { getEnv } from '../env'
 import { recordAudit } from '@/server/audit/composition'
-import { requestOrigin } from '../http/request-origin'
+import { CLIENT_IP_HEADER, requestOrigin } from '../http/request-origin'
 
 export const USERNAME_RULE = /^[a-z][a-z0-9._-]{2,31}$/
 export const MINIMUM_PASSWORD = 12
@@ -37,7 +37,7 @@ export const auth = betterAuth({
   advanced: {
     cookiePrefix: 'forms',
     useSecureCookies: env.NODE_ENV === 'production',
-    ipAddress: { ipAddressHeaders: ['x-real-ip'] },
+    ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
   },
   plugins: [
     username({ minUsernameLength: 3, maxUsernameLength: 32, usernameValidator: (value) => USERNAME_RULE.test(value) }),
@@ -56,13 +56,13 @@ export const auth = betterAuth({
       const origin = ctx.request ? requestOrigin(ctx.request.headers) : null
       const returned = ctx.context.returned
       if (returned instanceof APIError) {
-        await recordAudit({ action: 'access_denied', actorUsername: attempted, reference: attempted, detail: { reason: returned.message, ip: origin?.ip } })
+        await recordAudit({ action: 'access_denied', actorUsername: attempted, reference: attempted, detail: { reason: returned.message, ...origin } })
         return
       }
       const user = ctx.context.newSession?.user
       if (user) {
         await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
-        await recordAudit({ action: 'login', actorId: user.id, actorUsername: attempted, detail: { ip: origin?.ip } })
+        await recordAudit({ action: 'login', actorId: user.id, actorUsername: attempted, detail: { ...origin } })
       }
     }),
   },

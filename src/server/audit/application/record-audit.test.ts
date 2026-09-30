@@ -5,11 +5,15 @@ import { makeListAudit, makeRecordAudit } from './record-audit'
 
 function fakeRepository() {
   const entries: AuditEntryInput[] = []
+  let receivedLimit = 0
   const repository: AuditLogRepository = {
     append: async (entry) => void entries.push(entry),
-    latest: async (limit) => entries.slice(-limit).map((e, i) => ({ ...e, id: i + 1, occurredAt: new Date(0) }) as AuditEntry),
+    latest: async (limit) => {
+      receivedLimit = limit
+      return entries.slice(-limit).map((e, i) => ({ ...e, id: i + 1, occurredAt: new Date(0) }) as AuditEntry)
+    },
   }
-  return { entries, repository }
+  return { entries, repository, getReceivedLimit: () => receivedLimit }
 }
 
 describe('recordAudit', () => {
@@ -20,8 +24,13 @@ describe('recordAudit', () => {
   })
 
   it('caps the listing at 500', async () => {
-    const { repository } = fakeRepository()
+    const { repository, getReceivedLimit } = fakeRepository()
     const listAudit = makeListAudit(repository)
-    await expect(listAudit(10_000)).resolves.toEqual([])
+    await listAudit(10_000)
+    expect(getReceivedLimit()).toBe(500)
+    await listAudit(0)
+    expect(getReceivedLimit()).toBe(1)
+    await listAudit()
+    expect(getReceivedLimit()).toBe(200)
   })
 })

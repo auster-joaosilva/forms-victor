@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: forms_victor_dev
+      TZ: America/Sao_Paulo
+    ports: ['5432:5432']
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U app']
+      interval: 2s
+      retries: 20
+  minio:
+    image: pgsty/minio:RELEASE.2026-06-18T00-00-00Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports: ['9000:9000', '9001:9001']
+    volumes: [miniodata:/data]
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 2s
+      retries: 20
+volumes:
+  pgdata:
+  miniodata:

@@ -19,6 +19,13 @@ function withInvite(target: string, search: URLSearchParams): string {
   return query ? `${target}?${query}` : target
 }
 
+function withoutId(target: string, search: URLSearchParams): string {
+  const params = new URLSearchParams(search)
+  params.delete('id')
+  const query = params.toString()
+  return query ? `${target}?${query}` : target
+}
+
 export function resolveLegacyRedirect(url: URL): string | null {
   let path: string
   try {
@@ -29,9 +36,9 @@ export function resolveLegacyRedirect(url: URL): string | null {
   const lower = path.toLowerCase()
   if (path === '/' && url.searchParams.has('c')) return withInvite('/diagnosis', url.searchParams)
   if (STATIC_PATHS[lower]) return withInvite(STATIC_PATHS[lower], url.searchParams)
-  if (lower.startsWith('/eventos/')) return `/events/${encodeURIComponent(path.slice('/eventos/'.length))}`
+  if (lower.startsWith('/eventos/')) return `/events/${encodeURIComponent(path.slice('/eventos/'.length))}${url.search}`
   const id = url.searchParams.get('id')
-  if (lower === '/backoffice/relatorio' && id && /^\d+$/.test(id)) return `/backoffice/responses/${id}/report`
-  if (lower === '/backoffice/termo' && id && /^\d+$/.test(id)) return `/backoffice/adhesions/${id}/term`
+  if (lower === '/backoffice/relatorio' && id && /^\d+$/.test(id)) return withoutId(`/backoffice/responses/${id}/report`, url.searchParams)
+  if (lower === '/backoffice/termo' && id && /^\d+$/.test(id)) return withoutId(`/backoffice/adhesions/${id}/term`, url.searchParams)
   return null
 }

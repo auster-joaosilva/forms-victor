@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: Kanit, Montserrat, Raleway, Arial, sans-serif;
+  --color-auster-dark: #052c47;
+  --color-auster-light: #71cfeb;
+  --color-auster-accent: #007e99;
+  --color-auster-ink: #052c47;
+  --color-auster-gray: #5b6b78;
+  --color-auster-background: #f1f5f8;
+  --color-auster-border: #cfd9e0;
+  --color-auster-border-strong: #8496a5;
+  --color-auster-high: #b63b32;
+  --color-auster-medium: #9a6608;
+  --color-auster-low: #2f7d52;
+  --color-auster-unknown: #7a5200;
+  --color-auster-unknown-bg: #fdf4e3;
+}
+
+body {
+  background: var(--color-auster-background);
+  color: var(--color-auster-ink);
+  font-family: var(--font-sans);
+  font-weight: 300;
+  line-height: 1.55;
+}

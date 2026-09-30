@@ -1,42 +1,21 @@
-# O banco tem dado de cliente: nunca versionar.
+node_modules/
+dist/
+.output/
+.tanstack/
+.vinxi/
+.env
+.env.local
+src/app/routeTree.gen.ts
+src/server/shared/prisma/generated/
+*.log
+.claude/
+
+# Dados de cliente e arquivos locais do servidor legacy (legacy/ ainda escreve aqui).
 dados/
 *.db
 *.db-wal
 *.db-shm
-
-# Gerado pelo build.
-portal.html
-
-# Backups locais.
-09_Backups/
-
-node_modules/
-.env
-
-# Amostra de resposta da consulta cadastral, usada em conferencia manual.
-# Nao e fonte: e despejo de API.
 bapi.json
-
-# Registro interno de decisoes da casa: nomes, discussoes, revisao externa,
-# premissas em aberto. Fica na maquina, nao em repositorio publico. A
-# rastreabilidade exigida pela casa continua atendida pelo arquivo local.
 CHANGELOG_CLAUDE.md
-
-# Configuracao de sessao de ferramenta, nada a ver com a aplicacao.
-.claude/
+09_Backups/
 .claude-flow/
-
-# Gerado pelo build (a fonte e modelo_adesao.html).
-adesao.html
-
-# Gerado pelo build (a fonte e modelo_evento.html).
-evento.html
-
-# Gerado pelo build (a fonte e modelo_principal.html).
-principal.html
-
-# Originais das fotos: ficam na maquina, nao no repositorio.
-07_Originais_Fotos/
-
-# Derivado: o motivo e gerado por ferramentas/gerar_motivo.py e colado no CSS.
-ativos/motivo.txt

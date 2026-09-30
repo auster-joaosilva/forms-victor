@@ -947,6 +947,29 @@ try {
     const proprio = await (await fetch(OUTRA + '/diagnostico-simples')).text();
     conferir('o endereço próprio do diagnóstico ignora a virada',
       proprio.includes('Object.assign(CONFIG,'));
+
+    // -------------------------------------------- F-04: a janela que fecha
+    // Depois do corte a pagina do termo ABRE e explica, em vez de sumir: link
+    // antigo no WhatsApp que responde "nao encontrado" deixa a pessoa sem
+    // saber se perdeu o prazo ou se o portal quebrou.
+    const termoFora = await (await fetch(OUTRA + '/adesao')).text();
+    conferir('depois do corte, /adesao abre e diz que a janela encerrou',
+      termoFora.includes('window.__JANELA_ENCERRADA__ = {'));
+    conferir('e a pagina do termo ainda responde 200, nao 404',
+      (await fetch(OUTRA + '/adesao')).status === 200);
+
+    // A porta fecha no SERVIDOR, e nao so na tela: a pagina pode estar aberta
+    // desde ontem, e um envio depois do prazo viraria adesao que ninguem
+    // protocola — com recibo prometendo protocolo que nao acontece.
+    const tentativa = await fetch(OUTRA + '/api/adesao', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(adesaoValida()),
+    });
+    const recusa = await tentativa.json();
+    conferir('depois do corte, POST /api/adesao recusa',
+      tentativa.status === 422 && !recusa.ok
+      && String(recusa.erro).includes('encerrou em 01/01/2020'),
+      `${tentativa.status} ${recusa.erro || ''}`);
   } finally {
     outro.kill();
   }
@@ -981,6 +1004,12 @@ try {
     r = await fetch(BASE + '/imagens/' + tentativa);
     conferir(`/imagens recusa "${tentativa}"`, r.status === 404, 'status ' + r.status);
   }
+
+  // Hoje a janela esta aberta, e o servidor principal tem de se comportar como
+  // antes: se esta assercao cair, o corte fechou a porta cedo demais.
+  const termoHoje = await (await fetch(BASE + '/adesao')).text();
+  conferir('com a janela aberta, /adesao nao anuncia encerramento',
+    !termoHoje.includes('window.__JANELA_ENCERRADA__ = {'));
 
   // ------------------------------------------- endereco do evento editavel
   // O apelido E o endereco da pagina, e a coluna e UNIQUE: sem conferencia,

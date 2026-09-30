@@ -628,7 +628,29 @@ if (TERMO) document.getElementById('subCabecalho').textContent = TERMO.subtitulo
  * via em PDF. Reaproveita o mesmo desenho que o cliente viu — o backoffice não
  * precisa aprender a montar o documento de novo, e assim as duas vias não
  * podem divergir. */
-if (window.__SO_TERMO__) {
+/* Janela encerrada: a página abre e explica, em vez de sumir. Link antigo no
+ * WhatsApp que responde "não encontrado" deixa a pessoa sem saber se perdeu o
+ * prazo ou se o portal quebrou — e ela liga para a equipe perguntando. Aqui
+ * ela lê o que aconteceu e o que fazer, que é a mesma coisa que a equipe
+ * diria no telefone.
+ *
+ * O texto NÃO promete a próxima janela: a data do próximo ciclo é decisão de
+ * conteúdo da casa, não minha, e prometer errado aqui custa mais que calar. */
+if (window.__JANELA_ENCERRADA__ && !window.__SO_TERMO__) {
+  const j = window.__JANELA_ENCERRADA__;
+  const dia = String(j.fim || '').split('-').reverse().join('/');
+  tela.innerHTML = `<div class="cartao">
+    <h2 style="margin-top:0">A janela de opção encerrou</h2>
+    <p>O prazo para formalizar a opção pelo Simples Híbrido terminou em
+    <b>${dia}</b>, e por isso esta página não recebe mais confirmações.</p>
+    <p>Se a sua empresa confirmou a opção antes do prazo, nada muda: a Auster
+    já tem o registro e segue com o que foi combinado.</p>
+    <p>Se você chegou aqui agora, ou ficou em dúvida sobre o que foi feito no
+    caso da sua empresa, escreva para
+    <a href="mailto:${j.contato}">${j.contato}</a> — a equipe responde com a
+    situação da sua empresa e com o que ainda dá para fazer.</p>
+  </div>`;
+} else if (window.__SO_TERMO__) {
   const guardado = window.__SO_TERMO__;
   Object.assign(R, guardado.empresa || {});
   R.modalidade = guardado.modalidade || '';

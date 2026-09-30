@@ -12,7 +12,6 @@ export default tseslint.config(
       'boundaries/include': ['src/**/*'],
       'boundaries/elements': [
         { type: 'app', pattern: 'src/app/**', partialMatch: false },
-        { type: 'entry', pattern: ['src/router.tsx', 'src/start.ts'], partialMatch: false },
         { type: 'feature-api', pattern: 'src/features/*/api/**', capture: ['feature'], partialMatch: false },
         { type: 'feature', pattern: 'src/features/*/**', capture: ['feature'], partialMatch: false },
         { type: 'shared-ui', pattern: ['src/components/**', 'src/lib/**', 'src/hooks/**', 'src/config/**', 'src/styles/**'], partialMatch: false },
@@ -22,7 +21,10 @@ export default tseslint.config(
         { type: 'application', pattern: 'src/server/*/application/**', capture: ['module'], partialMatch: false },
         { type: 'ports', pattern: 'src/server/*/ports/**', capture: ['module'], partialMatch: false },
         { type: 'adapters', pattern: 'src/server/*/adapters/**', capture: ['module'], partialMatch: false },
-        { type: 'composition', pattern: 'src/server/*/composition.ts', capture: ['module'], partialMatch: false },
+      ],
+      'boundaries/files': [
+        { category: 'entry', pattern: ['src/router.tsx', 'src/start.ts'] },
+        { category: 'composition', pattern: 'src/server/*/composition.ts', capture: ['module'] },
       ],
     },
     rules: {
@@ -30,6 +32,7 @@ export default tseslint.config(
         'error',
         {
           default: 'disallow',
+          checkInternals: true,
           policies: [
             {
               from: { element: { type: 'app' } },
@@ -40,12 +43,12 @@ export default tseslint.config(
                 { to: { element: { type: 'shared-ui' } } },
                 { to: { element: { type: 'domain' } } },
                 { to: { element: { type: 'shared-domain' } } },
-                { to: { element: { type: 'composition' } }, partialMatch: false },
+                { to: { file: { categories: 'composition' } } },
                 { to: { element: { type: 'server-shared' } } }
               ],
             },
             {
-              from: { element: { type: 'entry' } },
+              from: { file: { categories: 'entry' } },
               allow: [
                 { to: { element: { type: 'app' } } },
                 { to: { element: { type: 'shared-ui' } } }
@@ -56,7 +59,7 @@ export default tseslint.config(
               allow: [
                 { to: { element: { type: 'feature', captured: { feature: '{{ from.element.captured.feature }}' } } } },
                 { to: { element: { type: 'feature-api', captured: { feature: '{{ from.element.captured.feature }}' } } } },
-                { to: { element: { type: 'composition' } }, partialMatch: false },
+                { to: { file: { categories: 'composition' } } },
                 { to: { element: { type: 'server-shared' } } },
                 { to: { element: { type: 'domain' } } },
                 { to: { element: { type: 'shared-domain' } } },
@@ -119,13 +122,13 @@ export default tseslint.config(
               ],
             },
             {
-              from: { element: { type: 'composition' }, partialMatch: false },
+              from: { file: { categories: 'composition' } },
               allow: [
-                { to: { element: { type: 'domain', captured: { module: '{{ from.element.captured.module }}' } } } },
-                { to: { element: { type: 'application', captured: { module: '{{ from.element.captured.module }}' } } } },
-                { to: { element: { type: 'ports', captured: { module: '{{ from.element.captured.module }}' } } } },
-                { to: { element: { type: 'adapters', captured: { module: '{{ from.element.captured.module }}' } } } },
-                { to: { element: { type: 'composition' } }, partialMatch: false },
+                { to: { element: { type: 'domain', captured: { module: '{{ from.file.captured.module }}' } } } },
+                { to: { element: { type: 'application', captured: { module: '{{ from.file.captured.module }}' } } } },
+                { to: { element: { type: 'ports', captured: { module: '{{ from.file.captured.module }}' } } } },
+                { to: { element: { type: 'adapters', captured: { module: '{{ from.file.captured.module }}' } } } },
+                { to: { file: { categories: 'composition' } } },
                 { to: { element: { type: 'server-shared' } } },
                 { to: { element: { type: 'shared-domain' } } }
               ],
@@ -135,7 +138,7 @@ export default tseslint.config(
               allow: [
                 { to: { element: { type: 'server-shared' } } },
                 { to: { element: { type: 'shared-domain' } } },
-                { to: { element: { type: 'composition' } } }
+                { to: { file: { categories: 'composition' } } }
               ],
             },
           ],

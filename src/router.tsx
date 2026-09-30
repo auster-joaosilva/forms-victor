@@ -5,7 +5,7 @@ import { createQueryClient } from './lib/query-client'
 
 export function getRouter() {
   const queryClient = createQueryClient()
-  const router = createRouter({ routeTree, context: { queryClient }, scrollRestoration: true, defaultPreload: 'intent' })
+  const router = createRouter({ routeTree, context: { queryClient }, defaultPreload: 'intent' })
   setupRouterSsrQueryIntegration({ router, queryClient })
   return router
 }

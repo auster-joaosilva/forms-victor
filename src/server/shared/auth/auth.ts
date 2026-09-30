@@ -11,6 +11,7 @@ import { requestOrigin } from '../http/request-origin'
 export const USERNAME_RULE = /^[a-z][a-z0-9._-]{2,31}$/
 export const MINIMUM_PASSWORD = 12
 const SIGN_IN_PATH = '/sign-in/username'
+const HTTP_DISABLED_PATHS = ['/sign-in/email', '/update-user', '/change-password', '/change-email', '/delete-user', '/delete-user/callback']
 
 const env = getEnv()
 
@@ -18,6 +19,7 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
+  disabledPaths: HTTP_DISABLED_PATHS,
   emailAndPassword: { enabled: true, disableSignUp: true, minPasswordLength: MINIMUM_PASSWORD, maxPasswordLength: 128 },
   session: { expiresIn: 60 * 60 * 12, updateAge: 60 * 60 },
   rateLimit: {
@@ -28,7 +30,11 @@ export const auth = betterAuth({
     max: 60,
     customRules: { [SIGN_IN_PATH]: { window: 60, max: 5 } },
   },
-  advanced: { cookiePrefix: 'forms', useSecureCookies: env.NODE_ENV === 'production' },
+  advanced: {
+    cookiePrefix: 'forms',
+    useSecureCookies: env.NODE_ENV === 'production',
+    ipAddress: { ipAddressHeaders: ['x-real-ip'] },
+  },
   plugins: [
     username({ minUsernameLength: 3, maxUsernameLength: 32, usernameValidator: (value) => USERNAME_RULE.test(value) }),
     admin({ defaultRole: 'team', adminRoles: ['admin'] }),

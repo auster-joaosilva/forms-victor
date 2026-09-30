@@ -160,6 +160,6 @@ export default tseslint.config(
   },
   {
     files: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
-    rules: { 'no-restricted-imports': 'off' },
+    rules: { 'no-restricted-imports': 'off', 'boundaries/dependencies': 'off' },
   },
 )

@@ -2,7 +2,7 @@ import tseslint from 'typescript-eslint'
 import boundaries from 'eslint-plugin-boundaries'
 
 export default tseslint.config(
-  { ignores: ['legacy/**', 'dist/**', '.output/**', 'src/app/routeTree.gen.ts', 'src/server/shared/prisma/generated/**', 'src/components/ui/**'] },
+  { ignores: ['dist/**', '.output/**', 'src/app/routeTree.gen.ts', 'src/server/shared/prisma/generated/**', 'src/components/ui/**'] },
   ...tseslint.configs.strict,
   {
     files: ['src/**/*.{ts,tsx}'],

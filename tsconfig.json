@@ -19,5 +19,5 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src", "tests", "scripts", "prisma", "*.ts"],
-  "exclude": ["legacy", "node_modules", "dist"]
+  "exclude": ["node_modules", "dist"]
 }

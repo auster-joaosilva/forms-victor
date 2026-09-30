@@ -1,16 +1,11 @@
-import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { TERMO } from '../../../../legacy/src/termo.js'
 import { CURRENT_TERM, TERM_V4, computeTermHash } from './term'
 
-describe('term V4', () => {
-  it('is byte-identical to the legacy object', () => {
-    expect(JSON.stringify(TERM_V4)).toBe(JSON.stringify(TERMO))
-  })
+const TERM_V4_HASH = '94667b1747b65c3e177416ee98e63a79b10599c1a5240b3a0836c094c0788441'
 
-  it('hashes to the same value stored with every existing adhesion', async () => {
-    const legacyHash = createHash('sha256').update(JSON.stringify(TERMO), 'utf8').digest('hex')
-    expect(await computeTermHash(TERM_V4)).toBe(legacyHash)
+describe('term V4', () => {
+  it('hashes to the value stored with every existing adhesion', async () => {
+    expect(await computeTermHash(TERM_V4)).toBe(TERM_V4_HASH)
   })
 
   it('is the current version', () => {

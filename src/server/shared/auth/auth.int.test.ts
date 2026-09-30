@@ -39,6 +39,7 @@ describe('auth', () => {
     expect(response.headers.get('set-cookie')).toMatch(/forms\.session_token=/)
     const entries = await prisma.auditLog.findMany()
     expect(entries.map((e) => e.action)).toContain('login')
+    expect(entries.find((e) => e.action === 'login')?.detail).toEqual({ ip: '9.9.9.9', source: 'x-real-ip', chain: null })
     expect((await prisma.user.findUnique({ where: { username: 'ana' } }))?.lastLoginAt).not.toBeNull()
   })
 
@@ -47,6 +48,17 @@ describe('auth', () => {
     expect(response.status).toBe(401)
     const denied = await prisma.auditLog.findFirst({ where: { action: 'access_denied' } })
     expect(denied?.reference).toBe('ana')
+    expect(denied?.detail).toEqual({ reason: 'Invalid username or password', ip: '9.9.9.9', source: 'x-real-ip', chain: null })
+  })
+
+  it('records the resolved origin and its chain behind Cloudflare', async () => {
+    const edge = { 'x-real-ip': CLOUDFLARE_EDGE, 'cf-connecting-ip': '200.1.2.3', 'x-forwarded-for': `200.1.2.3, ${CLOUDFLARE_EDGE}` }
+    expect((await signInThroughHandler('senha-bem-longa-1', edge)).status).toBe(200)
+    expect((await signInThroughHandler('errada-errada-errada', edge)).status).toBe(401)
+    const expected = { ip: '200.1.2.3', source: 'cf-connecting-ip', chain: `200.1.2.3, ${CLOUDFLARE_EDGE}` }
+    expect((await prisma.auditLog.findFirst({ where: { action: 'login' } }))?.detail).toEqual(expected)
+    expect((await prisma.auditLog.findFirst({ where: { action: 'access_denied' } }))?.detail).toEqual({ reason: 'Invalid username or password', ...expected })
+    expect((await prisma.session.findFirst())?.ipAddress).toBe('200.1.2.3')
   })
 
   it('refuses public sign-up', async () => {
@@ -178,6 +190,8 @@ describe('auth', () => {
     expect((await signInThroughHandler('errada-errada-errada', { 'x-real-ip': '86.1.1.1', 'cf-connecting-ip': '200.9.9.9' })).status).toBe(429)
     const keys = (await prisma.rateLimit.findMany()).map((row) => row.key)
     expect(keys).toEqual(['86.1.1.1|/sign-in/username'])
+    const denied = await prisma.auditLog.findMany({ where: { action: 'access_denied' } })
+    expect(denied.map((entry) => (entry.detail as { ip?: string }).ip)).toEqual(Array(5).fill('86.1.1.1'))
   })
 
   it('resolves the client through the production HTTP server', async () => {

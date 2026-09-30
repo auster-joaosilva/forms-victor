@@ -56,13 +56,13 @@ export const auth = betterAuth({
       const origin = ctx.request ? requestOrigin(ctx.request.headers) : null
       const returned = ctx.context.returned
       if (returned instanceof APIError) {
-        await recordAudit({ action: 'access_denied', actorUsername: attempted, reference: attempted, detail: { reason: returned.message, ip: origin?.ip } })
+        await recordAudit({ action: 'access_denied', actorUsername: attempted, reference: attempted, detail: { reason: returned.message, ...origin } })
         return
       }
       const user = ctx.context.newSession?.user
       if (user) {
         await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
-        await recordAudit({ action: 'login', actorId: user.id, actorUsername: attempted, detail: { ip: origin?.ip } })
+        await recordAudit({ action: 'login', actorId: user.id, actorUsername: attempted, detail: { ...origin } })
       }
     }),
   },

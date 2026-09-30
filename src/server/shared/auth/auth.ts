@@ -11,7 +11,12 @@ import { requestOrigin } from '../http/request-origin'
 export const USERNAME_RULE = /^[a-z][a-z0-9._-]{2,31}$/
 export const MINIMUM_PASSWORD = 12
 const SIGN_IN_PATH = '/sign-in/username'
-const HTTP_DISABLED_PATHS = ['/sign-in/email', '/update-user', '/change-password', '/change-email', '/delete-user', '/delete-user/callback']
+const HTTP_ALLOWED_PATHS = new Set([SIGN_IN_PATH, '/get-session', '/sign-out', '/ok', '/error'])
+
+export function auditableUsername(raw: unknown): string | null {
+  const username = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+  return USERNAME_RULE.test(username) ? username : null
+}
 
 const env = getEnv()
 
@@ -19,7 +24,6 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
-  disabledPaths: HTTP_DISABLED_PATHS,
   emailAndPassword: { enabled: true, disableSignUp: true, minPasswordLength: MINIMUM_PASSWORD, maxPasswordLength: 128 },
   session: { expiresIn: 60 * 60 * 12, updateAge: 60 * 60 },
   rateLimit: {
@@ -42,15 +46,17 @@ export const auth = betterAuth({
   ],
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      if (ctx.path.startsWith('/admin/') && ctx.request) throw new APIError('FORBIDDEN')
+      if (!ctx.request) return
+      if (ctx.path.startsWith('/admin/')) throw new APIError('FORBIDDEN')
+      if (!HTTP_ALLOWED_PATHS.has(ctx.path)) throw new APIError('NOT_FOUND')
     }),
     after: createAuthMiddleware(async (ctx) => {
       if (ctx.path !== SIGN_IN_PATH) return
-      const attempted = String((ctx.body as { username?: string } | undefined)?.username ?? '').toLowerCase()
+      const attempted = auditableUsername((ctx.body as { username?: unknown } | undefined)?.username)
       const origin = ctx.request ? requestOrigin(ctx.request.headers) : null
       const returned = ctx.context.returned
       if (returned instanceof APIError) {
-        await recordAudit({ action: 'access_denied', actorUsername: attempted || null, reference: attempted || null, detail: { reason: returned.message, ip: origin?.ip } })
+        await recordAudit({ action: 'access_denied', actorUsername: attempted, reference: attempted, detail: { reason: returned.message, ip: origin?.ip } })
         return
       }
       const user = ctx.context.newSession?.user

@@ -10,7 +10,7 @@ src/server/shared/prisma/generated/
 *.log
 .claude/
 
-# Dados de cliente e arquivos locais do servidor legacy (legacy/ ainda escreve aqui).
+# Dados de cliente do portal antigo: nunca versionar, mesmo que reapareçam numa cópia local.
 dados/
 *.db
 *.db-wal

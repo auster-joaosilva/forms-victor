@@ -1,4 +1,5 @@
 import { prisma } from '@/server/shared/prisma/client'
+import { assertTestDatabase } from './guard'
 
 const tables = [
   'registrations', 'event_sessions', 'events', 'adhesions', 'responses', 'diagnosis_drafts',
@@ -7,6 +8,7 @@ const tables = [
 ]
 
 export async function resetDatabase() {
+  assertTestDatabase()
   await prisma.$executeRawUnsafe('ALTER TABLE audit_logs DISABLE TRIGGER audit_logs_no_update')
   await prisma.$executeRawUnsafe(`TRUNCATE ${['audit_logs', ...tables].map((t) => `"${t}"`).join(', ')} RESTART IDENTITY CASCADE`)
   await prisma.$executeRawUnsafe('ALTER TABLE audit_logs ENABLE TRIGGER audit_logs_no_update')

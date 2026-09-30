@@ -16,6 +16,8 @@ export default tseslint.config(
         { type: 'feature', pattern: 'src/features/*/**', capture: ['feature'], partialMatch: false },
         { type: 'shared-ui', pattern: ['src/components/**', 'src/lib/**', 'src/hooks/**', 'src/config/**', 'src/styles/**'], partialMatch: false },
         { type: 'shared-domain', pattern: 'src/server/shared/domain/**', partialMatch: false },
+        { type: 'server-http', pattern: 'src/server/shared/http/**', partialMatch: false },
+        { type: 'server-auth', pattern: 'src/server/shared/auth/**', partialMatch: false },
         { type: 'server-shared', pattern: 'src/server/shared/**', partialMatch: false },
         { type: 'domain', pattern: 'src/server/*/domain/**', capture: ['module'], partialMatch: false },
         { type: 'application', pattern: 'src/server/*/application/**', capture: ['module'], partialMatch: false },
@@ -44,7 +46,7 @@ export default tseslint.config(
                 { to: { element: { type: 'domain' } } },
                 { to: { element: { type: 'shared-domain' } } },
                 { to: { file: { categories: 'composition' } } },
-                { to: { element: { type: 'server-shared' } } }
+                { to: { element: { type: 'server-http' } } }
               ],
             },
             {
@@ -60,7 +62,7 @@ export default tseslint.config(
                 { to: { element: { type: 'feature', captured: { feature: '{{ from.element.captured.feature }}' } } } },
                 { to: { element: { type: 'feature-api', captured: { feature: '{{ from.element.captured.feature }}' } } } },
                 { to: { file: { categories: 'composition' } } },
-                { to: { element: { type: 'server-shared' } } },
+                { to: { element: { type: 'server-http' } } },
                 { to: { element: { type: 'domain' } } },
                 { to: { element: { type: 'shared-domain' } } },
                 { to: { element: { type: 'shared-ui' } } }
@@ -117,7 +119,7 @@ export default tseslint.config(
                 { to: { element: { type: 'ports', captured: { module: '{{ from.element.captured.module }}' } } } },
                 { to: { element: { type: 'domain', captured: { module: '{{ from.element.captured.module }}' } } } },
                 { to: { element: { type: 'adapters', captured: { module: '{{ from.element.captured.module }}' } } } },
-                { to: { element: { type: 'server-shared' } } },
+                { to: { element: { types: { anyOf: ['server-shared', 'server-http', 'server-auth'] } } } },
                 { to: { element: { type: 'shared-domain' } } }
               ],
             },
@@ -129,16 +131,21 @@ export default tseslint.config(
                 { to: { element: { type: 'ports', captured: { module: '{{ from.file.captured.module }}' } } } },
                 { to: { element: { type: 'adapters', captured: { module: '{{ from.file.captured.module }}' } } } },
                 { to: { file: { categories: 'composition' } } },
-                { to: { element: { type: 'server-shared' } } },
+                { to: { element: { types: { anyOf: ['server-shared', 'server-http', 'server-auth'] } } } },
                 { to: { element: { type: 'shared-domain' } } }
               ],
             },
             {
-              from: { element: { type: 'server-shared' } },
+              from: { element: { types: { anyOf: ['server-shared', 'server-http', 'server-auth'] } } },
               allow: [
-                { to: { element: { type: 'server-shared' } } },
-                { to: { element: { type: 'shared-domain' } } },
-                { to: { file: { categories: 'composition' } } }
+                { to: { element: { types: { anyOf: ['server-shared', 'server-http', 'server-auth'] } } } },
+                { to: { element: { type: 'shared-domain' } } }
+              ],
+            },
+            {
+              from: { element: { type: 'server-auth' } },
+              allow: [
+                { to: { file: { categories: 'composition', captured: { module: 'audit' } } } }
               ],
             },
           ],
@@ -156,6 +163,20 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': ['error', { patterns: ['node:*', '@prisma/*', '@aws-sdk/*', 'better-auth*'] }],
       'no-restricted-globals': ['error', 'process', 'fetch', 'localStorage', 'sessionStorage', 'indexedDB'],
+    },
+  },
+  {
+    files: ['src/app/**', 'src/features/**', 'src/components/**', 'src/lib/**', 'src/hooks/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['node:*', '@prisma/*', '@aws-sdk/*'], message: 'Front não usa módulo de servidor: passe por server/shared/http ou server/*/composition.ts.' },
+            { regex: '^better-auth(?!/react$|/client/plugins$)(/.*)?$', message: 'No front, só better-auth/react e better-auth/client/plugins.' },
+          ],
+        },
+      ],
     },
   },
   {

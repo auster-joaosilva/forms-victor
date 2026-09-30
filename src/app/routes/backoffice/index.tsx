@@ -1,4 +1,5 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { LogoutButton } from '@/features/auth/components/logout-button'
 
 export const Route = createFileRoute('/backoffice/')({ component: BackofficeHome })
 
@@ -10,7 +11,7 @@ function BackofficeHome() {
       <p className="mt-2 text-sm text-auster-gray">
         Olá, {user.name}. As áreas do backoffice entram na etapa 4.
       </p>
-      <Link to="/logout" className="mt-6 inline-block text-sm text-auster-accent underline">Sair</Link>
+      <LogoutButton className="mt-6 inline-block cursor-pointer text-sm text-auster-accent underline" />
     </main>
   )
 }

@@ -1,6 +1,6 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { auth } from '../auth/auth'
+import { getSessionUser } from './session'
 
 export class AuthorizationError extends Error {
   constructor(readonly reason: 'unauthenticated' | 'forbidden') {
@@ -9,14 +9,8 @@ export class AuthorizationError extends Error {
 }
 
 export const sessionMiddleware = createMiddleware({ type: 'function' }).server(async ({ next }) => {
-  const session = await auth.api.getSession({ headers: getRequest().headers })
-  if (!session || session.user.banned) throw new AuthorizationError('unauthenticated')
-  const user = {
-    id: session.user.id,
-    username: session.user.username ?? '',
-    name: session.user.name,
-    role: session.user.role === 'admin' ? ('admin' as const) : ('team' as const),
-  }
+  const user = await getSessionUser(getRequest().headers)
+  if (!user) throw new AuthorizationError('unauthenticated')
   return next({ context: { session: { user } } })
 })
 

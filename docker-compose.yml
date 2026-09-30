@@ -7,7 +7,7 @@ services:
       POSTGRES_DB: forms_victor_dev
       TZ: America/Sao_Paulo
     ports: ['5432:5432']
-    volumes: [pgdata:/var/lib/postgresql/data]
+    volumes: [pgdata:/var/lib/postgresql/data, ./docker/postgres-init:/docker-entrypoint-initdb.d:ro]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U app']
       interval: 2s

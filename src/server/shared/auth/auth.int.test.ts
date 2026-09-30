@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDatabase } from '../../../../tests/integration/db'
 import { prisma } from '../prisma/client'
-import { auth } from './auth'
+import { auditableUsername, auth } from './auth'
 
 const signIn = (username: string, password: string, ip = '9.9.9.9') =>
   auth.handler(
@@ -68,6 +68,67 @@ describe('auth', () => {
       expect(response.status, path).toBe(404)
     }
     expect(await prisma.auditLog.count({ where: { action: 'login' } })).toBe(0)
+  })
+
+  it('refuses over HTTP every endpoint outside the allowlist', async () => {
+    const requests = [
+      ['GET', '/is-username-available?username=ana'],
+      ['POST', '/is-username-available'],
+      ['POST', '/unlink-account'],
+      ['GET', '/list-accounts'],
+      ['GET', '/list-sessions'],
+      ['POST', '/revoke-sessions'],
+      ['POST', '/sign-up/email'],
+    ] as const
+    for (const [method, path] of requests) {
+      const response = await auth.handler(
+        new Request(`http://localhost:3000/api/auth${path}`, {
+          method,
+          headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
+          ...(method === 'POST' ? { body: JSON.stringify({ username: 'ana', providerId: 'credential' }) } : {}),
+        }),
+      )
+      expect(response.status, `${method} ${path}`).toBe(404)
+    }
+  })
+
+  it('keeps the allowlisted endpoints open over HTTP', async () => {
+    const signed = await signIn('ana', 'senha-bem-longa-1')
+    const cookie = (signed.headers.get('set-cookie') ?? '').split(';')[0] ?? ''
+    const headers = { origin: 'http://localhost:3000', cookie }
+    const session = await auth.handler(new Request('http://localhost:3000/api/auth/get-session', { headers }))
+    expect(session.status).toBe(200)
+    expect(((await session.json()) as { user?: { username?: string } } | null)?.user?.username).toBe('ana')
+    expect((await auth.handler(new Request('http://localhost:3000/api/auth/ok', { headers }))).status).toBe(200)
+    const out = await auth.handler(new Request('http://localhost:3000/api/auth/sign-out', { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: '{}' }))
+    expect(out.status).toBe(200)
+    expect(await prisma.session.count()).toBe(0)
+  })
+
+  it('keeps the server-side user management API', async () => {
+    const created = await auth.api.createUser({
+      body: { email: 'bia@users.invalid', password: 'senha-bem-longa-2', name: 'Bia', data: { username: 'bia' } },
+    })
+    expect(created.user.id).toBeTruthy()
+    const signed = await auth.api.signInEmail({ body: { email: 'bia@users.invalid', password: 'senha-bem-longa-2' }, asResponse: true })
+    const cookie = (signed.headers.get('set-cookie') ?? '').split(';')[0] ?? ''
+    const session = await auth.api.getSession({ headers: new Headers({ cookie }) })
+    expect(session?.user.email).toBe('bia@users.invalid')
+    await auth.api.signOut({ headers: new Headers({ cookie }) })
+    expect(await auth.api.getSession({ headers: new Headers({ cookie }) })).toBeNull()
+  })
+
+  it('stores only a well-formed attempted username in the audit', async () => {
+    expect(auditableUsername('  Ana.Souza ')).toBe('ana.souza')
+    expect(auditableUsername('x'.repeat(5000))).toBeNull()
+    expect(auditableUsername('1ana')).toBeNull()
+    expect(auditableUsername(42)).toBeNull()
+    const response = await signIn('<script>'.repeat(200), 'errada-errada-errada')
+    expect(response.status).toBeGreaterThanOrEqual(400)
+    const denied = await prisma.auditLog.findMany({ where: { action: 'access_denied' } })
+    expect(denied).toHaveLength(1)
+    expect(denied[0]?.actorUsername).toBeNull()
+    expect(denied[0]?.reference).toBeNull()
   })
 
   it('keeps the server-side API the bootstrap relies on', async () => {

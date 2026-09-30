@@ -51,6 +51,8 @@ As fronteiras estão no `eslint.config.js`. Lint quebrado não entra.
 - Proibido `localStorage`, `sessionStorage`, IndexedDB e escrita em disco pelo app.
 - Estado vai para o Postgres. Arquivo vai para o MinIO.
 - No navegador, só cookies `httpOnly` que carregam identificador (sessão, rascunho).
+- Não usar `authClient.signOut` nem `useSession`: o cliente do better-auth grava
+  `localStorage`. Sair é pela server function `signOutCurrentUser`.
 
 ## Segurança
 
@@ -95,6 +97,14 @@ cp .env.example .env    # valores de desenvolvimento
 pnpm db:up
 pnpm db:migrate
 pnpm db:seed
-pnpm auth:bootstrap-admin
+pnpm auth:bootstrap-admin   # antes, preencha BOOTSTRAP_ADMIN_* no .env
 pnpm dev                # http://localhost:3000
+```
+
+O banco de teste (`forms_victor_test`, usado por `pnpm test`) é criado sozinho por
+`docker/postgres-init/`, que o Postgres só roda com o volume novo. Se o volume já
+existia antes disso, crie uma vez depois do `pnpm db:up`:
+
+```bash
+docker compose exec postgres psql -U app -d forms_victor_dev -c "CREATE DATABASE forms_victor_test"
 ```

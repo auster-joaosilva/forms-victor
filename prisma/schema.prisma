@@ -1,0 +1,366 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/server/shared/prisma/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  admin
+  team
+}
+
+enum ResponseStatus {
+  new
+  in_review
+  validated
+  discarded
+}
+
+enum AdhesionModality {
+  standard
+  hybrid
+}
+
+enum WithoutManifestation {
+  cancel
+  keep
+}
+
+enum AdhesionStatus {
+  received
+  filed
+  cancelled
+}
+
+enum EventStatus {
+  draft
+  published
+  closed
+}
+
+enum RegistrationWindow {
+  open
+  closed
+}
+
+enum SessionFormat {
+  in_person
+  online
+}
+
+enum RegistrationStatus {
+  registered
+  confirmed
+  present
+  absent
+  cancelled
+}
+
+enum FileKind {
+  house_photo
+  event_cover
+  speaker_photo
+}
+
+model User {
+  id              String    @id
+  name            String
+  email           String    @unique
+  emailVerified   Boolean   @default(false) @map("email_verified")
+  image           String?
+  username        String?   @unique
+  displayUsername String?   @map("display_username")
+  role            String    @default("team")
+  banned          Boolean   @default(false)
+  banReason       String?   @map("ban_reason")
+  banExpires      DateTime? @map("ban_expires") @db.Timestamptz
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  sessions            Session[]
+  accounts            Account[]
+  invitationsCreated  Invitation[]   @relation("InvitationCreatedBy")
+  responsesHandled    Response[]     @relation("ResponseHandledBy")
+  adhesionsHandled    Adhesion[]     @relation("AdhesionHandledBy")
+  eventsCreated       Event[]        @relation("EventCreatedBy")
+  eventsUpdated       Event[]        @relation("EventUpdatedBy")
+  registrationsHandled Registration[] @relation("RegistrationHandledBy")
+  filesCreated        StoredFile[]
+  auditEntries        AuditLog[]
+
+  @@map("users")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz
+  token          String   @unique
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  impersonatedBy String?  @map("impersonated_by")
+  userId         String   @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt @map("last_request")
+
+  @@map("auth_rate_limits")
+}
+
+model Invitation {
+  token        String     @id
+  companyName  String?    @map("company_name")
+  cnpj         String?
+  email        String?
+  note         String?
+  openCount    Int        @default(0) @map("open_count")
+  lastOpenedAt DateTime?  @map("last_opened_at") @db.Timestamptz
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  createdById  String?    @map("created_by_id")
+  createdBy    User?      @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  responses    Response[]
+  adhesions    Adhesion[]
+
+  @@map("invitations")
+}
+
+model DiagnosisDraft {
+  id        String   @id @default(uuid()) @db.Uuid
+  step      Int      @default(1)
+  payload   Json
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+
+  @@index([expiresAt])
+  @@map("diagnosis_drafts")
+}
+
+model Response {
+  id              Int            @id @default(autoincrement())
+  protocol        String         @unique
+  invitationToken String?        @map("invitation_token")
+  invitation      Invitation?    @relation(fields: [invitationToken], references: [token], onDelete: SetNull)
+  receivedAt      DateTime       @default(now()) @map("received_at") @db.Timestamptz
+  companyName     String?        @map("company_name")
+  cnpj            String?
+  cnpjDigits      String?        @map("cnpj_digits")
+  requester       String?
+  email           String?
+  phone           String?
+  formVersion     String?        @map("form_version")
+  outcome         String?
+  position        String?
+  certainty       String?
+  urgency         String?
+  confidence      String?
+  requesterInQsa  Boolean?       @map("requester_in_qsa")
+  payload         Json
+  status          ResponseStatus @default(new)
+  internalNote    String?        @map("internal_note")
+  handledById     String?        @map("handled_by_id")
+  handledBy       User?          @relation("ResponseHandledBy", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt       DateTime?      @map("handled_at") @db.Timestamptz
+  adhesions       Adhesion[]
+  registrations   Registration[]
+
+  @@index([status])
+  @@index([receivedAt])
+  @@index([cnpjDigits])
+  @@map("responses")
+}
+
+model Adhesion {
+  id                   Int                   @id @default(autoincrement())
+  protocol             String                @unique
+  responseId           Int?                  @map("response_id")
+  response             Response?             @relation(fields: [responseId], references: [id], onDelete: SetNull)
+  invitationToken      String?               @map("invitation_token")
+  invitation           Invitation?           @relation(fields: [invitationToken], references: [token], onDelete: SetNull)
+  acceptedAt           DateTime              @map("accepted_at") @db.Timestamptz
+  companyName          String                @map("company_name")
+  cnpj                 String
+  cnpjDigits           String                @map("cnpj_digits")
+  representative       String
+  cpf                  String
+  representativeRole   String                @map("representative_role")
+  email                String
+  phone                String?
+  modality             AdhesionModality
+  withoutManifestation WithoutManifestation? @map("without_manifestation")
+  wantsProposal        Boolean               @default(false) @map("wants_proposal")
+  termVersion          String                @map("term_version")
+  termHash             String                @map("term_hash")
+  originIp             String?               @map("origin_ip")
+  originSource         String?               @map("origin_source")
+  forwardedChain       String?               @map("forwarded_chain")
+  userAgent            String?               @map("user_agent")
+  payload              Json
+  status               AdhesionStatus        @default(received)
+  internalNote         String?               @map("internal_note")
+  handledById          String?               @map("handled_by_id")
+  handledBy            User?                 @relation("AdhesionHandledBy", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt            DateTime?             @map("handled_at") @db.Timestamptz
+
+  @@index([acceptedAt])
+  @@index([status])
+  @@index([modality])
+  @@index([cnpjDigits])
+  @@map("adhesions")
+}
+
+model Event {
+  id            Int                @id @default(autoincrement())
+  slug          String             @unique
+  title         String
+  status        EventStatus        @default(draft)
+  registrations RegistrationWindow @default(open)
+  content       Json
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  createdById   String?            @map("created_by_id")
+  createdBy     User?              @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedAt     DateTime?          @map("updated_at") @db.Timestamptz
+  updatedById   String?            @map("updated_by_id")
+  updatedBy     User?              @relation("EventUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  sessions      EventSession[]
+  entries       Registration[]
+
+  @@map("events")
+}
+
+model EventSession {
+  id            Int            @id @default(autoincrement())
+  eventId       Int            @map("event_id")
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  order         Int            @default(0)
+  date          DateTime       @db.Date
+  time          String
+  format        SessionFormat  @default(in_person)
+  title         String
+  description   String?
+  location      String?
+  seats         Int?
+  registrations Registration[]
+
+  @@index([eventId])
+  @@map("event_sessions")
+}
+
+model Registration {
+  id             Int                @id @default(autoincrement())
+  protocol       String             @unique
+  eventId        Int                @map("event_id")
+  event          Event              @relation(fields: [eventId], references: [id])
+  sessionId      Int                @map("session_id")
+  session        EventSession       @relation(fields: [sessionId], references: [id])
+  responseId     Int?               @map("response_id")
+  response       Response?          @relation(fields: [responseId], references: [id], onDelete: SetNull)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  name           String
+  email          String
+  phone          String?
+  company        String?
+  cnpj           String?
+  cnpjDigits     String?            @map("cnpj_digits")
+  jobTitle       String?            @map("job_title")
+  privacyConsent Boolean            @default(false) @map("privacy_consent")
+  originIp       String?            @map("origin_ip")
+  userAgent      String?            @map("user_agent")
+  payload        Json
+  status         RegistrationStatus @default(registered)
+  internalNote   String?            @map("internal_note")
+  handledById    String?            @map("handled_by_id")
+  handledBy      User?              @relation("RegistrationHandledBy", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt      DateTime?          @map("handled_at") @db.Timestamptz
+
+  @@index([eventId])
+  @@index([sessionId])
+  @@index([cnpjDigits])
+  @@index([email])
+  @@map("registrations")
+}
+
+model StoredFile {
+  id           String   @id @default(uuid()) @db.Uuid
+  bucket       String
+  key          String   @unique
+  originalName String?  @map("original_name")
+  contentType  String   @map("content_type")
+  size         Int
+  sha256       String
+  kind         FileKind
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdById  String?  @map("created_by_id")
+  createdBy    User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([kind])
+  @@map("stored_files")
+}
+
+model AuditLog {
+  id            Int      @id @default(autoincrement())
+  occurredAt    DateTime @default(now()) @map("occurred_at") @db.Timestamptz
+  actorId       String?  @map("actor_id")
+  actor         User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorUsername String?  @map("actor_username")
+  action        String
+  reference     String?
+  detail        Json?
+
+  @@index([occurredAt])
+  @@map("audit_logs")
+}
+
+model RateLimitHit {
+  key         String
+  windowStart DateTime @map("window_start") @db.Timestamptz
+  count       Int      @default(0)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+  @@map("rate_limit_hits")
+}

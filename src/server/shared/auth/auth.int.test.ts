@@ -1,14 +1,27 @@
+import { serve } from 'srvx'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDatabase } from '../../../../tests/integration/db'
 import { prisma } from '../prisma/client'
+import { authHandler } from '../http/session'
 import { auditableUsername, auth } from './auth'
 
 const signIn = (username: string, password: string, ip = '9.9.9.9') =>
-  auth.handler(
+  authHandler(
     new Request('http://localhost:3000/api/auth/sign-in/username', {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: 'http://localhost:3000', 'x-real-ip': ip },
       body: JSON.stringify({ username, password }),
+    }),
+  )
+
+const CLOUDFLARE_EDGE = '172.68.10.20'
+
+const signInThroughHandler = (password: string, headers: Record<string, string>) =>
+  authHandler(
+    new Request('http://localhost:3000/api/auth/sign-in/username', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:3000', ...headers },
+      body: JSON.stringify({ username: 'ana', password }),
     }),
   )
 
@@ -145,5 +158,42 @@ describe('auth', () => {
     expect((await signIn('ana', 'errada-errada-errada', '8.8.8.8')).status).toBe(401)
     const keys = (await prisma.rateLimit.findMany()).map((row) => row.key)
     expect(keys).toEqual(expect.arrayContaining(['7.7.7.7|/sign-in/username', '8.8.8.8|/sign-in/username']))
+  })
+
+  it('keys the sign-in rate limit by the client behind Cloudflare', async () => {
+    const behind = (client: string) => ({ 'x-real-ip': CLOUDFLARE_EDGE, 'cf-connecting-ip': client })
+    for (let attempt = 0; attempt < 5; attempt++) expect((await signInThroughHandler('errada-errada-errada', behind('200.1.1.1'))).status).toBe(401)
+    expect((await signInThroughHandler('errada-errada-errada', behind('200.1.1.1'))).status).toBe(429)
+    expect((await signInThroughHandler('errada-errada-errada', behind('200.2.2.2'))).status).toBe(401)
+    const keys = (await prisma.rateLimit.findMany()).map((row) => row.key)
+    expect(keys).toEqual(expect.arrayContaining(['200.1.1.1|/sign-in/username', '200.2.2.2|/sign-in/username']))
+    expect(keys.some((key) => key.startsWith(CLOUDFLARE_EDGE))).toBe(false)
+  })
+
+  it('keys a forged CF-Connecting-IP from outside Cloudflare by the real peer', async () => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const forged = { 'x-real-ip': '86.1.1.1', 'cf-connecting-ip': `200.3.3.${attempt}`, 'x-client-ip': `200.4.4.${attempt}` }
+      expect((await signInThroughHandler('errada-errada-errada', forged)).status).toBe(401)
+    }
+    expect((await signInThroughHandler('errada-errada-errada', { 'x-real-ip': '86.1.1.1', 'cf-connecting-ip': '200.9.9.9' })).status).toBe(429)
+    const keys = (await prisma.rateLimit.findMany()).map((row) => row.key)
+    expect(keys).toEqual(['86.1.1.1|/sign-in/username'])
+  })
+
+  it('resolves the client through the production HTTP server', async () => {
+    const server = serve({ port: 0, hostname: '127.0.0.1', silent: true, fetch: authHandler })
+    await server.ready()
+    try {
+      const response = await fetch(new URL('/api/auth/sign-in/username', server.url), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'http://localhost:3000', 'x-real-ip': CLOUDFLARE_EDGE, 'cf-connecting-ip': '200.5.5.5', 'x-client-ip': '6.6.6.6' },
+        body: JSON.stringify({ username: 'ana', password: 'senha-bem-longa-1' }),
+      })
+      expect(response.status).toBe(200)
+      expect((await prisma.session.findFirst())?.ipAddress).toBe('200.5.5.5')
+      expect((await prisma.rateLimit.findMany()).map((row) => row.key)).toEqual(['200.5.5.5|/sign-in/username'])
+    } finally {
+      await server.close(true)
+    }
   })
 })

@@ -6,7 +6,7 @@ import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { prisma } from '../prisma/client'
 import { getEnv } from '../env'
 import { recordAudit } from '@/server/audit/composition'
-import { requestOrigin } from '../http/request-origin'
+import { CLIENT_IP_HEADER, requestOrigin } from '../http/request-origin'
 
 export const USERNAME_RULE = /^[a-z][a-z0-9._-]{2,31}$/
 export const MINIMUM_PASSWORD = 12
@@ -37,7 +37,7 @@ export const auth = betterAuth({
   advanced: {
     cookiePrefix: 'forms',
     useSecureCookies: env.NODE_ENV === 'production',
-    ipAddress: { ipAddressHeaders: ['x-real-ip'] },
+    ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
   },
   plugins: [
     username({ minUsernameLength: 3, maxUsernameLength: 32, usernameValidator: (value) => USERNAME_RULE.test(value) }),

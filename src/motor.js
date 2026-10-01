@@ -71,14 +71,31 @@ export const APLICAR_TESTE_DENSIDADE_NO_RAMO_ALTO = true;
  *  Como as duas se conciliam: o § 10 fecha o SEMESTRE, e o regulamento do CGSN
  *  abre uma janela de desistência da SOLICITAÇÃO antes de os efeitos começarem.
  *
+ *  3. PRORROGAÇÃO — Resolução CGSN nº 194/2026, assinada em 25/09/2026 e
+ *     publicada em edição extra do DOU de 28/09/2026, que deu nova redação aos
+ *     prazos da Resolução CGSN nº 186/2026:
+ *       · entrada no Simples Nacional para 2027: de 30/09 para 15/10/2026;
+ *       · opção pelo regime regular de IBS e CBS: de 30/09 para 30/10/2026;
+ *       · regularização de pendências que barram o ingresso: 30/10/2026;
+ *       · cancelamento: deixou de ser "até 30/11" e virou JANELA COM COMEÇO,
+ *         de 03/11 a 20/12/2026, em caráter irretratável.
+ *
+ *  A mudança do cancelamento é a que muda conselho, não só data: antes havia
+ *  saída disponível a qualquer momento até o fim de novembro; agora, quem optar
+ *  em outubro fica sem poder cancelar até 03/11, porque o serviço não existe
+ *  antes disso.
+ *
  *  HISTÓRICO: em 15/09/2026 eu removi o cancelamento de novembro deste arquivo,
  *  por não o encontrar na lei. Estava errado — ele está no regulamento, para o
  *  qual a própria lei remete. Reposto no mesmo dia, com as duas fontes acima.
- *  A assimetria que decide: perder setembro custa um semestre e NÃO se recupera;
- *  optar e se arrepender se resolve até 30/11 sem custo. */
+ *  A assimetria que decide continua de pé, com as datas novas: perder a janela
+ *  custa um semestre e NÃO se recupera; optar e se arrepender se resolve dentro
+ *  da janela de cancelamento, antes de qualquer efeito. */
 export const PRAZO = {
-  fimDaJanela: '2026-09-30',          // último dia do mês de setembro de 2026
-  desistenciaAte: '2026-11-30',       // cancelamento da solicitação, item 4.2 do manual
+  fimDaJanela: '2026-10-30',          // opção pelo regime regular, Res. CGSN 194/2026
+  entradaNoSimplesAte: '2026-10-15',  // ingresso no Simples para 2027, Res. CGSN 194/2026
+  desistenciaDe: '2026-11-03',        // antes disso o cancelamento não está disponível
+  desistenciaAte: '2026-12-20',       // cancelamento da solicitação, Res. CGSN 194/2026
   semestreDeEfeito: '1º semestre de 2027',
   janelaSeguinte: 'março de 2027',
   efeitoDaJanelaSeguinte: '2º semestre de 2027',
@@ -347,15 +364,15 @@ export function confianca(r) {
 export const POSICOES = {
   padrao: {
     familia: 'padrao', certeza: 'fechada', rotulo: 'Simples padrão', qualificador: 'decisão fechada',
-    acaoUnica: 'Não há nada a protocolar em setembro. Você continua na guia única.',
+    acaoUnica: 'Não há nada a protocolar em outubro. Você continua na guia única.',
     detalhe: 'IBS e CBS seguem sendo recolhidos dentro do DAS.' },
   padrao_a_confirmar: {
     familia: 'padrao', certeza: 'aberta', rotulo: 'Simples padrão', qualificador: 'a confirmar',
-    acaoUnica: 'Nada a protocolar em setembro. Antes de fechar o ano, confira o que ficou em aberto abaixo.',
+    acaoUnica: 'Nada a protocolar em outubro. Antes de fechar o ano, confira o que ficou em aberto abaixo.',
     detalhe: 'IBS e CBS seguem sendo recolhidos dentro do DAS. Se a conferência mudar a leitura, a próxima janela é ' + PRAZO.janelaSeguinte + '.' },
   hibrido_definitivo: {
     familia: 'hibrido', certeza: 'fechada', rotulo: 'Simples híbrido', qualificador: 'decisão fechada',
-    acaoUnica: 'Protocole a opção até 30 de setembro de 2026.',
+    acaoUnica: 'Protocole a opção até 30 de outubro de 2026.',
     detalhe: 'O DAS continua para os demais tributos e o IBS e a CBS passam a ser apurados por fora, com direito a crédito. O efeito é no ' + PRAZO.semestreDeEfeito + '.' },
   // A posição de hedge. O nome NÃO pode ser "Simples híbrido" puro: em corpo 46 px
   // isso se lê como a decisão tomada, quando a decisão ainda está aberta e a opção
@@ -363,12 +380,12 @@ export const POSICOES = {
   hibrido_a_confirmar: {
     familia: 'hibrido', certeza: 'aberta', rotulo: 'Híbrido como proteção',
     qualificador: 'a decisão em si continua aberta',
-    acaoUnica: 'Protocole a opção até 30 de setembro para não perder a janela, e feche a conta até o início de novembro — se ela disser que não vale, cancele até 30 de novembro.',
-    detalhe: 'Optar agora não é escolher o híbrido: é guardar o direito de escolher. O prazo de setembro não volta; a opção feita nele se desfaz até 30 de novembro sem efeito nenhum.' },
+    acaoUnica: 'Protocole a opção até 30 de outubro para não perder a janela, e feche a conta até o fim de outubro — se ela disser que não vale, cancele entre 3 de novembro e 20 de dezembro.',
+    detalhe: 'Optar agora não é escolher o híbrido: é guardar o direito de escolher. A janela de outubro não volta; a opção feita nela se desfaz entre 3 de novembro e 20 de dezembro, sem efeito nenhum. Antes de 3 de novembro o cancelamento não está disponível — e isso é o que você precisa saber antes de optar.' },
   a_definir: {
     familia: 'a_definir', certeza: 'aberta', rotulo: 'Proteja o prazo antes de decidir', qualificador: 'a conta depende de número real',
-    acaoUnica: 'Protocole a opção até 30 de setembro para não perder a janela, e decida de verdade até 30 de novembro, com os números na mão.',
-    detalhe: 'As respostas não fecham a conta em nenhum dos dois lados. Como a solicitação pode ser cancelada até 30 de novembro e setembro não volta, o movimento barato é optar e conferir depois — desde que a decisão seja retomada mesmo.' },
+    acaoUnica: 'Protocole a opção até 30 de outubro para não perder a janela, e decida de verdade até 20 de dezembro, com os números na mão.',
+    detalhe: 'As respostas não fecham a conta em nenhum dos dois lados. Como a solicitação pode ser cancelada entre 3 de novembro e 20 de dezembro, e outubro não volta, o movimento barato é optar e conferir depois — desde que a decisão seja retomada mesmo, e a tempo de usar a janela de cancelamento.' },
   setor_sem_credito: {
     familia: 'a_definir', certeza: 'aberta', rotulo: 'Depende do regime do seu setor',
     qualificador: 'o argumento do crédito ao cliente não existe aqui',
@@ -498,7 +515,7 @@ export const SAIDAS = {
        modalidade: 'padrao'},
   C: { codigo: 'C', titulo: 'Vale apurar IBS e CBS por fora do DAS.',
        resumo: 'Sua cadeia é de empresas, e o crédito virou condição para competir.',
-       significa: 'Boa parte do que você fatura vai para empresas que aproveitam crédito de imposto. Continuando na guia única, você entrega a elas um crédito menor do que um concorrente entregaria — e a diferença aparece no preço. Apurar por fora corrige isso. A decisão precisa ser confirmada por simulação e protocolada até 30 de setembro.',
+       significa: 'Boa parte do que você fatura vai para empresas que aproveitam crédito de imposto. Continuando na guia única, você entrega a elas um crédito menor do que um concorrente entregaria — e a diferença aparece no preço. Apurar por fora corrige isso. A decisão precisa ser confirmada por simulação e protocolada até 30 de outubro.',
        modalidade: 'hibrido'},
   D: { codigo: 'D', titulo: 'A pergunta é maior: vale continuar no Simples?',
        resumo: 'Você está no teto do Simples, ou muito perto dele.',
@@ -506,11 +523,11 @@ export const SAIDAS = {
        modalidade: 'a_definir'},
   E: { codigo: 'E', titulo: 'Não decida sem simular.',
        resumo: 'Suas respostas apontam para lados opostos.',
-       significa: 'Há motivo para mudar e motivo para ficar, nas mesmas informações. Isso não é indefinição do formulário: é um caso que depende de número real, não de estimativa. Mas os dois erros não custam igual. Deixar setembro passar e descobrir depois que valia apurar por fora custa um semestre inteiro, e esse prazo não volta: a janela seguinte é março, com efeito só no segundo semestre de 2027. Já optar em setembro e concluir que era melhor ficar se resolve cancelando a solicitação até 30 de novembro, antes de qualquer efeito. Por isso o movimento prudente é proteger o prazo agora e fechar a conta em outubro e novembro.',
+       significa: 'Há motivo para mudar e motivo para ficar, nas mesmas informações. Isso não é indefinição do formulário: é um caso que depende de número real, não de estimativa. Mas os dois erros não custam igual. Deixar outubro passar e descobrir depois que valia apurar por fora custa um semestre inteiro, e esse prazo não volta: a janela seguinte é março, com efeito só no segundo semestre de 2027. Já optar em outubro e concluir que era melhor ficar se resolve cancelando a solicitação entre 3 de novembro e 20 de dezembro, antes de qualquer efeito. Por isso o movimento prudente é proteger o prazo agora e fechar a conta em novembro.',
        modalidade: 'a_definir'},
   E_SEM_DADO: { codigo: 'E', titulo: 'Falta uma informação para decidir.',
        resumo: 'Sem ela, qualquer recomendação aqui seria chute.',
-       significa: 'Você marcou "não sei" em uma resposta que decide o resultado: o tipo de cliente que compra de você, ou a origem das suas compras. Não é problema — são dados que a contabilidade tem, e levantados a leitura sai na hora. O que não dá é deixar setembro passar esperando por eles: a solicitação pode ser cancelada até 30 de novembro, mas o prazo para fazê-la não se recupera.',
+       significa: 'Você marcou "não sei" em uma resposta que decide o resultado: o tipo de cliente que compra de você, ou a origem das suas compras. Não é problema — são dados que a contabilidade tem, e levantados a leitura sai na hora. O que não dá é deixar outubro passar esperando por eles: a solicitação pode ser cancelada entre 3 de novembro e 20 de dezembro, mas o prazo para fazê-la não se recupera.',
        modalidade: 'a_definir' },
   SETOR_SEM_CREDITO: { codigo: 'ESPECIAL-SETOR-SEM-CREDITO',
        titulo: 'Seu cliente não pode aproveitar crédito — por lei.',
@@ -523,7 +540,7 @@ export const SAIDAS = {
        modalidade: 'nao_se_aplica'},
   FORA: { codigo: 'ESPECIAL-FORA-DO-SIMPLES', titulo: 'Sua empresa não está no Simples.',
           resumo: 'Este diagnóstico trata de quem já é optante.',
-          significa: 'A escolha entre recolher IBS e CBS na guia única ou por fora só existe para quem está no Simples. No seu caso a pergunta vem antes: vale ou não entrar no Simples. E o prazo é o mesmo — quem quer ingressar em 2027 precisa pedir entre 1º e 30 de setembro de 2026, e só depois formalizar a escolha do IBS e da CBS. Perdido setembro, a entrada fica para 2028.',
+          significa: 'A escolha entre recolher IBS e CBS na guia única ou por fora só existe para quem está no Simples. No seu caso a pergunta vem antes: vale ou não entrar no Simples. E são DOIS prazos diferentes, atenção: quem quer ingressar em 2027 precisa pedir a entrada até 15 de outubro de 2026, e só depois formalizar a escolha do IBS e da CBS, que vai até 30 de outubro. Pendência que barre o ingresso pode ser regularizada até 30 de outubro. Perdida a entrada, ela fica para 2028.',
        modalidade: 'nao_se_aplica'},
 };
 
@@ -629,10 +646,10 @@ export function urgenciaEPrazo(saida, r, conf, hoje) {
   const fim = new Date(PRAZO.fimDaJanela + 'T23:59:59');
   const janelaAberta = hoje <= fim;
   const uteisAteFim = janelaAberta ? diasUteisEntre(hoje, fim) : 0;
-  // A janela legal é de calendário — "até 30 de setembro" — e é assim que ela
+  // A janela legal é de calendário — "até 30 de outubro" — e é assim que ela
   // aparece na tela. Os dias úteis servem ao cálculo interno do prazo para agir,
   // que reserva a antecedência operacional.
-  // Diferença entre DATAS, não entre instantes: em 30/09 às 10h a subtração em
+  // Diferença entre DATAS, não entre instantes: no último dia às 10h a subtração em
   // milissegundos dava 0,58 dia e arredondava para 1, dizendo "termina amanhã"
   // no último dia da janela.
   const soData = d => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
@@ -641,7 +658,7 @@ export function urgenciaEPrazo(saida, r, conf, hoje) {
 
   /** [DIVERGE-D4] O manual mandava exibir um "prazo para agir" em dias úteis
    *  (3 para urgência alta). Isso inventava pressão: o prazo real é um só, 30 de
-   *  setembro, e o que a casa precisa é de antecedência para operacionalizar.
+   *  o fim da janela, e o que a casa precisa é de antecedência para operacionalizar.
    *  Em vez de uma contagem, o portal mostra a DATA até a qual protocolar, que é
    *  o fim da janela menos a antecedência operacional. Conceito, não cronómetro. */
   const limite = recuarDiasUteis(new Date(PRAZO.fimDaJanela + 'T12:00:00'),
@@ -687,7 +704,7 @@ export function faixaRadar(s) {
 // tem remédio dentro do próprio regulamento; não optar não tem. Quem recebe
 // "fique no Padrão" precisa ficar por ESCOLHA, não por omissão.
 //
-// Premissa validada pela direção em 16/09/2026: o cancelamento até 30/11 anula
+// Premissa validada pela direção em 16/09/2026: o cancelamento anula
 // a opção sem prejuízo do que veio antes. A Resolução CGSN 186/2026 traz o
 // prazo (art. 2º, parágrafo único) e é silente sobre o efeito — a leitura de
 // que a anulação é plena é da casa, e a Auster não é escritório jurídico:
@@ -696,9 +713,10 @@ export function faixaRadar(s) {
 
 export const ASSIMETRIA = {
   titulo: 'Os dois erros não custam igual',
-  texto: 'Optar em setembro e concluir depois que era melhor ficar tem remédio: '
-    + 'a solicitação pode ser cancelada até 30 de novembro de 2026 e a opção é anulada, '
-    + 'sem efeito nenhum sobre o que veio antes. Deixar setembro passar não tem remédio: '
+  texto: 'Optar em outubro e concluir depois que era melhor ficar tem remédio: '
+    + 'a solicitação pode ser cancelada entre 3 de novembro e 20 de dezembro de 2026 '
+    + 'e a opção é anulada, sem efeito nenhum sobre o que veio antes. Antes de 3 de '
+    + 'novembro o cancelamento não está disponível. Deixar outubro passar não tem remédio: '
     + 'a próxima janela é março de 2027 e só produz efeito no segundo semestre, então o '
     + 'primeiro semestre inteiro fica decidido por omissão.',
   paraQuemFica: 'Se a leitura for ficar no Simples Padrão, que seja por escolha: '

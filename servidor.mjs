@@ -23,7 +23,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { abrirBanco, senhaConfere, MINIMO_SENHA, VERSAO_DO_ESQUEMA,
          MODALIDADES_ADESAO, SEM_MANIFESTACAO } from './src/banco.mjs';
 import { PERGUNTAS, BLOCOS } from './src/perguntas.js';
-import { TERMO } from './src/termo.js';
+import { TERMO, TERMOS } from './src/termo.js';
 
 const HORAS_DE_SESSAO = 12;
 
@@ -93,7 +93,7 @@ function esperaPorExcessoDeEnvios(origem, agora = Date.now()) {
  *  forma `/?c=TOKEN`, e cair na capa perderia o vínculo do convite com a
  *  resposta: a empresa preencheria de novo, do zero, sem que ninguém notasse.
  *  Com token, a raiz continua entregando o formulário. */
-const HOME = (process.env.AUSTER_HOME || 'diagnostico').trim();
+const HOME = (process.env.AUSTER_HOME || 'principal').trim();
 
 if (!SENHA) {
   console.error('ERRO: defina AUSTER_SENHA_BACKOFFICE. Sem senha, o backoffice');
@@ -225,8 +225,20 @@ function portalConfigurado(convite) {
 // prova que o cliente quisesse — que não é prova nenhuma.
 // --------------------------------------------------------------------------
 
-const RESUMO_TERMO = createHash('sha256')
-  .update(JSON.stringify(TERMO), 'utf8').digest('hex');
+const resumoDoTermo = t => createHash('sha256')
+  .update(JSON.stringify(t), 'utf8').digest('hex');
+
+const RESUMO_TERMO = resumoDoTermo(TERMO);
+
+/* O resumo de CADA versão já publicada, não só o da corrente.
+ *
+ * Serve à reimpressão: o banco guarda a versão aceita, e a via tirada no
+ * backoffice tem de sair com o texto daquela versão. Antes disto a reimpressão
+ * montava sempre o texto de hoje e carimbava embaixo o resumo guardado — com
+ * uma só versão no ar ninguém via, mas na primeira troca de texto o documento
+ * passaria a contradizer a própria prova. */
+const RESUMOS = Object.fromEntries(
+  Object.entries(TERMOS).map(([v, t]) => [v, resumoDoTermo(t)]));
 
 /* A marca do backoffice.
  *
@@ -278,8 +290,15 @@ function origemDoPedido(req) {
 function paginaDeAdesao({ previo, vinculo, soTermo } = {}) {
   const html = pagina('./adesao.html');
   if (!html) return null;
+  /* A via de uma adesão já registrada sai com o texto da versão que a pessoa
+   * ACEITOU, buscado pela chave gravada no banco — e não com o texto corrente.
+   * Quem assinou a V4 tem de reler a V4, ainda que o portal já ofereça a V5:
+   * o recibo impresso embaixo carrega o resumo da V4, e documento que exibe um
+   * texto e prova outro não serve de prova nenhuma. */
+  const termoDaPagina = soTermo ? TERMOS[soTermo.recibo?.versaoTermo] : TERMO;
+  if (!termoDaPagina) return null;
   const trechos = [
-    `window.__TERMO__ = ${jsonParaScript(TERMO)};`,
+    `window.__TERMO__ = ${jsonParaScript(termoDaPagina)};`,
     `window.__HOJE__ = ${jsonParaScript(new Date().toISOString())};`,
   ];
   /* Depois do corte a página não recebe mais confirmação. Tirar a rota do ar
@@ -313,7 +332,7 @@ function conferirAdesao(corpo, req) {
   if (corpo.declara !== true) return { erro: 'sem a declaração final marcada' };
   if (!MODALIDADES_ADESAO.includes(corpo.modalidade)) return { erro: 'modalidade inválida' };
   if (corpo.modalidade === 'hibrido' && !SEM_MANIFESTACAO.includes(corpo.semManifestacao)) {
-    return { erro: 'falta escolher o que acontece sem manifestação até 20/11' };
+    return { erro: 'falta escolher o que acontece sem manifestação até 10/12' };
   }
   // Versão diferente significa página aberta antes de o texto mudar. Gravar
   // assim registraria adesão a um texto que a pessoa não viu.
@@ -380,17 +399,21 @@ function imagensDaCasa() {
 /** A janela de opção.
  *
  *  O ÚLTIMO DIA é 30/09/2026, decidido por Victor em 28/09 — é a data que o
- *  recibo promete ("a Auster fará a opção até 30/09/2026"). O texto do termo
- *  fala em 29/09 para a confirmação; a diferença entre os dois está anotada
- *  e vale um acerto no texto, mas quem manda no sistema é o recibo, porque é
- *  ele que vai para a mão do cliente como prova.
+ *  recibo promete ("a Auster fará a opção até 30/10/2026"). O texto do termo
+ *  fala em 29/10 para a confirmação: um dia de folga operacional, deliberado,
+ *  para a casa protocolar. Quem manda no sistema é o recibo, porque é ele que
+ *  vai para a mão do cliente como prova.
+ *
+ *  ATUALIZADO em 01/10/2026 pela Resolução CGSN nº 194/2026 (DOU de 28/09),
+ *  que prorrogou a opção pelo regime regular de IBS e CBS de 30/09 para
+ *  30/10/2026.
  *
  *  `AUSTER_FIM_DA_JANELA` sobrepõe a data sem publicação nova — serve para
  *  adiar ou antecipar o corte pelo painel, se a Receita mexer no prazo.
  *
- *  O corte é em Brasília: às 21h de 30/09 o servidor em UTC já acha que é
- *  dia 1º, e fecharia a porta três horas antes da hora. */
-const FIM_DA_JANELA = (process.env.AUSTER_FIM_DA_JANELA || '2026-09-30').trim();
+ *  O corte é em Brasília: às 21h do último dia o servidor em UTC já acha que
+ *  é o dia seguinte, e fecharia a porta três horas antes da hora. */
+const FIM_DA_JANELA = (process.env.AUSTER_FIM_DA_JANELA || '2026-10-30').trim();
 
 /** AAAA-MM-DD -> DD/MM/AAAA. Ninguém no Brasil lê a primeira forma. */
 const diaBrasileiro = iso => {
@@ -400,8 +423,8 @@ const diaBrasileiro = iso => {
 
 function estadoDaJanela(agora = new Date()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(FIM_DA_JANELA)) return 'aberta';
-  // O corte é em Brasília, não em UTC: às 21h de 30/09 o servidor em UTC já
-  // acha que é dia 1º, e fecharia a porta três horas antes da hora.
+  // O corte é em Brasília, não em UTC: às 21h do último dia o servidor em UTC
+  // já acha que é o dia seguinte, e fecharia a porta três horas antes da hora.
   const brasilia = new Date(agora.getTime() - 3 * 3600 * 1000);
   const hoje = brasilia.toISOString().slice(0, 10);
   return hoje > FIM_DA_JANELA ? 'encerrada' : 'aberta';
@@ -1020,6 +1043,9 @@ const servidor = createServer(async (req, res) => {
         return responder(res, 200, html.replace('/*__LOGO__*/', LOGO_NEGATIVA).replace('/*__QUEM__*/',
           `window.__QUEM__ = ${jsonParaScript(quem)};\n`
           + `window.__JANELA__ = ${jsonParaScript(estadoDaJanela())};\n`
+          /* A data vai junto: antes o painel trazia "30/09/2026" escrito à mão
+           * no HTML, e uma prorrogação deixava o aviso mentindo. */
+          + `window.__JANELA_FIM__ = ${jsonParaScript(diaBrasileiro(FIM_DA_JANELA))};\n`
           + `window.__PAPEL__ = ${jsonParaScript(sessao.papel)};\n`
           + `window.__IMPLANTACAO__ = ${sessao.implantacao === true};`),
           'text/html; charset=utf-8', { 'Cache-Control': 'no-store' });
@@ -1166,6 +1192,13 @@ const servidor = createServer(async (req, res) => {
       if (req.method === 'GET' && rota === '/backoffice/termo') {
         const a = banco.adesao(Number(url.searchParams.get('id')));
         if (!a) return responder(res, 404, 'Adesão não encontrada.', 'text/plain; charset=utf-8');
+        /* Versão que o sistema não conhece mais: recusar é melhor que imprimir
+         * o texto de hoje por cima de uma prova antiga. */
+        if (!TERMOS[a.versao_termo]) {
+          return responder(res, 409, `Esta adesão foi aceita na versão ${a.versao_termo} do `
+            + 'termo, cujo texto não está mais no sistema. A via não pode ser tirada sem ele.',
+            'text/plain; charset=utf-8');
+        }
         const html = paginaDeAdesao({ soTermo: {
           empresa: {
             nomeEmpresa: a.nome_empresa, cnpj: a.cnpj, representante: a.representante,

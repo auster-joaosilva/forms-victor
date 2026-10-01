@@ -8,7 +8,9 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { TERMO } from './src/termo.js';
+import { TERMO, TERMOS } from './src/termo.js';
+import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
 
 const SENHA = 'senha-de-teste-nao-usar-em-producao';
 const PORTA = 8731;
@@ -79,9 +81,20 @@ try {
   conferir('sobe e responde /saude', true);
 
   // ------------------------------------------------------------- formulário
+  /* A RAIZ mudou de dono em 01/10/2026: `AUSTER_HOME` passou a nascer em
+     `principal`, e quem chega sem convite vê a capa institucional. Este servidor
+     NAO define a variavel — e exatamente por isso ele prova o padrao. O
+     diagnostico continua inteiro, no endereco proprio. */
   let r = await fetch(BASE + '/');
+  const raiz = await r.text();
+  conferir('por padrão, a raiz entrega a capa', r.ok && raiz.includes('window.__PRINCIPAL__'),
+    'status ' + r.status);
+  conferir('a capa na raiz não é o formulário', !raiz.includes('Object.assign(CONFIG,'));
+
+  r = await fetch(BASE + '/diagnostico-simples');
   const html = await r.text();
-  conferir('GET / devolve o portal', r.ok && html.includes('Diagn'), 'status ' + r.status);
+  conferir('GET /diagnostico-simples devolve o portal', r.ok && html.includes('Diagn'),
+    'status ' + r.status);
   conferir('o endpoint de envio é injetado',
     html.includes('"endpointEnvio":"/api/respostas"'));
   conferir('o e-mail de privacidade é injetado',
@@ -665,6 +678,54 @@ try {
   const comInjecao = await r.text();
   conferir('o termo do backoffice não deixa fechar o bloco de script',
     !comInjecao.includes('</script><script>x=1'));
+
+  /* ------------- a via sai com o texto da versao ACEITA, nao com o de hoje
+   *
+   * O defeito que isto pega: a reimpressao montava sempre o TERMO corrente e
+   * carimbava embaixo a versao e o resumo guardados. Com uma versao so no ar
+   * ninguem via. Na primeira troca de texto — que aconteceu em 01/10/2026,
+   * quando a Resolucao CGSN 194/2026 mudou os prazos e o termo subiu para V5 —
+   * toda via de adesao antiga sairia com o texto novo sob a prova antiga.
+   *
+   * Para provar e preciso uma adesao de versao ANTIGA, e a API recusa versao
+   * que nao seja a corrente (e faz bem). Entao a linha e forjada direto no
+   * banco, que e o unico jeito de simular o passado. */
+  conferir('o portal oferece a versao corrente do termo', TERMO.versao === 'V5', TERMO.versao);
+
+  const bancoDireto = new DatabaseSync(join(pasta, 'teste.db'));
+  const resumoV4 = createHash('sha256')
+    .update(JSON.stringify(TERMOS.V4), 'utf8').digest('hex');
+  bancoDireto.prepare(`INSERT INTO adesoes
+      (protocolo, nome_empresa, cnpj, representante, cpf, cargo, email, telefone,
+       modalidade, sem_manifestacao, quer_proposta, versao_termo, resumo_termo,
+       origem, agente, pacote, aceito_em)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .run('DS-V4-ANTIGA', 'Empresa Que Assinou Antes', '11.222.333/0001-81',
+         'Representante Antigo', '111.222.333-96', 'Sócio', 'antigo@exemplo.test',
+         '(34) 3333-3333', 'hibrido', 'cancelar', 0, 'V4', resumoV4,
+         '127.0.0.1', 'teste', '{}', new Date().toISOString());
+  const idV4 = bancoDireto.prepare(
+    'SELECT id FROM adesoes WHERE protocolo = ?').get('DS-V4-ANTIGA').id;
+
+  r = await fetch(`${BASE}/backoffice/termo?id=${idV4}`,
+    { headers: { Authorization: cabecalhoDe('maria', SENHA_MARIA) } });
+  const viaV4 = await r.text();
+  conferir('a via de uma adesão V4 sai com o texto da V4',
+    r.ok && viaV4.includes('até 30/11/2026'), 'status ' + r.status);
+  conferir('e NÃO traz o texto da V5 por cima da prova antiga',
+    !viaV4.includes('de 03/11/2026 a 20/12/2026'));
+  conferir('a via da V4 se declara V4', viaV4.includes('"versao":"V4"'));
+
+  // Versao que o sistema nao conhece: recusar e melhor que imprimir por cima.
+  bancoDireto.prepare(
+    "UPDATE adesoes SET versao_termo = 'V9' WHERE protocolo = 'DS-V4-ANTIGA'").run();
+  r = await fetch(`${BASE}/backoffice/termo?id=${idV4}`,
+    { headers: { Authorization: cabecalhoDe('maria', SENHA_MARIA) } });
+  conferir('versão desconhecida do termo é recusada, não impressa',
+    r.status === 409, 'status ' + r.status);
+  bancoDireto.prepare(
+    "UPDATE adesoes SET versao_termo = 'V4' WHERE protocolo = 'DS-V4-ANTIGA'").run();
+  bancoDireto.close();
 
   // ------------------------------------------------------------- eventos
   // A agenda e a unica area onde a EQUIPE cria conteudo publico sem passar

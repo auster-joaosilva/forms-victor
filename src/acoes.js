@@ -46,7 +46,7 @@ export const REGRAS_ACAO = [
   a('decidir_com_os_socios',
     r => ['conselho_matriz', 'socios_conjunto'].includes(r.responsavelDecisao),
     'Marque a conversa com os sócios ainda nesta semana.',
-    { porque: 'A decisão é de quem tem alçada, e a janela fecha em 30 de setembro. Decisão em conjunto não cabe nos últimos três dias.',
+    { porque: 'A decisão é de quem tem alçada, e a janela fecha em 30 de outubro. Decisão em conjunto não cabe nos últimos três dias.',
       executor: 'cliente', trilha: 1, precisa: 'Uma hora na agenda de quem decide' }),
 
   // A data de novembro é o que torna a opção barata — e o que a torna perigosa
@@ -54,14 +54,14 @@ export const REGRAS_ACAO = [
   a('fechar_a_conta_ate_o_inicio_de_novembro',
     (r, d) => d.posicao.familia === 'hibrido' || d.posicao.familia === 'a_definir',
     'Comece a levantar os números agora e feche a conta até o início de novembro.',
-    { porque: 'A solicitação feita em setembro pode ser cancelada até 30 de novembro, sem efeito nenhum. Mas 30 de novembro é o limite, não a data de começar: deixe a conclusão pronta na primeira semana de novembro, para haver tempo de cancelar com calma se o número disser o contrário.',
+    { porque: 'A solicitação feita em outubro pode ser cancelada entre 3 de novembro e 20 de dezembro, sem efeito nenhum. Mas 20 de dezembro é o limite, não a data de começar — e antes de 3 de novembro o cancelamento nem existe. Deixe a conclusão pronta até o fim de outubro, para chegar em 3 de novembro já sabendo se cancela.',
       fundamento: 'Manual da Opção pelo Regime Regular do IBS e da CBS, item 4.2 (CGSN, 01/09/2026)',
       executor: 'cliente', trilha: 1, precisa: 'Os relatórios em mãos agora, e a decisão marcada para a primeira semana de novembro' }),
 
   a('ciencia_da_trava_do_ressarcimento',
     (r, d) => d.posicao.familia === 'hibrido',
     'Saiba que pedir devolução de crédito fecha a porta de saída.',
-    { porque: 'Depois de 30 de novembro a opção vale pelo semestre. E se a empresa chegar a receber ressarcimento de crédito de IBS ou CBS, fica impedida de voltar ao recolhimento unificado no ano corrente e no seguinte — a saída deixa de existir, não só atrasa.',
+    { porque: 'Depois de 20 de dezembro a opção vale pelo semestre. E se a empresa chegar a receber ressarcimento de crédito de IBS ou CBS, fica impedida de voltar ao recolhimento unificado no ano corrente e no seguinte — a saída deixa de existir, não só atrasa.',
       fundamento: 'LC 214/2025, art. 41, § 5º',
       executor: 'cliente', trilha: 2, precisa: 'Ciência dos sócios sobre isso, por escrito' }),
 
@@ -161,7 +161,7 @@ export const REGRAS_ACAO = [
   a('simular_as_duas_opcoes',
     (r, d) => ['C', 'E'].includes(d.saida.codigo),
     'Simular sua carga nas duas opções, com seus números reais',
-    { porque: 'Compara o que você paga hoje com o que pagaria apurando por fora, já considerando o crédito das suas compras. É esta conta que fecha a decisão antes de 30 de novembro.',
+    { porque: 'Compara o que você paga hoje com o que pagaria apurando por fora, já considerando o crédito das suas compras. É esta conta que fecha a decisão antes de 20 de dezembro.',
       executor: 'auster', trilha: 1, precisa: 'Apuração dos últimos 12 meses e uma hora sua para ver o resultado' }),
 
   a('levantar_o_das_e_a_folha',
@@ -185,7 +185,7 @@ export const REGRAS_ACAO = [
   a('regularizar_debitos_no_prazo',
     r => ['sim_aberto', 'nao_sei'].includes(r.debitosTributarios),
     'Levante e regularize o que estiver em aberto, sem esperar o resultado da opção.',
-    { porque: 'Débito em aberto barra o ingresso de quem está entrando e é causa de exclusão de quem já está. A própria Receita orienta a confirmar o pedido mesmo com pendência, para não perder o prazo de 30 de setembro — o prazo de regularização é de 30 dias contados da confirmação, ou da ciência do termo de indeferimento.',
+    { porque: 'Débito em aberto barra o ingresso de quem está entrando e é causa de exclusão de quem já está. A própria Receita orienta a confirmar o pedido mesmo com pendência, para não perder o prazo — que agora é 15 de outubro para a entrada no Simples e 30 de outubro para regularizar o que barrou o ingresso.',
       fundamento: 'Roteiro da Opção pelo Simples Nacional para 2027, item 2.2 (CGSN); LC 123/2006, art. 17, V',
       executor: 'cliente', trilha: 1, precisa: 'Situação fiscal nas três esferas — podemos extrair para você' }),
 

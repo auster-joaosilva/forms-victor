@@ -51,3 +51,30 @@ export interface LegacyEvent {
   referencia: string | null
   detalhe: string | null
 }
+
+export interface LegacyAdhesion {
+  id: number
+  protocolo: string
+  resposta_id: number | null
+  token_convite: string | null
+  aceito_em: string
+  nome_empresa: string | null
+  cnpj: string | null
+  representante: string | null
+  cpf: string | null
+  cargo: string | null
+  email: string | null
+  telefone: string | null
+  modalidade: string
+  sem_manifestacao: string | null
+  quer_proposta: number
+  versao_termo: string
+  resumo_termo: string
+  origem: string | null
+  agente: string | null
+  pacote: string
+  situacao: string
+  nota_interna: string | null
+  tratado_por: string | null
+  tratado_em: string | null
+}

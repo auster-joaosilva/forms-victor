@@ -1,6 +1,6 @@
 import type { Role } from '@/server/shared/domain/permissions'
 import { normalizeCnpj } from '@/server/shared/domain/validation'
-import type { LegacyEvent, LegacyInvitation, LegacyResponse, LegacyUser } from './legacy-rows'
+import type { LegacyAdhesion, LegacyEvent, LegacyInvitation, LegacyResponse, LegacyUser } from './legacy-rows'
 
 export type ImportedAuditAction =
   | 'access_denied' | 'invitation_created' | 'invitation_deleted' | 'response_received' | 'response_handled'
@@ -89,6 +89,52 @@ export const AUDIT_ACTION_MAP: Record<string, { action: ImportedAuditAction; ext
 
 export const STATUS_MAP: Record<string, ImportedStatus> = { nova: 'new', em_analise: 'in_review', validada: 'validated', descartada: 'discarded' }
 
+// equipe is the pre-roles value; Victor sent it down to operador, the most closed, not to gestor.
+export const ROLE_MAP: Record<string, Role> = { admin: 'admin', gestor: 'manager', regularizacao: 'regularization', operador: 'operator', equipe: 'operator' }
+
+export function translateRole(papel: string): { role: Role; known: boolean } {
+  const role = Object.hasOwn(ROLE_MAP, papel) ? ROLE_MAP[papel] : undefined
+  return role ? { role, known: true } : { role: 'operator', known: false }
+}
+
+export type ImportedAdhesionStatus = 'received' | 'filed' | 'cancelled'
+
+export const ADHESION_STATUS_MAP: Record<string, ImportedAdhesionStatus> = { recebida: 'received', protocolada: 'filed', cancelada: 'cancelled' }
+export const MODALITY_MAP: Record<string, 'standard' | 'hybrid'> = { padrao: 'standard', hibrido: 'hybrid' }
+export const WITHOUT_MANIFESTATION_MAP: Record<string, 'cancel' | 'keep'> = { cancelar: 'cancel', manter: 'keep' }
+
+const REQUIRED_ADHESION_FIELDS = { nome_empresa: 'razão social', cnpj: 'CNPJ', representante: 'representante', cpf: 'CPF', cargo: 'cargo', email: 'e-mail' } as const
+
+export interface ImportedAdhesion {
+  id: number
+  protocol: string
+  responseId: number | null
+  invitationToken: string | null
+  acceptedAt: Date
+  companyName: string
+  cnpj: string
+  cnpjDigits: string
+  representative: string
+  cpf: string
+  representativeRole: string
+  email: string
+  phone: string | null
+  modality: 'standard' | 'hybrid'
+  withoutManifestation: 'cancel' | 'keep' | null
+  wantsProposal: boolean
+  termVersion: string
+  termHash: string
+  originIp: string | null
+  originSource: string | null
+  forwardedChain: string | null
+  userAgent: string | null
+  payload: unknown
+  status: ImportedAdhesionStatus
+  internalNote: string | null
+  handledById: string | null
+  handledAt: Date | null
+}
+
 const date = (value: string | null): Date | null => (value ? new Date(value) : null)
 
 export function translateAuditAction(legacy: string): { action: ImportedAuditAction; extra: Record<string, unknown>; known: boolean } {
@@ -127,7 +173,7 @@ export const mapUser = (row: LegacyUser, id: string): ImportedUser => ({
   username: row.usuario,
   name: row.nome || row.usuario,
   email: `${row.usuario}@users.invalid`,
-  role: row.papel === 'admin' ? 'admin' : 'operator',
+  role: translateRole(row.papel).role,
   banned: row.ativo === 0,
   banReason: row.ativo === 0 ? 'desativado' : null,
   createdAt: new Date(row.criado_em),
@@ -167,6 +213,54 @@ export function mapResponse(row: LegacyResponse, context: { protocol: string; in
     requesterInQsa: requesterInQsaFrom(row.solicitante_no_qsa),
     payload: parseJson(row.pacote) ?? {},
     status: STATUS_MAP[row.situacao] ?? 'new',
+    internalNote: row.nota_interna,
+    handledById: row.tratado_por ? (context.userIds.get(row.tratado_por) ?? null) : null,
+    handledAt: date(row.tratado_em),
+  }
+}
+
+export function emptyRequiredFields(row: LegacyAdhesion): string[] {
+  return (Object.keys(REQUIRED_ADHESION_FIELDS) as (keyof typeof REQUIRED_ADHESION_FIELDS)[])
+    .filter((key) => !row[key]?.trim())
+    .map((key) => REQUIRED_ADHESION_FIELDS[key])
+}
+
+const textField = (record: Record<string, unknown>, key: string): string | null => (typeof record[key] === 'string' && record[key] ? record[key] : null)
+
+// The stored hash and version are the proof of what was accepted: copied as they are, never recomputed.
+export function mapAdhesion(
+  row: LegacyAdhesion,
+  context: { protocol: string; invitationTokens: Set<string>; responseIds: Set<number>; userIds: Map<string, string> },
+): ImportedAdhesion | null {
+  const modality = Object.hasOwn(MODALITY_MAP, row.modalidade) ? MODALITY_MAP[row.modalidade] : undefined
+  if (!modality) return null
+  const payload = parseJson(row.pacote) ?? {}
+  const pacote = typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {}
+  return {
+    id: row.id,
+    protocol: context.protocol,
+    responseId: row.resposta_id !== null && context.responseIds.has(row.resposta_id) ? row.resposta_id : null,
+    invitationToken: row.token_convite && context.invitationTokens.has(row.token_convite) ? row.token_convite : null,
+    acceptedAt: new Date(row.aceito_em),
+    companyName: row.nome_empresa ?? '',
+    cnpj: row.cnpj ?? '',
+    cnpjDigits: cnpjDigitsOf(row.cnpj) ?? '',
+    representative: row.representante ?? '',
+    cpf: row.cpf ?? '',
+    representativeRole: row.cargo ?? '',
+    email: row.email ?? '',
+    phone: row.telefone || null,
+    modality,
+    withoutManifestation: row.sem_manifestacao ? (WITHOUT_MANIFESTATION_MAP[row.sem_manifestacao] ?? null) : null,
+    wantsProposal: row.quer_proposta === 1,
+    termVersion: row.versao_termo,
+    termHash: row.resumo_termo,
+    originIp: row.origem,
+    originSource: textField(pacote, 'comoObtido'),
+    forwardedChain: textField(pacote, 'cadeia'),
+    userAgent: row.agente,
+    payload,
+    status: ADHESION_STATUS_MAP[row.situacao] ?? 'received',
     internalNote: row.nota_interna,
     handledById: row.tratado_por ? (context.userIds.get(row.tratado_por) ?? null) : null,
     handledAt: date(row.tratado_em),

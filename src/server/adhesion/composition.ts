@@ -8,6 +8,7 @@ import { systemClock } from './adapters/system-clock'
 import { makeAdhesionBackoffice } from './application/backoffice-adhesions'
 import { makeAdhesionPage } from './application/adhesion-page'
 import { makeSubmitAdhesion } from './application/submit-adhesion'
+import { TERMS } from './domain/term'
 
 export const submitAdhesion = makeSubmitAdhesion({
   adhesions: prismaAdhesionRepository,
@@ -32,3 +33,5 @@ export type { AdhesionReceipt } from './domain/adhesion'
 export const adhesionBackoffice = makeAdhesionBackoffice({ adhesions: prismaAdhesionRepository, clock: systemClock, recordAudit })
 
 export type { AdhesionList, AdhesionSummary, BackofficeActor } from './application/backoffice-adhesions'
+
+export const termVersions: readonly string[] = Object.keys(TERMS)

@@ -14,7 +14,7 @@ const importer = legacyImporter(path)
 try {
   const report = await importer.run({ dryRun })
   console.log(dryRun ? 'Simulação: nada foi gravado.' : report.conflicts.length ? 'Nada foi gravado.' : 'Migração gravada.')
-  console.table({ usuários: report.users, convites: report.invitations, respostas: report.responses, auditoria: report.audit })
+  console.table({ usuários: report.users, convites: report.invitations, respostas: report.responses, adesões: report.adhesions, auditoria: report.audit })
   for (const note of report.notes) console.log(`aviso · ${note}`)
   for (const conflict of report.conflicts) console.error(`conflito · ${conflict}`)
   if (report.conflicts.length) process.exitCode = 1

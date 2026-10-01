@@ -11,6 +11,8 @@ export const prismaImportTarget: ImportTarget = {
   existingInvitationTokens: async () => new Set((await prisma.invitation.findMany({ select: { token: true } })).map((row) => row.token)),
   existingResponses: async () => new Map((await prisma.response.findMany({ select: { id: true, protocol: true } })).map((row) => [row.id, row.protocol] as const)),
   existingProtocols: async () => new Map((await prisma.response.findMany({ select: { id: true, protocol: true } })).map((row) => [row.protocol, row.id] as const)),
+  existingAdhesions: async () => new Map((await prisma.adhesion.findMany({ select: { id: true, protocol: true } })).map((row) => [row.id, row.protocol] as const)),
+  existingAdhesionProtocols: async () => new Map((await prisma.adhesion.findMany({ select: { id: true, protocol: true } })).map((row) => [row.protocol, row.id] as const)),
   importedEventIds: async () => {
     const rows = await prisma.$queryRaw<{ id: number }[]>`SELECT (detail->>'legacyEventId')::int AS id FROM audit_logs WHERE detail->>'legacyEventId' IS NOT NULL`
     return new Set(rows.map((row) => row.id))
@@ -28,6 +30,12 @@ export const prismaImportTarget: ImportTarget = {
       if (rows.length) await tx.response.createMany({ data: rows.map((row) => ({ ...row, payload: json(row.payload) })) })
       // Ids were copied by hand: without this the next submission would collide with a migrated id.
       await tx.$queryRaw`SELECT setval(pg_get_serial_sequence('responses', 'id'), COALESCE((SELECT MAX(id) FROM responses), 0) + 1, false)`
+    }, LONG_TRANSACTION),
+  insertAdhesions: async (rows) =>
+    prisma.$transaction(async (tx) => {
+      if (rows.length) await tx.adhesion.createMany({ data: rows.map((row) => ({ ...row, payload: json(row.payload) })) })
+      // Same reason as the responses: copied ids would collide with the next adhesion.
+      await tx.$queryRaw`SELECT setval(pg_get_serial_sequence('adhesions', 'id'), COALESCE((SELECT MAX(id) FROM adhesions), 0) + 1, false)`
     }, LONG_TRANSACTION),
   insertAuditEntries: async (rows) =>
     prisma.$transaction(async (tx) => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AUDIT_ACTIONS } from '@/server/audit/domain/audit-entry'
-import { AUDIT_ACTION_MAP, assignProtocols, mapResponse, mapUser, requesterInQsaFrom, translateAuditAction } from './mapping'
+import { AUDIT_ACTION_MAP, assignProtocols, emptyRequiredFields, mapAdhesion, mapResponse, mapUser, requesterInQsaFrom, translateAuditAction, translateRole } from './mapping'
+import type { LegacyAdhesion } from './legacy-rows'
 
 describe('legacy mapping', () => {
   it('suffixes repeated protocols by id order and names the missing ones', () => {
@@ -38,5 +39,42 @@ describe('legacy mapping', () => {
       handledById: null, handledAt: new Date('2026-09-16T12:00:00.000Z'), payload: { respostas: { a: 'b' } }, outcome: 'B', formVersion: 'sintetico',
     })
     expect([requesterInQsaFrom('nao'), requesterInQsaFrom(null)]).toEqual([false, null])
+  })
+
+  it('translates the four legacy roles, and the old equipe and anything unknown fall to operator', () => {
+    expect(['admin', 'gestor', 'regularizacao', 'operador', 'equipe'].map((papel) => translateRole(papel).role)).toEqual([
+      'admin', 'manager', 'regularization', 'operator', 'operator',
+    ])
+    expect(translateRole('equipe').known).toBe(true)
+    expect(translateRole('chefe')).toEqual({ role: 'operator', known: false })
+  })
+
+  it('maps an adhesion keeping the stored proof and translating the domain values', () => {
+    const row: LegacyAdhesion = {
+      id: 4, protocolo: 'ADS-20260925-AAAAA', resposta_id: 1, token_convite: 'ABCDEFGHJK', aceito_em: '2026-09-25T13:00:00.000Z',
+      nome_empresa: 'Padaria Boa', cnpj: '11.222.333/0001-81', representante: 'Ana', cpf: '529.982.247-25', cargo: 'Sócio',
+      email: 'ana@padaria.com', telefone: '', modalidade: 'hibrido', sem_manifestacao: 'cancelar', quer_proposta: 1, versao_termo: 'V4',
+      resumo_termo: '94667b1747b65c3e177416ee98e63a79b10599c1a5240b3a0836c094c0788441', origem: '203.0.113.7', agente: 'Mozilla/5.0',
+      pacote: '{"comoObtido":"cf-connecting-ip","cadeia":"203.0.113.7, 10.0.0.1","empresa":{"nomeEmpresa":"Padaria Boa"}}',
+      situacao: 'protocolada', nota_interna: null, tratado_por: 'regina', tratado_em: '2026-09-26T12:00:00.000Z',
+    }
+    const context = { protocol: 'ADS-20260925-AAAAA-2', invitationTokens: new Set(['ABCDEFGHJK']), responseIds: new Set([1]), userIds: new Map([['regina', 'u-regina']]) }
+    expect(mapAdhesion(row, context)).toEqual({
+      id: 4, protocol: 'ADS-20260925-AAAAA-2', responseId: 1, invitationToken: 'ABCDEFGHJK', acceptedAt: new Date('2026-09-25T13:00:00.000Z'),
+      companyName: 'Padaria Boa', cnpj: '11.222.333/0001-81', cnpjDigits: '11222333000181', representative: 'Ana', cpf: '529.982.247-25',
+      representativeRole: 'Sócio', email: 'ana@padaria.com', phone: null, modality: 'hybrid', withoutManifestation: 'cancel', wantsProposal: true,
+      termVersion: 'V4', termHash: '94667b1747b65c3e177416ee98e63a79b10599c1a5240b3a0836c094c0788441', originIp: '203.0.113.7',
+      originSource: 'cf-connecting-ip', forwardedChain: '203.0.113.7, 10.0.0.1', userAgent: 'Mozilla/5.0',
+      payload: { comoObtido: 'cf-connecting-ip', cadeia: '203.0.113.7, 10.0.0.1', empresa: { nomeEmpresa: 'Padaria Boa' } },
+      status: 'filed', internalNote: null, handledById: 'u-regina', handledAt: new Date('2026-09-26T12:00:00.000Z'),
+    })
+
+    const orphan = { ...row, resposta_id: 99, token_convite: 'ORFAOXXXXX', cpf: null, cargo: null, cnpj: null, modalidade: 'padrao', sem_manifestacao: null, situacao: 'esquisita', tratado_por: 'fantasma', pacote: 'não é json' }
+    expect(mapAdhesion(orphan, context)).toMatchObject({
+      responseId: null, invitationToken: null, cpf: '', representativeRole: '', cnpj: '', cnpjDigits: '', modality: 'standard',
+      withoutManifestation: null, status: 'received', handledById: null, originSource: null, forwardedChain: null, payload: { raw: 'não é json' },
+    })
+    expect(emptyRequiredFields(orphan)).toEqual(['CNPJ', 'CPF', 'cargo'])
+    expect(mapAdhesion({ ...row, modalidade: 'outra' }, context)).toBeNull()
   })
 })

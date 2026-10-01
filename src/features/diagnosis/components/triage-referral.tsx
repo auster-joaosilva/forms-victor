@@ -1,6 +1,5 @@
 import type { TriageReason } from '@/server/diagnosis/domain/draft-rules'
-
-const PRIOR_ASSESSMENT_URL = 'https://consultoria.austercontabil.com.br/diagnostico-reforma'
+import { PRIOR_ASSESSMENT_URL } from './prior-assessment'
 
 export function TriageReferral({ reason, onBack }: { reason: TriageReason; onBack(): void }) {
   const mei = reason === 'mei'

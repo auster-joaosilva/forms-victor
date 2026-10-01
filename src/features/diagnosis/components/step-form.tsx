@@ -1,10 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { FORM_STEPS } from '@/server/diagnosis/domain/draft-rules'
+import { FIRST_STEP, FORM_STEPS } from '@/server/diagnosis/domain/draft-rules'
 import { BLOCKS, visibleQuestions } from '@/server/diagnosis/domain/questions'
 import type { DiagnosisForm } from '../hooks/use-diagnosis-form'
 import { QuestionField } from './question-field'
-
-const FIRST_STEP = 1
 
 export function StepForm({ form, step }: { form: DiagnosisForm; step: number }) {
   const { state, actions } = form

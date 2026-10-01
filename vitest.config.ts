@@ -9,7 +9,11 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: 'unit', include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'scripts/**/*.test.ts'], exclude: ['**/*.int.test.ts'] },
+        test: { name: 'unit', include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'], exclude: ['**/*.int.test.ts'] },
+      },
+      {
+        extends: true,
+        test: { name: 'dom', include: ['src/**/*.test.tsx'], environment: 'jsdom', setupFiles: ['tests/setup.ts', 'tests/setup-dom.ts'] },
       },
       {
         extends: true,

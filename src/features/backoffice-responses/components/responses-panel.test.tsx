@@ -1,4 +1,4 @@
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -24,6 +24,13 @@ const detail = (internalNote: string): ResponseDetail => ({
   engine: { outcome: '', position: '', certainty: '', urgency: '', confidence: '', gaps: [], triggers: [], openPoints: [] },
   answers: { blocks: [], outsideForm: [], total: 0 }, internalNote, handledBy: null, handledAt: null, changedAfterHandling: false,
 })
+
+const renderPanel = (client = createQueryClient()) =>
+  render(
+    <QueryClientProvider client={client}>
+      <ResponsesPanel filter={{ page: 1 }} onFilterChange={() => undefined} />
+    </QueryClientProvider>,
+  )
 
 describe('ResponsesPanel', () => {
   it('fetches the sheet again on every opening and seeds the note from the fresh copy', async () => {
@@ -68,5 +75,37 @@ describe('ResponsesPanel', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(within(screen.getByRole('dialog')).getByRole('textbox')).toBe(note)
     expect(note).toHaveValue('digitando')
+  })
+
+  it('keeps the sheet open and shows the refusal when handling is refused', async () => {
+    listResponsesFn.mockResolvedValue(list)
+    getResponseFn.mockReset().mockResolvedValue(detail(''))
+    handleResponseFn.mockReset().mockResolvedValue({ ok: false, message: 'Resposta não encontrada.' })
+    renderPanel()
+    await userEvent.click(await screen.findByText('Padaria Boa'))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Validada' }))
+    expect(within(screen.getByRole('dialog')).getByText('Resposta não encontrada.')).toHaveClass('bo-error')
+  })
+
+  it('keeps the sheet open and shows the failure when the server cannot be reached', async () => {
+    listResponsesFn.mockResolvedValue(list)
+    getResponseFn.mockReset().mockResolvedValue(detail(''))
+    handleResponseFn.mockReset().mockRejectedValue(new Error('Failed to fetch'))
+    renderPanel()
+    await userEvent.click(await screen.findByText('Padaria Boa'))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Só salvar a nota' }))
+    expect(await within(screen.getByRole('dialog')).findByText('Não deu para falar com o servidor: Failed to fetch')).toHaveClass('bo-error')
+  })
+
+  it('says so when the sheet cannot be loaded or no longer exists', async () => {
+    listResponsesFn.mockResolvedValue(list)
+    getResponseFn.mockReset().mockRejectedValueOnce(new Error('HTTP 500')).mockResolvedValueOnce(null)
+    renderPanel(new QueryClient({ defaultOptions: { queries: { retry: false } } }))
+    await userEvent.click(await screen.findByText('Padaria Boa'))
+    expect(await screen.findByText('Falha ao carregar: HTTP 500')).toHaveClass('bo-error')
+    await userEvent.click(screen.getByText('Padaria Boa'))
+    expect(await screen.findByText('Resposta não encontrada.')).toHaveClass('bo-error')
+    expect(screen.queryByText('Falha ao carregar: HTTP 500')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

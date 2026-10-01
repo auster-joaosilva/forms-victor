@@ -17,7 +17,6 @@ describe('parseEnv', () => {
     const env = parseEnv(valid)
     expect(env.PORT).toBe(3000)
     expect(env.S3_USE_SSL).toBe(false)
-    expect(env.ADHESION_WINDOW_END).toBe('2026-09-30')
   })
 
   it('rejects an S3 endpoint written as URL', () => {

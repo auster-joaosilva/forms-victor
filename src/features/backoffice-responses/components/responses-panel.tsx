@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog } from 'radix-ui'
 import { useState } from 'react'
-import { formatShortDateTime } from '@/server/diagnosis/domain/dates'
+import { formatShortDateTime } from '@/server/shared/domain/dates'
 import { RESPONSE_STATUSES, RESPONSE_STATUS_LABELS, isResponseStatus, type ResponseStatus } from '@/server/diagnosis/domain/response-status'
 import { responseQuery, responsesQuery, type ResponsesFilter } from '../api/queries'
 import { handleResponseFn, type ResponseDetail as ResponseDetailData, type ResponseSummary } from '../api/responses'

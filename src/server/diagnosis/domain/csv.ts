@@ -1,4 +1,4 @@
-import { brasiliaDateParts } from './dates'
+import { brasiliaDateParts } from '../../shared/domain/dates'
 import type { Question } from './question-types'
 import { QUESTIONS } from './questions'
 import { RESPONSE_STATUS_LABELS, type ResponseStatus } from './response-status'

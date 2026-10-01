@@ -12,7 +12,6 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url(),
   APP_PUBLIC_URL: z.url(),
-  ADHESION_WINDOW_END: z.iso.date().default('2026-09-30'),
 })
 
 export type Env = z.infer<typeof envSchema>

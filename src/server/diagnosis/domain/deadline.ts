@@ -55,7 +55,7 @@ const MONTHS = [
 
 const spelledOut = (date: Date): string => `${date.getDate()} de ${MONTHS[date.getMonth()]}`
 
-// Difference between dates, not instants: at 10h on 30/09 the window ends today, not tomorrow.
+// Difference between dates, not instants: at 10h on the last day the window ends today, not tomorrow.
 const dateOnly = (date: Date): number => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
 
 export function assessUrgencyAndDeadline(

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatShortDateTime } from '@/server/diagnosis/domain/dates'
+import { formatShortDateTime } from '@/server/shared/domain/dates'
 import type { Role, UserChanges } from '@/server/identity/domain/user'
 import type { UserRow } from '../api/users'
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatShortDateTime } from '@/server/diagnosis/domain/dates'
+import { formatShortDateTime } from '@/server/shared/domain/dates'
 import type { InvitationView } from '../api/invitations'
 
 export type InvitationFields = { companyName: string; cnpj: string; email: string }

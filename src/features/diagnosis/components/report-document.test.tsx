@@ -25,7 +25,13 @@ describe('ReportDocument', () => {
       expect(text).toContain('DS-260915-AB12')
       expect(text).not.toMatch(/\b(undefined|NaN|null)\b/)
       expect(affirmsMerit(text)).toBeNull()
-      if (sheets.meaning.showDeadlines) expect(text).toContain('30 de novembro de 2026')
+      if (sheets.meaning.showDeadlines) {
+        expect(text).toContain('3 de novembro de 2026')
+        expect(text).toContain('20 de dezembro de 2026')
+      }
+      expect(text).not.toMatch(/at[ée]\s+30 de (setembro|novembro)/)
+      expect(text).not.toContain('30/09/2026')
+      expect(text).not.toContain('30/11/2026')
       unmount()
       drawn++
     }

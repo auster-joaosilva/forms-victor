@@ -1,4 +1,4 @@
-import { formatShortDateTime } from '@/server/diagnosis/domain/dates'
+import { formatShortDateTime } from '@/server/shared/domain/dates'
 import { AUDIT_ACTION_LABELS, type AuditAction } from '@/server/audit/domain/audit-entry'
 import type { AuditRow } from '../api/audit'
 

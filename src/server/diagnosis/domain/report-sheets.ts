@@ -1,5 +1,5 @@
 import type { ActionItem, ActionPlan } from './action-plan'
-import { formatLongDate } from './dates'
+import { formatLongDate } from '../../shared/domain/dates'
 import type { Conflict, Diagnosis } from './diagnose'
 import type { PositionDefinition } from './outcomes'
 import type { Answers } from './question-types'

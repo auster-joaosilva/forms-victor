@@ -19,16 +19,8 @@ export const THRESHOLDS = {
 // [DIVERGE-D1] Turned on 15/09/2026 by management: the high branch also tests credit density.
 export const APPLY_DENSITY_TEST_ON_HIGH_BRANCH = true
 
-// LC 123/2006, art. 13, §§ 9º e 10 (LC 227/2026); withdrawal until 30/11: CGSN option manual, item 4.2.
-export const DEADLINES = {
-  windowEnd: '2026-09-30',
-  withdrawalUntil: '2026-11-30',
-  effectSemester: '1º semestre de 2027',
-  nextWindow: 'março de 2027',
-  nextWindowEffect: '2º semestre de 2027',
-  // Operational lead time asked by the firm, in business days. Not a legal deadline.
-  filingSlackDays: 3,
-}
+// LC 123/2006, art. 13, §§ 9º e 10 (LC 227/2026); prazos da Resolução CGSN 194/2026, em shared/domain/deadlines.
+export { DEADLINES } from '../../shared/domain/deadlines'
 
 export const MARGIN_ORDER = ['prejuizo', 'ate_5', 'de_5_10', 'de_10_20', 'de_20_30', 'acima_30']
 

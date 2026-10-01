@@ -1,5 +1,5 @@
 import { useHydrated } from '@tanstack/react-router'
-import { TIME_ZONE } from '@/server/diagnosis/domain/dates'
+import { TIME_ZONE } from '@/server/shared/domain/dates'
 import type { Resumable } from '../hooks/form-state'
 
 function savedWhen(savedAt: string): string {

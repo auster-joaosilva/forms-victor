@@ -27,7 +27,7 @@ function Cover({ cover }: { cover: ReportSheets['cover'] }) {
       <div className="rp-badge">Diagnóstico preliminar</div>
       <h1>
         Simples padrão ou híbrido:
-        <br />o que a sua empresa deve fazer até 30 de setembro
+        <br />o que a sua empresa deve fazer até 30 de outubro
       </h1>
       <table className="rp-header-table">
         <tbody>
@@ -140,11 +140,17 @@ function Meaning({ meaning }: { meaning: ReportSheets['meaning'] }) {
           <table className="rp-deadlines">
             <tbody>
               <tr>
-                <td>30 de setembro de 2026</td>
+                <td>30 de outubro de 2026</td>
                 <th>Último dia para protocolar a opção. Não se recupera: a janela seguinte é março de 2027, com efeito só no 2º semestre.</th>
               </tr>
               <tr>
-                <td>30 de novembro de 2026</td>
+                <td>3 de novembro de 2026</td>
+                <th>
+                  Abre o prazo para <b>cancelar</b> a solicitação. Antes disso o cancelamento não está disponível.
+                </th>
+              </tr>
+              <tr>
+                <td>20 de dezembro de 2026</td>
                 <th>
                   Último dia para <b>cancelar</b> a solicitação, sem efeito nenhum — como se nunca tivesse sido feita.
                 </th>
@@ -173,7 +179,7 @@ function Plan({ plan }: { plan: ReportSheets['plan'] }) {
       <h2>O que fazer na sua empresa</h2>
       {plan.clientNow.length ? (
         <>
-          <h3>Antes de 30 de setembro</h3>
+          <h3>Antes de 30 de outubro</h3>
           {plan.clientNow.map((item) => (
             <Action key={item.number} item={item} />
           ))}
@@ -245,9 +251,10 @@ function Cautions({ footer }: { footer: string }) {
       <h2>Três coisas para não errar</h2>
       <ol className="rp-cautions">
         <li>
-          <b>A opção do híbrido pode ser cancelada até 30 de novembro de 2026.</b> Pedida em setembro, produz efeito a partir de 1º de janeiro de 2027. Até 30 de novembro a
-          solicitação pode ser cancelada, sem consequência nenhuma. Depois, só cabe renunciar, nas janelas semestrais de março e setembro. Quem receber ressarcimento de
-          crédito fica impedido de voltar ao recolhimento unificado no ano corrente e no seguinte.
+          <b>A opção do híbrido pode ser cancelada entre 3 de novembro e 20 de dezembro de 2026.</b> Pedida em outubro, produz efeito a partir de 1º de janeiro de 2027.
+          Nessa janela a solicitação pode ser cancelada, sem consequência nenhuma — mas só nela: antes de 3 de novembro o cancelamento não está disponível, e o cancelamento
+          feito é irretratável. Depois, só cabe renunciar, nas janelas semestrais de março e setembro. Quem receber ressarcimento de crédito fica impedido de voltar ao
+          recolhimento unificado no ano corrente e no seguinte.
         </li>
         <li>
           <b>O MEI não pode optar pelo regime regular</b> — e não aproveita nem transfere crédito. Nas compras é tratado como consumo final. Há duas exceções de crédito

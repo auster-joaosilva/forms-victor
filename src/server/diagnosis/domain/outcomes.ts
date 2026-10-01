@@ -56,7 +56,7 @@ export const POSITIONS: Record<PositionKey, PositionDefinition> = {
     certainty: 'fechada',
     label: 'Simples padrão',
     qualifier: 'decisão fechada',
-    singleAction: 'Não há nada a protocolar em setembro. Você continua na guia única.',
+    singleAction: 'Não há nada a protocolar em outubro. Você continua na guia única.',
     detail: 'IBS e CBS seguem sendo recolhidos dentro do DAS.',
   },
   padrao_a_confirmar: {
@@ -65,7 +65,7 @@ export const POSITIONS: Record<PositionKey, PositionDefinition> = {
     label: 'Simples padrão',
     qualifier: 'a confirmar',
     singleAction:
-      'Nada a protocolar em setembro. Antes de fechar o ano, confira o que ficou em aberto abaixo.',
+      'Nada a protocolar em outubro. Antes de fechar o ano, confira o que ficou em aberto abaixo.',
     detail:
       'IBS e CBS seguem sendo recolhidos dentro do DAS. Se a conferência mudar a leitura, a próxima janela é ' +
       DEADLINES.nextWindow +
@@ -76,7 +76,7 @@ export const POSITIONS: Record<PositionKey, PositionDefinition> = {
     certainty: 'fechada',
     label: 'Simples híbrido',
     qualifier: 'decisão fechada',
-    singleAction: 'Protocole a opção até 30 de setembro de 2026.',
+    singleAction: 'Protocole a opção até 30 de outubro de 2026.',
     detail:
       'O DAS continua para os demais tributos e o IBS e a CBS passam a ser apurados por fora, com direito a crédito. O efeito é no ' +
       DEADLINES.effectSemester +
@@ -89,9 +89,9 @@ export const POSITIONS: Record<PositionKey, PositionDefinition> = {
     label: 'Híbrido como proteção',
     qualifier: 'a decisão em si continua aberta',
     singleAction:
-      'Protocole a opção até 30 de setembro para não perder a janela, e feche a conta até o início de novembro — se ela disser que não vale, cancele até 30 de novembro.',
+      'Protocole a opção até 30 de outubro para não perder a janela, e feche a conta até o fim de outubro — se ela disser que não vale, cancele entre 3 de novembro e 20 de dezembro.',
     detail:
-      'Optar agora não é escolher o híbrido: é guardar o direito de escolher. O prazo de setembro não volta; a opção feita nele se desfaz até 30 de novembro sem efeito nenhum.',
+      'Optar agora não é escolher o híbrido: é guardar o direito de escolher. A janela de outubro não volta; a opção feita nela se desfaz entre 3 de novembro e 20 de dezembro, sem efeito nenhum. Antes de 3 de novembro o cancelamento não está disponível — e isso é o que você precisa saber antes de optar.',
   },
   a_definir: {
     family: 'a_definir',
@@ -99,9 +99,9 @@ export const POSITIONS: Record<PositionKey, PositionDefinition> = {
     label: 'Proteja o prazo antes de decidir',
     qualifier: 'a conta depende de número real',
     singleAction:
-      'Protocole a opção até 30 de setembro para não perder a janela, e decida de verdade até 30 de novembro, com os números na mão.',
+      'Protocole a opção até 30 de outubro para não perder a janela, e decida de verdade até 20 de dezembro, com os números na mão.',
     detail:
-      'As respostas não fecham a conta em nenhum dos dois lados. Como a solicitação pode ser cancelada até 30 de novembro e setembro não volta, o movimento barato é optar e conferir depois — desde que a decisão seja retomada mesmo.',
+      'As respostas não fecham a conta em nenhum dos dois lados. Como a solicitação pode ser cancelada entre 3 de novembro e 20 de dezembro, e outubro não volta, o movimento barato é optar e conferir depois — desde que a decisão seja retomada mesmo, e a tempo de usar a janela de cancelamento.',
   },
   setor_sem_credito: {
     family: 'a_definir',
@@ -166,7 +166,7 @@ export const OUTCOMES: Record<OutcomeKey, Outcome> = {
     title: 'Vale apurar IBS e CBS por fora do DAS.',
     summary: 'Sua cadeia é de empresas, e o crédito virou condição para competir.',
     meaning:
-      'Boa parte do que você fatura vai para empresas que aproveitam crédito de imposto. Continuando na guia única, você entrega a elas um crédito menor do que um concorrente entregaria — e a diferença aparece no preço. Apurar por fora corrige isso. A decisão precisa ser confirmada por simulação e protocolada até 30 de setembro.',
+      'Boa parte do que você fatura vai para empresas que aproveitam crédito de imposto. Continuando na guia única, você entrega a elas um crédito menor do que um concorrente entregaria — e a diferença aparece no preço. Apurar por fora corrige isso. A decisão precisa ser confirmada por simulação e protocolada até 30 de outubro.',
     modality: 'hibrido',
   },
   D: {
@@ -182,7 +182,7 @@ export const OUTCOMES: Record<OutcomeKey, Outcome> = {
     title: 'Não decida sem simular.',
     summary: 'Suas respostas apontam para lados opostos.',
     meaning:
-      'Há motivo para mudar e motivo para ficar, nas mesmas informações. Isso não é indefinição do formulário: é um caso que depende de número real, não de estimativa. Mas os dois erros não custam igual. Deixar setembro passar e descobrir depois que valia apurar por fora custa um semestre inteiro, e esse prazo não volta: a janela seguinte é março, com efeito só no segundo semestre de 2027. Já optar em setembro e concluir que era melhor ficar se resolve cancelando a solicitação até 30 de novembro, antes de qualquer efeito. Por isso o movimento prudente é proteger o prazo agora e fechar a conta em outubro e novembro.',
+      'Há motivo para mudar e motivo para ficar, nas mesmas informações. Isso não é indefinição do formulário: é um caso que depende de número real, não de estimativa. Mas os dois erros não custam igual. Deixar outubro passar e descobrir depois que valia apurar por fora custa um semestre inteiro, e esse prazo não volta: a janela seguinte é março, com efeito só no segundo semestre de 2027. Já optar em outubro e concluir que era melhor ficar se resolve cancelando a solicitação entre 3 de novembro e 20 de dezembro, antes de qualquer efeito. Por isso o movimento prudente é proteger o prazo agora e fechar a conta em novembro.',
     modality: 'a_definir',
   },
   E_NO_DATA: {
@@ -190,7 +190,7 @@ export const OUTCOMES: Record<OutcomeKey, Outcome> = {
     title: 'Falta uma informação para decidir.',
     summary: 'Sem ela, qualquer recomendação aqui seria chute.',
     meaning:
-      'Você marcou "não sei" em uma resposta que decide o resultado: o tipo de cliente que compra de você, ou a origem das suas compras. Não é problema — são dados que a contabilidade tem, e levantados a leitura sai na hora. O que não dá é deixar setembro passar esperando por eles: a solicitação pode ser cancelada até 30 de novembro, mas o prazo para fazê-la não se recupera.',
+      'Você marcou "não sei" em uma resposta que decide o resultado: o tipo de cliente que compra de você, ou a origem das suas compras. Não é problema — são dados que a contabilidade tem, e levantados a leitura sai na hora. O que não dá é deixar outubro passar esperando por eles: a solicitação pode ser cancelada entre 3 de novembro e 20 de dezembro, mas o prazo para fazê-la não se recupera.',
     modality: 'a_definir',
   },
   SECTOR_WITHOUT_CREDIT: {
@@ -214,7 +214,7 @@ export const OUTCOMES: Record<OutcomeKey, Outcome> = {
     title: 'Sua empresa não está no Simples.',
     summary: 'Este diagnóstico trata de quem já é optante.',
     meaning:
-      'A escolha entre recolher IBS e CBS na guia única ou por fora só existe para quem está no Simples. No seu caso a pergunta vem antes: vale ou não entrar no Simples. E o prazo é o mesmo — quem quer ingressar em 2027 precisa pedir entre 1º e 30 de setembro de 2026, e só depois formalizar a escolha do IBS e da CBS. Perdido setembro, a entrada fica para 2028.',
+      'A escolha entre recolher IBS e CBS na guia única ou por fora só existe para quem está no Simples. No seu caso a pergunta vem antes: vale ou não entrar no Simples. E são DOIS prazos diferentes, atenção: quem quer ingressar em 2027 precisa pedir a entrada até 15 de outubro de 2026, e só depois formalizar a escolha do IBS e da CBS, que vai até 30 de outubro. Pendência que barre o ingresso pode ser regularizada até 30 de outubro. Perdida a entrada, ela fica para 2028.',
     modality: 'nao_se_aplica',
   },
 }
@@ -223,9 +223,10 @@ export const OUTCOMES: Record<OutcomeKey, Outcome> = {
 export const ASYMMETRY = {
   title: 'Os dois erros não custam igual',
   text:
-    'Optar em setembro e concluir depois que era melhor ficar tem remédio: ' +
-    'a solicitação pode ser cancelada até 30 de novembro de 2026 e a opção é anulada, ' +
-    'sem efeito nenhum sobre o que veio antes. Deixar setembro passar não tem remédio: ' +
+    'Optar em outubro e concluir depois que era melhor ficar tem remédio: ' +
+    'a solicitação pode ser cancelada entre 3 de novembro e 20 de dezembro de 2026 ' +
+    'e a opção é anulada, sem efeito nenhum sobre o que veio antes. Antes de 3 de ' +
+    'novembro o cancelamento não está disponível. Deixar outubro passar não tem remédio: ' +
     'a próxima janela é março de 2027 e só produz efeito no segundo semestre, então o ' +
     'primeiro semestre inteiro fica decidido por omissão.',
   forWhom:

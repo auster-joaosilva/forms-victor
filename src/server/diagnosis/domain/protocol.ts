@@ -1,4 +1,4 @@
-import { brasiliaDateParts } from './dates'
+import { brasiliaDateParts } from '../../shared/domain/dates'
 
 export const PROTOCOL_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 export const PROTOCOL_PATTERN = /^DS-\d{6}-[A-Z0-9]{4}$/

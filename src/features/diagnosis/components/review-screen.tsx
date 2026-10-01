@@ -1,16 +1,19 @@
 import type { ReadableAnswer, ReviewRow, ReviewView } from '@/server/diagnosis/domain/review'
 
+export function AnswerText({ answer }: { answer: ReadableAnswer }) {
+  if (answer.kind === 'text') return answer.text
+  return answer.rows.map((row) => (
+    <span key={row.label} className={row.gap ? 'dx-matrix-line is-gap' : 'dx-matrix-line'}>
+      {row.label}: <b>{row.value}</b>
+    </span>
+  ))
+}
+
 function Answer({ answer }: { answer: ReadableAnswer | null }) {
   if (!answer) return <div className="dx-review-answer is-empty">não respondido</div>
   return (
     <div className={answer.gap ? 'dx-review-answer is-gap' : 'dx-review-answer'}>
-      {answer.kind === 'text'
-        ? answer.text
-        : answer.rows.map((row) => (
-            <span key={row.label} className={row.gap ? 'dx-matrix-line is-gap' : 'dx-matrix-line'}>
-              {row.label}: <b>{row.value}</b>
-            </span>
-          ))}
+      <AnswerText answer={answer} />
     </div>
   )
 }

@@ -225,6 +225,7 @@ model Response {
 model Adhesion {
   id                   Int                   @id @default(autoincrement())
   protocol             String                @unique
+  receiptToken         String?               @unique @map("receipt_token")
   responseId           Int?                  @map("response_id")
   response             Response?             @relation(fields: [responseId], references: [id], onDelete: SetNull)
   invitationToken      String?               @map("invitation_token")

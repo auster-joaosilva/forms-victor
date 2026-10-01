@@ -1,0 +1,53 @@
+export interface LegacyUser {
+  usuario: string
+  nome: string | null
+  papel: string
+  ativo: number
+  criado_em: string
+  acesso_em: string | null
+}
+
+export interface LegacyInvitation {
+  token: string
+  nome_empresa: string | null
+  cnpj: string | null
+  email: string | null
+  observacao: string | null
+  criado_em: string
+  criado_por: string | null
+  aberturas: number
+  aberto_em: string | null
+}
+
+export interface LegacyResponse {
+  id: number
+  protocolo: string
+  token_convite: string | null
+  recebido_em: string
+  nome_empresa: string | null
+  cnpj: string | null
+  solicitante: string | null
+  email: string | null
+  telefone: string | null
+  versao: string | null
+  saida: string | null
+  posicao: string | null
+  certeza: string | null
+  urgencia: string | null
+  confianca: string | null
+  solicitante_no_qsa: string | null
+  pacote: string
+  situacao: string
+  nota_interna: string | null
+  tratado_por: string | null
+  tratado_em: string | null
+}
+
+export interface LegacyEvent {
+  id: number
+  quando: string
+  quem: string | null
+  o_que: string
+  referencia: string | null
+  detalhe: string | null
+}

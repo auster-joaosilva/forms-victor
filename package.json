@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@12.6.0",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.13"
   },
   "scripts": {
     "postinstall": "prisma generate",
@@ -23,6 +23,7 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "auth:bootstrap-admin": "tsx --env-file-if-exists=.env scripts/bootstrap-admin.ts",
+    "migrate:legacy": "tsx --env-file-if-exists=.env scripts/migrate-legacy.ts",
     "sweep": "tsx scripts/sweep.ts",
     "sweep:weighted": "tsx scripts/sweep-weighted.ts"
   },

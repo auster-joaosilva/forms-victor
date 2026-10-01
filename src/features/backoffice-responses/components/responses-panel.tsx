@@ -55,12 +55,12 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
   const list = useQuery({ ...responsesQuery(filter), placeholderData: keepPreviousData })
   const [search, setSearch] = useState(filter.q ?? '')
   const [status, setStatus] = useState<ResponseStatus | ''>(filter.status ?? '')
-  const [openId, setOpenId] = useState<number | null>(null)
-  const detail = useQuery({ ...responseQuery(openId ?? 0), enabled: openId !== null })
+  const [opening, setOpening] = useState<{ id: number; at: number } | null>(null)
+  const detail = useQuery({ ...responseQuery(opening?.id ?? 0), enabled: opening !== null })
   const handle = useMutation({
     mutationFn: (input: { id: number; status: ResponseStatus | null; note: string }) => handleResponseFn({ data: input }),
     onSuccess: async () => {
-      setOpenId(null)
+      setOpening(null)
       await queryClient.invalidateQueries({ queryKey: ['responses'] })
     },
   })
@@ -71,7 +71,8 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
   const { counts, items, page, pageCount } = list.data
   const applyFilter = () => onFilterChange({ status: status || undefined, q: search.trim() || undefined, page: 1 })
   const goTo = (next: number) => onFilterChange({ ...filter, page: next })
-  const opened = openId !== null ? detail.data : null
+  const fresh = opening !== null && detail.isSuccess && !detail.isFetching && detail.dataUpdatedAt >= opening.at
+  const opened = fresh ? detail.data : null
 
   return (
     <>
@@ -122,7 +123,7 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
           </thead>
           <tbody>
             {items.map((row) => (
-              <ResponseRow key={row.id} row={row} onOpen={() => setOpenId(row.id)} />
+              <ResponseRow key={row.id} row={row} onOpen={() => setOpening({ id: row.id, at: Date.now() })} />
             ))}
           </tbody>
         </table>
@@ -143,16 +144,16 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
         alíquota — e é nesta tela que isso fica registrado, com autor e data.
       </p>
 
-      <Dialog.Root open={Boolean(opened)} onOpenChange={(open) => !open && setOpenId(null)}>
+      <Dialog.Root open={Boolean(opened)} onOpenChange={(open) => !open && setOpening(null)}>
         <Dialog.Overlay className="bo-overlay" />
         <Dialog.Content className="bo-dialog" aria-describedby={undefined}>
           {opened ? (
             <ResponseDetail
-              key={opened.id}
+              key={`${opened.id}:${detail.dataUpdatedAt}`}
               detail={opened}
               pending={handle.isPending}
               onHandle={(next, note) => handle.mutate({ id: opened.id, status: next, note })}
-              onClose={() => setOpenId(null)}
+              onClose={() => setOpening(null)}
               Title={Dialog.Title}
             />
           ) : null}

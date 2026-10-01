@@ -8,4 +8,5 @@ export const responsesQuery = (filter: ResponsesFilter) =>
   queryOptions({ queryKey: ['responses', filter], queryFn: () => listResponsesFn({ data: { status: filter.status, search: filter.q, page: filter.page } }) })
 
 export const responseQuery = (id: number) =>
-  queryOptions({ queryKey: ['responses', 'detail', id], queryFn: () => getResponseFn({ data: { id } }) })
+  // The sheet seeds the note a colleague may have just changed, so it is always fetched again on opening.
+  queryOptions({ queryKey: ['responses', 'detail', id], queryFn: () => getResponseFn({ data: { id } }), staleTime: 0 })

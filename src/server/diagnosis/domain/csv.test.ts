@@ -46,6 +46,15 @@ describe('responses spreadsheet', () => {
     expect(csv).toContain(';"Empresa ""A""; Filial";')
   })
 
+  it('neutralises formula-looking cells with a leading apostrophe', () => {
+    const csv = toCsv([['=HYPERLINK("x")', '+1', '-2', '@SUM(A1)', '\tx', 'a=b']])
+    expect(csv).toBe(`\uFEFF"'=HYPERLINK(""x"")";'+1;'-2;'@SUM(A1);'\tx;a=b\r\n`)
+  })
+
+  it('quotes cells with a carriage return', () => {
+    expect(toCsv([['a\rb', '\rc']])).toBe(`\uFEFF"a\rb";"'\rc"\r\n`)
+  })
+
   it('names the file by the Brasília date', () => {
     expect(csvFileName(new Date('2026-10-01T02:00:00Z'))).toBe('respostas-simples-2026-09-30.csv')
   })

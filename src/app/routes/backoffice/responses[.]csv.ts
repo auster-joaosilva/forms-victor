@@ -9,7 +9,7 @@ export const Route = createFileRoute('/backoffice/responses.csv')({
     handlers: {
       GET: async ({ request }) => {
         const user = await getSessionUser(request.headers)
-        if (!user) return new Response('Entre no backoffice para baixar a planilha.', { status: 401 })
+        if (!user) return new Response('Acesso restrito.', { status: 401, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
         const url = new URL(request.url)
         const status = url.searchParams.get('status')
         const file = await responseBackoffice.exportResponses(

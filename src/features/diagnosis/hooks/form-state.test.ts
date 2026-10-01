@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { RESULT_STEP, REVIEW_STEP } from '@/server/diagnosis/domain/draft-rules'
 import { applicableFill } from '@/server/diagnosis/domain/testing/applicable-fill'
 import { formReducer, initialFormState, stepOf, type FormState } from './form-state'
 
@@ -25,8 +26,8 @@ describe('form state', () => {
     for (let i = 0; i < 5; i++) state = run(state, { type: 'next' })
     expect(state.view).toEqual({ kind: 'review' })
     state = run(state, { type: 'next' })
-    expect(stepOf(state.view)).toBe(7)
-    expect(run(state, { type: 'goTo', step: 6 }).view).toEqual({ kind: 'review' })
+    expect(stepOf(state.view)).toBe(RESULT_STEP)
+    expect(run(state, { type: 'goTo', step: REVIEW_STEP }).view).toEqual({ kind: 'review' })
     const atTwo = run(state, { type: 'goTo', step: 2 })
     expect(run(atTwo, { type: 'goTo', step: 4 }).view).toEqual({ kind: 'form', step: 2 })
   })

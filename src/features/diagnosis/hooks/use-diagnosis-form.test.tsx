@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildActionPlan } from '@/server/diagnosis/domain/action-plan'
 import { diagnose } from '@/server/diagnosis/domain/diagnose'
-import { toWireAnswers } from '@/server/diagnosis/domain/draft-rules'
+import { RESULT_STEP, REVIEW_STEP, toWireAnswers } from '@/server/diagnosis/domain/draft-rules'
 import { resultView } from '@/server/diagnosis/domain/result-view'
 import { applicableFill } from '@/server/diagnosis/domain/testing/applicable-fill'
 import type { DiagnosisApi, DiagnosisBootstrap } from '../types/diagnosis'
@@ -90,21 +90,42 @@ describe('useDiagnosisForm', () => {
     const diagnosis = diagnose(answers, new Date(TODAY))
     const serverView = { ...resultView(diagnosis, buildActionPlan(answers, diagnosis)), windowText: 'do servidor' }
     const api = fakeApi({ submitDiagnosis: vi.fn<DiagnosisApi['submitDiagnosis']>(async () => ({ ok: true, protocol: 'DS-260915-AB12', result: serverView })) })
-    const draft = { step: 6, answers: toWireAnswers(answers), savedAt: TODAY, protocol: null }
+    const draft = { step: REVIEW_STEP, answers: toWireAnswers(answers), savedAt: TODAY, protocol: null }
     const { result } = renderHook(() => useDiagnosisForm(bootstrap({ draft }), { api, resume: true }))
     expect(result.current.state.view).toEqual({ kind: 'review' })
     act(() => result.current.actions.next())
     expect(result.current.shownResult).not.toBeNull()
     await waitFor(() => expect(result.current.state.submission.status).toBe('sent'))
-    expect(api.saveDraft).toHaveBeenCalledWith(expect.objectContaining({ step: 7 }))
+    expect(api.saveDraft).toHaveBeenCalledWith(expect.objectContaining({ step: RESULT_STEP }))
     expect(api.submitDiagnosis).toHaveBeenCalledTimes(1)
     expect(result.current.shownResult?.windowText).toBe('do servidor')
+  })
+
+  it('sends saves one at a time and submits only after the pending ones', async () => {
+    const answers = applicableFill(7)
+    let release: (value: { ok: true }) => void = () => undefined
+    const api = fakeApi()
+    vi.mocked(api.saveDraft).mockImplementationOnce(() => new Promise((resolve) => (release = resolve)))
+    const draft = { step: REVIEW_STEP, answers: toWireAnswers(answers), savedAt: TODAY, protocol: null }
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useDiagnosisForm(bootstrap({ draft }), { api, resume: true }))
+    act(() => result.current.actions.setAnswer('nomeEmpresa', 'Primeira'))
+    await act(async () => vi.advanceTimersByTime(SAVE_DELAY_MS))
+    expect(api.saveDraft).toHaveBeenCalledTimes(1)
+    act(() => result.current.actions.next())
+    await act(async () => vi.advanceTimersByTime(0))
+    expect(api.saveDraft).toHaveBeenCalledTimes(1)
+    expect(api.submitDiagnosis).not.toHaveBeenCalled()
+    await act(async () => release({ ok: true }))
+    expect(api.saveDraft).toHaveBeenCalledTimes(2)
+    expect(api.saveDraft).toHaveBeenLastCalledWith(expect.objectContaining({ step: RESULT_STEP }))
+    expect(api.submitDiagnosis).toHaveBeenCalledTimes(1)
   })
 
   it('shows the wait time when the server answers 429', async () => {
     const answers = applicableFill(7)
     const api = fakeApi({ submitDiagnosis: vi.fn<DiagnosisApi['submitDiagnosis']>(async () => ({ ok: false, reason: 'rate_limited', retryAfterSeconds: 90 })) })
-    const draft = { step: 7, answers: toWireAnswers(answers), savedAt: TODAY, protocol: null }
+    const draft = { step: RESULT_STEP, answers: toWireAnswers(answers), savedAt: TODAY, protocol: null }
     const { result } = renderHook(() => useDiagnosisForm(bootstrap({ draft }), { api, resume: true }))
     await waitFor(() => expect(result.current.state.submission).toEqual({ status: 'rate_limited', retryAfterSeconds: 90 }))
   })

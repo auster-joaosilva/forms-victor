@@ -35,7 +35,10 @@ const textAnswer = (state: FormState, key: string) => {
 export function useDiagnosisForm(bootstrap: DiagnosisBootstrap, { api, resume = false }: { api: DiagnosisApi; resume?: boolean }): DiagnosisForm {
   const [state, dispatch] = useReducer(formReducer, bootstrap, (initial) => initialFormState(initial, { resume }))
   const latest = useRef(state)
-  latest.current = state
+  useEffect(() => {
+    latest.current = state
+  })
+  const queue = useRef<Promise<unknown>>(Promise.resolve())
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const submitting = useRef(false)
   const today = useMemo(() => new Date(bootstrap.today), [bootstrap.today])
@@ -45,16 +48,21 @@ export function useDiagnosisForm(bootstrap: DiagnosisBootstrap, { api, resume = 
     timer.current = null
   }
 
-  const persist = useCallback(async (): Promise<SaveDraftWireResult | null> => {
-    const current = latest.current
-    try {
-      const saved = await api.saveDraft({ step: stepOf(current.view), answers: toWireAnswers(current.answers), invitationToken: current.invitationToken })
-      dispatch({ type: saved.ok ? 'saveSucceeded' : 'saveFailed' })
-      return saved
-    } catch {
-      dispatch({ type: 'saveFailed' })
-      return null
+  const persist = useCallback((): Promise<SaveDraftWireResult | null> => {
+    const save = async () => {
+      const current = latest.current
+      try {
+        const saved = await api.saveDraft({ step: stepOf(current.view), answers: toWireAnswers(current.answers), invitationToken: current.invitationToken })
+        dispatch({ type: saved.ok ? 'saveSucceeded' : 'saveFailed' })
+        return saved
+      } catch {
+        dispatch({ type: 'saveFailed' })
+        return null
+      }
     }
+    const saving = queue.current.then(save)
+    queue.current = saving
+    return saving
   }, [api])
 
   const submit = useCallback(async () => {
@@ -146,7 +154,7 @@ export function useDiagnosisForm(bootstrap: DiagnosisBootstrap, { api, resume = 
       startOver: () => {
         cancelPendingSave()
         dispatch({ type: 'startOver' })
-        void api.discardDraft().catch(() => undefined)
+        queue.current = queue.current.then(() => api.discardDraft()).catch(() => undefined)
       },
       retrySubmit: () => void submit(),
     },

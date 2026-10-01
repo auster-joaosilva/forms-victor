@@ -62,6 +62,18 @@ describe('DiagnosisPage — form', () => {
     expect(screen.queryByText(/preenchimento começado/)).not.toBeInTheDocument()
   })
 
+  it('starts over when the person answers without choosing on the resume offer', async () => {
+    const fake = api()
+    const draft = { step: 2, answers: { versaoFormulario: 'completo', nomeEmpresa: 'Antiga Ltda' }, savedAt: '2026-09-14T15:30:00.000Z', protocol: 'DS-260914-AB12' }
+    render(<DiagnosisPage bootstrap={bootstrap({ draft })} api={fake} resume={false} onDownloadReport={() => undefined} />)
+    await userEvent.type(screen.getByRole('textbox', { name: /Nome da empresa/ }), 'Nova')
+    expect(screen.queryByText(/preenchimento começado/)).not.toBeInTheDocument()
+    await waitFor(() => expect(fake.saveDraft).toHaveBeenCalled())
+    expect(fake.discardDraft).toHaveBeenCalledTimes(1)
+    expect(fake.discardDraft.mock.invocationCallOrder[0]).toBeLessThan(fake.saveDraft.mock.invocationCallOrder[0] ?? 0)
+    expect(fake.saveDraft.mock.lastCall?.[0].answers).toEqual({ nomeEmpresa: 'Nova' })
+  })
+
   it('detours a MEI to the Avaliação Prévia and comes back to step 1', async () => {
     const answers = toWireAnswers({ ...applicableFill(3), ehSimei: 'sim' })
     render(<DiagnosisPage bootstrap={bootstrap({ draft: { step: 1, answers, savedAt: '2026-09-14T15:30:00.000Z', protocol: null } })} api={api()} resume onDownloadReport={() => undefined} />)

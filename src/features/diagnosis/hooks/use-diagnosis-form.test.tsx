@@ -74,6 +74,26 @@ describe('useDiagnosisForm', () => {
     expect(api.discardDraft).toHaveBeenCalledTimes(1)
   })
 
+  it('treats an answer given while the resume offer is pending as starting over, keeping the invitation prefill', async () => {
+    vi.useFakeTimers()
+    const calls: string[] = []
+    const api = fakeApi({
+      discardDraft: vi.fn<DiagnosisApi['discardDraft']>(async () => void calls.push('discard')),
+      saveDraft: vi.fn<DiagnosisApi['saveDraft']>(async () => (calls.push('save'), { ok: true })),
+    })
+    const draft = { step: 3, answers: { versaoFormulario: 'completo', nomeEmpresa: 'Antiga' }, savedAt: '2026-09-14T12:00:00.000Z', protocol: 'DS-260914-AB12' }
+    const invitation = { token: 'ABCDEFGHJK', companyName: 'Convidada', cnpj: '11.222.333/0001-81' }
+    const { result } = renderHook(() => useDiagnosisForm(bootstrap({ draft, invitation }), { api }))
+    act(() => result.current.actions.setAnswer('versaoFormulario', 'sintetico'))
+    expect(result.current.state.resumable).toBeNull()
+    expect(result.current.state.answers).toMatchObject({ versaoFormulario: 'sintetico', nomeEmpresa: 'Convidada', cnpj: '11.222.333/0001-81' })
+    await act(async () => vi.advanceTimersByTime(SAVE_DELAY_MS))
+    expect(calls).toEqual(['discard', 'save'])
+    expect(api.saveDraft).toHaveBeenCalledWith(expect.objectContaining({ step: 1, invitationToken: 'ABCDEFGHJK' }))
+    act(() => result.current.actions.resume())
+    expect(result.current.state.answers.nomeEmpresa).toBe('Convidada')
+  })
+
   it('prefills the invitation and sends its token with the save', async () => {
     vi.useFakeTimers()
     const api = fakeApi()

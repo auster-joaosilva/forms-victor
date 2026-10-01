@@ -104,6 +104,7 @@ function changeAnswers(state: FormState, answers: Answers, key: string): FormSta
     ...state,
     answers: cleanInvisibleAnswers(answers),
     errors: withoutKey(state.errors, key),
+    resumable: null,
     company,
     submission: state.submission.status === 'sending' ? state.submission : { status: 'idle' },
     revision: state.revision + 1,

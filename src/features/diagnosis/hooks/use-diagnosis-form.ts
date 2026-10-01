@@ -48,6 +48,16 @@ export function useDiagnosisForm(bootstrap: DiagnosisBootstrap, { api, resume = 
     timer.current = null
   }
 
+  const discardDraft = () => {
+    cancelPendingSave()
+    queue.current = queue.current.then(() => api.discardDraft()).catch(() => undefined)
+  }
+
+  // Answering past the resume offer starts a new fill: saving into the old draft would overwrite the response it already sent.
+  const startOverIfOffered = () => {
+    if (latest.current.resumable) discardDraft()
+  }
+
   const persist = useCallback((): Promise<SaveDraftWireResult | null> => {
     const save = async () => {
       const current = latest.current
@@ -142,8 +152,14 @@ export function useDiagnosisForm(bootstrap: DiagnosisBootstrap, { api, resume = 
     state,
     shownResult,
     actions: {
-      setAnswer: (key, value) => dispatch({ type: 'answer', key, value }),
-      setMatrixAnswer: (key, row, value) => dispatch({ type: 'answerMatrix', key, row, value }),
+      setAnswer: (key, value) => {
+        startOverIfOffered()
+        dispatch({ type: 'answer', key, value })
+      },
+      setMatrixAnswer: (key, row, value) => {
+        startOverIfOffered()
+        dispatch({ type: 'answerMatrix', key, row, value })
+      },
       blurField,
       next: () => dispatch({ type: 'next' }),
       back: () => dispatch({ type: 'back' }),
@@ -152,9 +168,8 @@ export function useDiagnosisForm(bootstrap: DiagnosisBootstrap, { api, resume = 
       clearHighlight: () => dispatch({ type: 'clearHighlight' }),
       resume: () => dispatch({ type: 'resume' }),
       startOver: () => {
-        cancelPendingSave()
         dispatch({ type: 'startOver' })
-        queue.current = queue.current.then(() => api.discardDraft()).catch(() => undefined)
+        discardDraft()
       },
       retrySubmit: () => void submit(),
     },

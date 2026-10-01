@@ -1,6 +1,6 @@
 import type { Answers } from '../../domain/question-types'
 import type { DraftRecord, DraftRepository } from '../../ports/draft-repository'
-import type { ResponseRecord, ResponseRepository } from '../../ports/response-repository'
+import type { ResponseBackofficeRepository, ResponseFilter, ResponseRecord, ResponseRepository } from '../../ports/response-repository'
 import type { RateLimitDecision, RateLimiter } from '../../ports/rate-limiter'
 
 export function fakeClock(start: string) {
@@ -39,7 +39,7 @@ export function memoryDrafts() {
   return { rows, repository, seed, patch }
 }
 
-export function memoryResponses(drafts?: ReturnType<typeof memoryDrafts>) {
+export function memoryResponses({ drafts, usernames = {} }: { drafts?: ReturnType<typeof memoryDrafts>; usernames?: Record<string, string> } = {}) {
   const rows = new Map<number, ResponseRecord>()
   let sequence = 0
   const repository: ResponseRepository = {
@@ -61,7 +61,35 @@ export function memoryResponses(drafts?: ReturnType<typeof memoryDrafts>) {
     },
     findById: async (id) => rows.get(id) ?? null,
   }
-  return { rows, repository }
+  const matches = (row: ResponseRecord, filter: ResponseFilter) =>
+    (!filter.status || row.status === filter.status) &&
+    (!filter.search || [row.companyName, row.protocol, row.cnpj, row.requester].some((value) => value?.toLowerCase().includes(filter.search?.toLowerCase() ?? '')))
+  const sorted = () => [...rows.values()].sort((a, b) => b.receivedAt.getTime() - a.receivedAt.getTime() || b.id - a.id)
+  const backoffice: ResponseBackofficeRepository = {
+    list: async (filter, { skip, take }) => {
+      const found = sorted().filter((row) => matches(row, filter))
+      return { items: found.slice(skip, skip + take), total: found.length }
+    },
+    countByStatus: async () => {
+      const counts = { new: 0, in_review: 0, validated: 0, discarded: 0 }
+      for (const row of rows.values()) counts[row.status]++
+      return counts
+    },
+    findById: repository.findById,
+    listForExport: async (filter, limit) => sorted().filter((row) => matches(row, filter)).slice(0, limit),
+    setNote: async (id, note) => {
+      const row = rows.get(id)
+      if (row) rows.set(id, { ...row, internalNote: note })
+      return Boolean(row)
+    },
+    setStatus: async (id, { status, note, handledById, handledAt }) => {
+      const row = rows.get(id)
+      if (row) rows.set(id, { ...row, status, internalNote: note, handledByUsername: usernames[handledById] ?? handledById, handledAt })
+      return Boolean(row)
+    },
+  }
+  const both: ResponseRepository & ResponseBackofficeRepository = { ...repository, ...backoffice }
+  return { rows, repository: both }
 }
 
 export function fakeRateLimiter(decisions: RateLimitDecision[] = []) {

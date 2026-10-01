@@ -1,7 +1,9 @@
 const CNPJ_STRIP = /[^0-9A-Za-z]/g
 
+export const normalizeCnpj = (raw: string): string => String(raw || '').replace(CNPJ_STRIP, '').toUpperCase()
+
 export function maskCnpj(raw: string): string {
-  const cnpj = String(raw || '').replace(CNPJ_STRIP, '').toUpperCase().slice(0, 14)
+  const cnpj = normalizeCnpj(raw).slice(0, 14)
   const parts = [cnpj.slice(0, 2), cnpj.slice(2, 5), cnpj.slice(5, 8), cnpj.slice(8, 12), cnpj.slice(12, 14)]
   let output = cnpj.slice(0, 2)
   if (cnpj.length > 2) output += '.' + parts[1]
@@ -25,7 +27,7 @@ function cnpjCheckDigit(base: string): number {
 }
 
 export function isValidCnpj(raw: string): boolean {
-  const cnpj = String(raw || '').replace(CNPJ_STRIP, '').toUpperCase()
+  const cnpj = normalizeCnpj(raw)
   if (cnpj.length !== 14) return false
   if (!/^[0-9A-Z]{12}[0-9]{2}$/.test(cnpj)) return false
   if (/^(.)\1{13}$/.test(cnpj)) return false

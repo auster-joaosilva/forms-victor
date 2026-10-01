@@ -2,12 +2,16 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { BackofficeShell } from '@/components/backoffice/backoffice-shell'
 import { LogoutButton } from '@/features/auth/components/logout-button'
+import { InvitationsPanel } from '@/features/backoffice-invitations/components/invitations-panel'
 import { ResponsesPanel } from '@/features/backoffice-responses/components/responses-panel'
 import { RESPONSE_STATUSES } from '@/server/diagnosis/domain/response-status'
 
-const TAB_KEYS = ['responses'] as const
+const TAB_KEYS = ['responses', 'invitations'] as const
 type TabKey = (typeof TAB_KEYS)[number]
-const TABS: { key: TabKey; label: string; adminOnly: boolean }[] = [{ key: 'responses', label: 'Respostas', adminOnly: false }]
+const TABS: { key: TabKey; label: string; adminOnly: boolean }[] = [
+  { key: 'responses', label: 'Respostas', adminOnly: false },
+  { key: 'invitations', label: 'Convites', adminOnly: false },
+]
 
 export const Route = createFileRoute('/backoffice/')({
   // The router parses numeric-looking values as numbers (?q=11222333, ?page=2), hence the coercions.
@@ -44,6 +48,7 @@ function BackofficeHome() {
           onFilterChange={(next) => void navigate({ search: { tab: 'responses', status: next.status, q: next.q, page: next.page } })}
         />
       ) : null}
+      {tab === 'invitations' ? <InvitationsPanel /> : null}
     </BackofficeShell>
   )
 }

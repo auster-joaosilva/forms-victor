@@ -79,6 +79,13 @@ describe('adhesion back office', () => {
     expect(await backoffice.handle(actor, { id: 1, status: 'cancelled' })).toEqual({ ok: true })
   })
 
+  it('refuses a status it does not know before touching anything', async () => {
+    const { backoffice, store, audits } = await setup([adhesion(1)])
+    expect(await backoffice.handle(actor, { id: 1, status: 'archived' })).toEqual({ ok: false, error: 'situação inválida' })
+    expect(store.rows.get(1)?.status).toBe('received')
+    expect(audits).toEqual([])
+  })
+
   it('refuses an adhesion that does not exist', async () => {
     const { backoffice, audits } = await setup([])
     expect(await backoffice.handle(actor, { id: 99, status: 'cancelled' })).toEqual({ ok: false, error: 'adesão não encontrada' })

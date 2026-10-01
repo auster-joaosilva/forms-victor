@@ -40,9 +40,9 @@ function AdhesionTerm() {
   }
   const fileName = termFileName(copy.adhesion.empresa.nomeEmpresa)
   return (
-    <>
+    <div className="ad-reprint">
       <SiteHeader subtitle={copy.term.subtitulo} />
-      <main className="dx ad-reprint">
+      <main className="dx">
         <div className="mb-4 print:hidden">
           <button type="button" className="dx-button is-primary" onClick={() => void printWhenReady(fileName)}>
             Baixar o termo (PDF)
@@ -52,6 +52,6 @@ function AdhesionTerm() {
           <TermDocument term={copy.term} adhesion={copy.adhesion} />
         </div>
       </main>
-    </>
+    </div>
   )
 }

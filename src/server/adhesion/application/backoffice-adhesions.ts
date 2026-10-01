@@ -1,5 +1,5 @@
 import { toCsv } from '@/server/shared/domain/csv-format'
-import type { AdhesionStatus, Modality, WithoutManifestationChoice } from '../domain/adhesion'
+import { isAdhesionStatus, type AdhesionStatus, type Modality, type WithoutManifestationChoice } from '../domain/adhesion'
 import { adhesionCsvFileName, adhesionCsvRows } from '../domain/csv'
 import { termCopyOf, type TermCopy } from '../domain/term-copy'
 import { adhesionWindow, type AdhesionWindow } from '../domain/window'
@@ -68,7 +68,8 @@ export function makeAdhesionBackoffice({ adhesions, clock, recordAudit }: {
       return { counts, items: items.map(summary), total, page, pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)), window: adhesionWindow(clock.now()) }
     },
 
-    async handle(actor: BackofficeActor, { id, status }: { id: number; status: AdhesionStatus }): Promise<{ ok: true } | { ok: false; error: string }> {
+    async handle(actor: BackofficeActor, { id, status }: { id: number; status: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+      if (!isAdhesionStatus(status)) return { ok: false, error: 'situação inválida' }
       const current = await adhesions.findById(id)
       if (!current) return { ok: false, error: 'adesão não encontrada' }
       // No Padrão não há ato no Portal do Simples Nacional: marcar protocolada registraria algo que não existe.

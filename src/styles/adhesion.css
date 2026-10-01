@@ -76,9 +76,9 @@
 @page adhesion{margin:8mm}
 @media print{
   /* Escopado em .ad-page: o diagnosis.css também tem @media print para o cabeçalho e o corpo. */
-  .ad-page{font-size:10pt}
-  .ad-page .dx-header{padding:0 14mm 7mm}
-  .ad-page .dx-header .dx-header-sub{display:none}
+  .ad-page,.ad-reprint{font-size:10pt}
+  .ad-page .dx-header,.ad-reprint .dx-header{padding:0 14mm 7mm}
+  .ad-page .dx-header .dx-header-sub,.ad-reprint .dx-header .dx-header-sub{display:none}
   .ad{max-width:none;padding:0}
   /* A margem de verdade mora AQUI, e não só em @page: a caixa de impressão do Chrome sobrepõe @page
      quando a pessoa escolhe "margens: nenhuma", e aí o texto encosta na borda do papel. */

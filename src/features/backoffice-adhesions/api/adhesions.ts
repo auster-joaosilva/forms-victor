@@ -21,7 +21,7 @@ export const listAdhesionsFn = createServerFn({ method: 'GET' })
 
 export const handleAdhesionFn = createServerFn({ method: 'POST' })
   .middleware([requireCapability('handle_adhesions')])
-  .inputValidator(idInput.extend({ status: z.enum(ADHESION_STATUSES) }))
+  .inputValidator(idInput.extend({ status: z.string().max(20) }))
   .handler(({ data, context }) => adhesionBackoffice.handle({ id: context.session.user.id, username: context.session.user.username }, data))
 
 export const getAdhesionTermFn = createServerFn({ method: 'GET' })

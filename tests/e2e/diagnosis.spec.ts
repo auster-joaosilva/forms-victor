@@ -1,7 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { changePhoneAndResubmit, completeDiagnosis, fillVisibleStep, login, useOwnAddress, walkToResult } from './fill'
-
-const nothingLocal = () => [localStorage.length, sessionStorage.length]
+import { changePhoneAndResubmit, completeDiagnosis, fillVisibleStep, login, nothingLocal, useOwnAddress, walkToResult } from './fill'
 
 test('caminho curto até o resultado; F5 mantém o protocolo; nada local', async ({ page }) => {
   const protocol = await completeDiagnosis(page)
@@ -19,6 +17,15 @@ test('voltar, alterar e reenviar mantém o protocolo', async ({ page }) => {
   const protocol = await completeDiagnosis(page)
   await changePhoneAndResubmit(page, '(34) 98888-7777')
   await expect(page.getByRole('heading', { name: `Protocolo ${protocol}` })).toBeVisible()
+})
+
+test('responder sem retomar começa outra resposta e não sobrescreve a enviada', async ({ page }) => {
+  const first = await completeDiagnosis(page)
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Retomar' })).toBeVisible()
+  const second = await walkToResult(page)
+  expect(second).toMatch(/^DS-\d{6}-[A-Z0-9]{4}$/)
+  expect(second).not.toBe(first)
 })
 
 test('o relatório abre com o nome do arquivo e 5 ou 6 folhas', async ({ page }) => {

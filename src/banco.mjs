@@ -200,7 +200,11 @@ CREATE INDEX IF NOT EXISTS idx_inscricoes_email  ON inscricoes(email);
 `;
 
 export const SITUACOES = ['nova', 'em_analise', 'validada', 'descartada'];
-export const PAPEIS = ['admin', 'equipe'];
+
+/* Os papéis moram em `papeis.mjs`, junto com o que cada um alcança. Aqui só se
+   reexporta, para quem já importava daqui não ter de mudar de porta. */
+export { PAPEIS, PAPEL_PADRAO, ROTULOS } from './papeis.mjs';
+import { PAPEIS, PAPEL_PADRAO } from './papeis.mjs';
 
 /** Situação da adesão. `protocolada` só faz sentido no híbrido — é o registro
  *  de que alguém entrou no Portal do Simples Nacional e fez. */
@@ -247,6 +251,16 @@ const MIGRACOES = [
   { versao: 3,
     descricao: 'eventos, sessoes e inscricoes',
     aplicar: db => db.exec(ESQUEMA_EVENTOS) },
+  /* Os dois papéis viraram quatro em 01/10/2026. `equipe` desce para
+     `operador`, que é o mais fechado — e NÃO para `gestor`, que seria manter o
+     alcance de hoje. Rebaixar por engano se conserta em dois cliques no painel;
+     manter alcance por engano não aparece em lugar nenhum.
+
+     Consequência operacional, dita em voz alta: quem trata adesão perde a área
+     até ser promovido a `regularizacao` ou `gestor`. */
+  { versao: 4,
+    descricao: 'papeis: equipe vira operador, o mais fechado dos quatro',
+    aplicar: db => db.exec("UPDATE usuarios SET papel = 'operador' WHERE papel = 'equipe'") },
 ];
 
 /** Versão máxima que este código conhece. */
@@ -800,7 +814,7 @@ function criarApi(db) {
       // conseguiria criar o segundo, e a senha de implantação já teria parado
       // de funcionar. Depois disso vale o papel informado.
       const primeiro = !this.temUsuarioAtivo();
-      const p = primeiro ? 'admin' : (PAPEIS.includes(papel) ? papel : 'equipe');
+      const p = primeiro ? 'admin' : (PAPEIS.includes(papel) ? papel : PAPEL_PADRAO);
       const sal = randomBytes(16).toString('hex');
       db.prepare(`INSERT INTO usuarios
         (usuario, nome, papel, sal, resumo, ativo, criado_em, criado_por)

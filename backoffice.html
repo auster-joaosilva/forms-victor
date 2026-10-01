@@ -152,12 +152,12 @@ dialog::backdrop{background:rgba(5,44,71,.45)}
 </header>
 <main>
   <div class="abas">
-    <button class="aba ativa" data-aba="respostas">Respostas</button>
-    <button class="aba" data-aba="adesoes">Adesões</button>
-    <button class="aba" data-aba="eventosAgenda">Eventos</button>
-    <button class="aba" data-aba="convites">Convites</button>
-    <button class="aba" data-aba="eventos">Auditoria</button>
-    <button class="aba oculta" data-aba="usuarios" id="abaUsuarios">Usuários</button>
+    <button class="aba ativa" data-aba="respostas" data-pode="ver_respostas">Respostas</button>
+    <button class="aba" data-aba="adesoes" data-pode="ver_adesoes">Adesões</button>
+    <button class="aba" data-aba="eventosAgenda" data-pode="ver_eventos">Eventos</button>
+    <button class="aba" data-aba="convites" data-pode="ver_convites">Convites</button>
+    <button class="aba" data-aba="eventos" data-pode="ver_auditoria">Auditoria</button>
+    <button class="aba" data-aba="usuarios" id="abaUsuarios" data-pode="gerir_usuarios">Usuários</button>
   </div>
   <div id="conteudo" class="painel">carregando…</div>
 </main>
@@ -177,9 +177,21 @@ dialog::backdrop{background:rgba(5,44,71,.45)}
 <script>
 /*__QUEM__*/
 const quem = (typeof window.__QUEM__ === 'string') ? window.__QUEM__ : 'equipe';
-const papel = (typeof window.__PAPEL__ === 'string') ? window.__PAPEL__ : 'equipe';
+const papel = (typeof window.__PAPEL__ === 'string') ? window.__PAPEL__ : 'operador';
 const porImplantacao = window.__IMPLANTACAO__ === true;
-const ehAdmin = papel === 'admin';
+
+/* O painel NAO conhece a tabela de permissoes: recebe do servidor a lista do
+   que ESTA pessoa pode e esconde o resto. Esconder aqui e conforto, nao
+   defesa — quem forjar a chamada esbarra na portaria do servidor. */
+const PODE = Array.isArray(window.__PODE__) ? window.__PODE__ : [];
+const ROTULOS_PAPEL = (typeof window.__ROTULOS_PAPEL__ === 'object'
+  && window.__ROTULOS_PAPEL__) || {};
+const podeFazer = c => PODE.includes(c);
+/* Botao que a portaria recusaria nao deve existir na tela: clicar e levar 403
+   e pior que nao ver o botao — a pessoa fica achando que quebrou. */
+const seApenas = (c, html) => (podeFazer(c) ? html : '');
+const rotuloDoPapel = p => ROTULOS_PAPEL[p] || p;
+const ehAdmin = podeFazer('gerir_usuarios');
 document.getElementById('quem').textContent = quem;
 
 /* Escapa tambem o apostrofo: atributo em aspas simples e lugar legitimo no
@@ -278,7 +290,7 @@ async function verRespostas() {
           `<option value="${k}" ${filtroSituacao === k ? 'selected' : ''}>${v}</option>`).join('')}
       </select>
       <button class="claro" onclick="aplicarFiltro()">Filtrar</button>
-      <button class="claro" onclick="baixarPlanilha()">Baixar planilha (CSV)</button>
+      ${seApenas('exportar_respostas', '<button class="claro" onclick="baixarPlanilha()">Baixar planilha (CSV)</button>')}
     </div>
     ${respostas.length ? `<table><thead><tr>
       <th>Empresa</th><th>Quem respondeu</th><th>Posição</th><th>Urgência</th>
@@ -478,7 +490,7 @@ async function verAdesoes() {
           `<option value="${k}" ${filtroSituacaoAdesao === k ? 'selected' : ''}>${v}</option>`).join('')}
       </select>
       <button class="claro" onclick="window.filtrarAdesoes()">Filtrar</button>
-      <button class="claro" onclick="window.baixarPlanilhaAdesoes()">Baixar planilha (CSV)</button>
+      ${seApenas('exportar_adesoes', '<button class="claro" onclick="window.baixarPlanilhaAdesoes()">Baixar planilha (CSV)</button>')}
     </div>
     ${adesoes.length ? `<table><thead><tr>
       <th>Empresa</th><th>Quem confirmou</th><th>Modalidade</th><th>Confirmado</th>
@@ -699,7 +711,7 @@ async function verEvento(id) {
         : `<button class="claro" onclick="window.mudarEvento('inscricoes','abertas')">Reabrir inscrições</button>`}
       ${evento.situacao !== 'encerrado'
         ? `<button class="claro" onclick="window.mudarEvento('situacao','encerrado')">Marcar como encerrado</button>` : ''}
-      <button class="claro" onclick="window.baixarInscritos(${evento.id})">Baixar inscritos (CSV)</button>
+      ${seApenas('exportar_inscricoes', `<button class="claro" onclick="window.baixarInscritos(${evento.id})">Baixar inscritos (CSV)</button>`)}
     </div>
 
     <div class="painel" style="margin-bottom:18px">
@@ -1103,14 +1115,17 @@ async function verUsuarios() {
     <tr class="${u.ativo ? '' : 'inativo'}">
       <td><b>${esc(u.usuario)}</b><br>
         <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(u.nome || '')}</span></td>
-      <td><span class="papel ${u.papel}">${u.papel === 'admin' ? 'administrador' : 'equipe'}</span></td>
+      <td><span class="papel ${u.papel}">${esc(rotuloDoPapel(u.papel))}</span></td>
       <td>${u.ativo ? 'ativo' : 'desativado'}</td>
       <td>${quando(u.acesso_em)}</td>
       <td>${quando(u.criado_em)}<br>
         <span style="color:var(--cinza);font-size:var(--t-meta)">${esc(u.criado_por || '')}</span></td>
       <td>
         <button class="claro" onclick="window.trocarSenhaDe('${esc(u.usuario)}')">Trocar senha</button>
-        <button class="claro" onclick="window.alternarPapel('${esc(u.usuario)}','${u.papel === 'admin' ? 'equipe' : 'admin'}')">${u.papel === 'admin' ? 'Tornar equipe' : 'Tornar administrador'}</button>
+        <select class="claro" onchange="window.alternarPapel('${esc(u.usuario)}', this.value)">
+          ${['operador', 'regularizacao', 'gestor', 'admin'].map(x =>
+            `<option value="${x}"${x === u.papel ? ' selected' : ''}>${esc(rotuloDoPapel(x))}</option>`).join('')}
+        </select>
         <button class="claro" onclick="window.alternarAtivo('${esc(u.usuario)}',${u.ativo ? 'false' : 'true'})">${u.ativo ? 'Desativar' : 'Reativar'}</button>
       </td>
     </tr>`).join('');
@@ -1118,9 +1133,19 @@ async function verUsuarios() {
   conteudo.innerHTML = `
     <h2 style="margin:0 0 4px;font-size:var(--t-titulo);font-weight:400">Usuários internos</h2>
     <p class="nota" style="margin:0 0 18px">Cada pessoa entra com usuário e senha próprios, e é
-    esse nome que fica gravado na auditoria de cada resposta validada. <b>Administrador</b> cria e
-    altera usuários; <b>equipe</b> confere respostas e gera convites, e pode trocar a própria
-    senha. A senha nunca é guardada: guarda-se o resumo <code>scrypt</code> com sal por usuário.</p>
+    esse nome que fica gravado na auditoria de cada resposta validada. A senha nunca é guardada:
+    guarda-se o resumo <code>scrypt</code> com sal por usuário.</p>
+
+    <ul class="nota" style="margin:0 0 18px;padding-left:18px;line-height:1.7">
+      <li><b>Administrador</b> — tudo, e é o único que cria e altera usuários.</li>
+      <li><b>Gestor de departamento</b> — tudo, menos abrir acesso para alguém.</li>
+      <li><b>Regularização</b> — respostas e adesões, inclusive protocolar a opção e tirar a via
+        do termo. Não exporta planilha nem lê a auditoria.</li>
+      <li><b>Operador</b> — respostas, convites, eventos e inscrições. Não alcança adesão.</li>
+    </ul>
+    <p class="nota" style="margin:-10px 0 18px">As planilhas com CNPJ e CPF e a trilha de
+    auditoria ficam com administrador e gestor. Quem não tem a permissão não vê o botão — e,
+    se forçar o endereço, a recusa fica registrada na auditoria.</p>
 
     ${implantacao ? `<div class="aviso-implantacao" style="border:1px solid #f0dcb4;
       background:#fdf9f0;border-radius:8px;padding:14px 17px;margin:0 0 18px">
@@ -1133,7 +1158,9 @@ async function verUsuarios() {
       <input type="text" id="novoUsuario" placeholder="usuario (sem espaço nem acento)">
       <input type="text" id="novoNome" placeholder="Nome de quem usa" style="min-width:190px">
       <select id="novoPapel">
-        <option value="equipe">equipe</option>
+        <option value="operador">operador</option>
+        <option value="regularizacao">regularização</option>
+        <option value="gestor">gestor de departamento</option>
         <option value="admin">administrador</option>
       </select>
       <button onclick="window.criarUsuario()">Criar usuário</button>
@@ -1252,7 +1279,18 @@ function desenhar() {
 
 // Quem nao administra nao ve a aba de usuarios — e o servidor recusa a rota
 // de todo modo: esconder e conforto de tela, nao controle de acesso.
-if (ehAdmin) document.getElementById('abaUsuarios').classList.remove('oculta');
+/* Cada aba declara a capacidade que exige; quem nao a tem nao ve o botao.
+   Se a aba ativa de nascenca cair fora do alcance, a primeira visivel assume —
+   senao a pessoa abriria o painel num 403. */
+for (const botao of document.querySelectorAll('.aba[data-pode]')) {
+  botao.classList.toggle('oculta', !podeFazer(botao.dataset.pode));
+}
+const abaAtiva = document.querySelector('.aba.ativa');
+if (!abaAtiva || abaAtiva.classList.contains('oculta')) {
+  if (abaAtiva) abaAtiva.classList.remove('ativa');
+  const primeira = document.querySelector('.aba:not(.oculta)');
+  if (primeira) { primeira.classList.add('ativa'); primeira.click(); }
+}
 if (porImplantacao) { abaAtual = 'usuarios';
   document.querySelectorAll('.aba').forEach(x =>
     x.classList.toggle('ativa', x.dataset.aba === 'usuarios')); }

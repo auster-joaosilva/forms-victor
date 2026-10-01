@@ -9,6 +9,7 @@ import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TERMO, TERMOS } from './src/termo.js';
+import { ROTAS, CAPACIDADES, pode, PAPEIS } from './src/papeis.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 
@@ -365,11 +366,11 @@ try {
   conferir('usuario com espaco e maiuscula e recusado', r.status === 400, 'status ' + r.status);
 
   r = await postar('/api/backoffice/usuarios',
-    { usuario: 'maria', nome: 'Maria', senha: SENHA_MARIA, papel: 'equipe' },
+    { usuario: 'maria', nome: 'Maria', senha: SENHA_MARIA, papel: 'operador' },
     { Authorization: cabecalhoSenha('implantacao') });
   const criada = await r.json();
   conferir('cria o primeiro usuario', r.status === 201 && criada.ok, 'status ' + r.status);
-  conferir('o primeiro usuario nasce administrador, mesmo pedindo equipe',
+  conferir('o primeiro usuario nasce administrador, mesmo pedindo operador',
     criada.papel === 'admin' && criada.primeiro === true, JSON.stringify(criada));
 
   r = await fetch(BASE + '/api/backoffice/usuarios', { headers: { Authorization: cabecalhoSenha() } });
@@ -392,29 +393,29 @@ try {
   conferir('usuario repetido e recusado', r.status === 400, 'status ' + r.status);
 
   r = await postar('/api/backoffice/usuarios',
-    { usuario: 'joao', nome: 'Joao', senha: SENHA_JOAO, papel: 'equipe' },
+    { usuario: 'joao', nome: 'Joao', senha: SENHA_JOAO, papel: 'operador' },
     { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
-  conferir('administrador cria usuario de equipe', r.status === 201, 'status ' + r.status);
+  conferir('administrador cria usuario operador', r.status === 201, 'status ' + r.status);
 
   r = await fetch(BASE + '/api/backoffice/usuarios',
     { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO) } });
-  conferir('equipe nao ve a lista de usuarios', r.status === 403, 'status ' + r.status);
+  conferir('operador nao ve a lista de usuarios', r.status === 403, 'status ' + r.status);
 
   r = await fetch(BASE + '/api/backoffice/respostas',
     { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO) } });
-  conferir('equipe continua vendo as respostas', r.ok, 'status ' + r.status);
+  conferir('operador continua vendo as respostas', r.ok, 'status ' + r.status);
 
   r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'joao', papel: 'admin' },
     { Authorization: cabecalhoDe('joao', SENHA_JOAO) });
-  conferir('equipe nao se promove', r.status === 403, 'status ' + r.status);
+  conferir('operador nao se promove', r.status === 403, 'status ' + r.status);
 
   r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', senha: 'invasao-1234567' },
     { Authorization: cabecalhoDe('joao', SENHA_JOAO) });
-  conferir('equipe nao troca a senha de outra pessoa', r.status === 403, 'status ' + r.status);
+  conferir('operador nao troca a senha de outra pessoa', r.status === 403, 'status ' + r.status);
 
   r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'joao', senha: SENHA_JOAO_NOVA },
     { Authorization: cabecalhoDe('joao', SENHA_JOAO) });
-  conferir('equipe troca a propria senha', r.ok, 'status ' + r.status);
+  conferir('operador troca a propria senha', r.ok, 'status ' + r.status);
 
   r = await fetch(BASE + '/api/backoffice/respostas',
     { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO_NOVA) } });
@@ -430,7 +431,7 @@ try {
   conferir('o unico administrador ativo nao se desativa',
     r.status === 400 && /[uú]nico administrador/.test(trava.motivo || ''), JSON.stringify(trava));
 
-  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', papel: 'equipe' },
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', papel: 'operador' },
     { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
   conferir('o unico administrador tambem nao se rebaixa', r.status === 400, 'status ' + r.status);
 
@@ -446,7 +447,7 @@ try {
     { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
   conferir('administrador reativa e promove', r.ok, 'status ' + r.status);
 
-  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', papel: 'equipe' },
+  r = await postar('/api/backoffice/usuarios/alterar', { usuario: 'maria', papel: 'operador' },
     { Authorization: cabecalhoDe('maria', SENHA_MARIA) });
   conferir('com dois administradores, a trava libera o rebaixamento', r.ok, 'status ' + r.status);
 
@@ -1329,6 +1330,109 @@ try {
       limitado.kill();
     }
   }
+
+  // =================================================== a matriz de permissões
+  //
+  // Duas provas, e a primeira importa mais que a segunda.
+  //
+  // (1) COBERTURA. Varre o próprio `servidor.mjs` atrás de toda rota do
+  //     backoffice e exige que cada uma esteja declarada em `src/papeis.mjs`.
+  //     É o que impede que a rota nova nasça aberta: quem acrescentar um
+  //     endereço e esquecer a tabela vê este teste cair com o nome dele. Sem
+  //     isto, a proteção dependeria de alguém lembrar — foi exatamente assim
+  //     que vinte das vinte e quatro rotas ficaram sem checagem até 01/10/2026.
+  //
+  // (2) A MATRIZ. Para cada papel, bate em CADA rota e confere se o 403 aparece
+  //     exatamente onde a tabela manda. Testar só "admin entra e operador não"
+  //     deixaria passar o caso que interessa: o papel do meio alcançando o que
+  //     não devia.
+  //
+  //     LIMITE DELA, provado por mutação em 01/10/2026: a matriz compara o
+  //     servidor com a MESMA tabela que está sob teste. Dando `ver_adesoes` ao
+  //     operador em `papeis.mjs`, a matriz continua verde — os dois lados se
+  //     movem juntos. Ela prova OBEDIÊNCIA à política declarada, não que a
+  //     política esteja certa. Quem fixa a política são as asserções nomeadas
+  //     logo abaixo, escritas à mão, uma por regra que Victor decidiu. Se você
+  //     mudar a tabela de propósito, são elas que vão cair — e é para caírem.
+  const SENHA_PAPEL = 'senha-de-teste-para-papel-1234';
+  const CONTAS = { admin: ['joao', SENHA_JOAO_NOVA] };
+  for (const [papelTeste, login] of
+       [['gestor', 'tgestor'], ['regularizacao', 'tregula'], ['operador', 'toper']]) {
+    r = await postar('/api/backoffice/usuarios',
+      { usuario: login, nome: 'Conta de teste', senha: SENHA_PAPEL, papel: papelTeste },
+      { Authorization: cabecalhoDe('joao', SENHA_JOAO_NOVA) });
+    conferir(`cria a conta de ${papelTeste}`, r.status === 201, 'status ' + r.status);
+    CONTAS[papelTeste] = [login, SENHA_PAPEL];
+  }
+  conferir('os quatro papéis têm conta no teste',
+    Object.keys(CONTAS).length === PAPEIS.length, Object.keys(CONTAS).join(','));
+
+  const fonteDaPortaria = readFileSync('servidor.mjs', 'utf8');
+  const declaradas = new Set(Object.keys(ROTAS));
+  const noCodigo = new Set();
+  for (const m of fonteDaPortaria.matchAll(
+      /req\.method === '(GET|POST)' && rota === '(\/(?:api\/)?backoffice[^']*)'/g)) {
+    noCodigo.add(`${m[1]} ${m[2]}`);
+  }
+  const semDeclaracao = [...noCodigo].filter(x => !declaradas.has(x));
+  conferir('toda rota do backoffice está declarada na tabela de permissões',
+    semDeclaracao.length === 0, semDeclaracao.join(' · '));
+  // Barreira de completude: varredura que nao acha nada passaria verde por
+  // ausencia, e e justamente o modo como este teste deixaria de proteger.
+  conferir('a varredura realmente encontrou as rotas no código',
+    noCodigo.size >= 20, 'encontradas ' + noCodigo.size);
+
+  let combinacoes = 0;
+  const divergentes = [];
+  for (const [papelTeste, [login, senha]] of Object.entries(CONTAS)) {
+    for (const [chave, capacidade] of Object.entries(ROTAS)) {
+      const [metodo, caminho] = chave.split(' ');
+      /* Corpo vazio serve para quase tudo, menos para a rota de alterar
+         usuario: ela exige, de quem nao administra, que o pedido seja sobre a
+         PROPRIA conta e traga senha — corpo vazio parece conta alheia e volta
+         403 por regra propria, nao por papel. Mandando o proprio login, mede-se
+         a portaria, que e o assunto aqui. */
+      /* A senha curta e deliberada: passa pela regra de posse e morre na
+         validacao com 400, sem trocar a senha de ninguem no meio da varredura. */
+      const corpo = caminho === '/api/backoffice/usuarios/alterar'
+        ? { usuario: login, senha: 'x' } : {};
+      const resp = metodo === 'GET'
+        ? await fetch(BASE + caminho, { headers: { Authorization: cabecalhoDe(login, senha) } })
+        : await postar(caminho, corpo, { Authorization: cabecalhoDe(login, senha) });
+      // Corpo vazio faz a rota permitida responder 400; o que se mede aqui e
+      // SO a portaria, isto e: 403 aparece exatamente onde a tabela manda.
+      const certo = pode(papelTeste, capacidade)
+        ? resp.status !== 403 : resp.status === 403;
+      if (!certo) divergentes.push(`${papelTeste} · ${chave} · ${resp.status}`);
+      combinacoes++;
+    }
+  }
+  conferir(`a matriz bate em ${combinacoes} combinações de papel e rota`,
+    divergentes.length === 0, divergentes.slice(0, 6).join('  |  '));
+
+  // O que mais importa, dito como asserção propria para cair com nome claro.
+  const comoOperador = { Authorization: cabecalhoDe('toper', SENHA_PAPEL) };
+  const comoRegula = { Authorization: cabecalhoDe('tregula', SENHA_PAPEL) };
+  const comoGestor = { Authorization: cabecalhoDe('tgestor', SENHA_PAPEL) };
+  conferir('operador não alcança adesão',
+    (await fetch(BASE + '/api/backoffice/adesoes', { headers: comoOperador })).status === 403);
+  conferir('regularização alcança adesão',
+    (await fetch(BASE + '/api/backoffice/adesoes', { headers: comoRegula })).ok);
+  conferir('regularização NÃO exporta a planilha de adesões',
+    (await fetch(BASE + '/api/backoffice/adesoes.csv', { headers: comoRegula })).status === 403);
+  conferir('regularização não lê a auditoria',
+    (await fetch(BASE + '/api/backoffice/auditoria', { headers: comoRegula })).status === 403);
+  conferir('gestor exporta e lê a auditoria',
+    (await fetch(BASE + '/api/backoffice/adesoes.csv', { headers: comoGestor })).ok
+    && (await fetch(BASE + '/api/backoffice/auditoria', { headers: comoGestor })).ok);
+  conferir('gestor NÃO cria usuário',
+    (await postar('/api/backoffice/usuarios', { usuario: 'x', senha: SENHA_PAPEL },
+      { Authorization: cabecalhoDe('tgestor', SENHA_PAPEL) })).status === 403);
+  conferir('a recusa por papel fica registrada na auditoria',
+    ((await (await fetch(BASE + '/api/backoffice/auditoria',
+      { headers: { Authorization: cabecalhoDe('joao', SENHA_JOAO_NOVA) } })).json()).eventos || [])
+      .some(e => e.o_que === 'acesso_negado'));
+
 
 } catch (e) {
   falhou++;

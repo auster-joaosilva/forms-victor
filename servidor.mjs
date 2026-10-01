@@ -24,6 +24,7 @@ import { abrirBanco, senhaConfere, MINIMO_SENHA, VERSAO_DO_ESQUEMA,
          MODALIDADES_ADESAO, SEM_MANIFESTACAO } from './src/banco.mjs';
 import { PERGUNTAS, BLOCOS } from './src/perguntas.js';
 import { TERMO, TERMOS } from './src/termo.js';
+import { exigidaPor, pode, capacidadesDe, ROTULOS } from './src/papeis.mjs';
 
 const HORAS_DE_SESSAO = 12;
 
@@ -1037,6 +1038,29 @@ const servidor = createServer(async (req, res) => {
       const quem = sessao.usuario;
       const ehAdmin = sessao.papel === 'admin';
 
+      /* ------------------------------------------------------- a portaria
+       *
+       * Uma checagem, antes de qualquer rota, contra a tabela de
+       * `src/papeis.mjs`. Rota que não está declarada lá NÃO RESPONDE — é o
+       * que impede que uma rota nova nasça aberta por esquecimento. Há teste
+       * de cobertura que falha, apontando o nome, antes de isso chegar ao ar.
+       *
+       * Até 01/10/2026 só quatro rotas checavam papel, todas de usuários: as
+       * outras vinte respondiam a qualquer pessoa autenticada, inclusive as
+       * três planilhas com CPF e CNPJ e a trilha de auditoria. */
+      const capacidadeExigida = exigidaPor(req.method, rota);
+      const negar = (motivo) => {
+        banco.registrar(quem, 'acesso_negado', rota,
+          { papel: sessao.papel, exigia: capacidadeExigida, metodo: req.method });
+        return rota.startsWith('/api/')
+          ? json(res, 403, { ok: false, erro: motivo })
+          : responder(res, 403, motivo, 'text/plain; charset=utf-8');
+      };
+      if (capacidadeExigida === null) return negar('rota não declarada na tabela de permissões');
+      if (!pode(sessao.papel, capacidadeExigida)) {
+        return negar('o seu papel não alcança esta área');
+      }
+
       if (req.method === 'GET' && rota === '/backoffice') {
         const html = pagina('./backoffice.html');
         if (!html) return responder(res, 500, 'backoffice.html não encontrado.');
@@ -1047,6 +1071,10 @@ const servidor = createServer(async (req, res) => {
            * no HTML, e uma prorrogação deixava o aviso mentindo. */
           + `window.__JANELA_FIM__ = ${jsonParaScript(diaBrasileiro(FIM_DA_JANELA))};\n`
           + `window.__PAPEL__ = ${jsonParaScript(sessao.papel)};\n`
+          /* O painel NÃO repete a tabela: recebe o que esta pessoa pode e
+           * esconde o resto. Regra em dois lugares é regra que diverge. */
+          + `window.__PODE__ = ${jsonParaScript(capacidadesDe(sessao.papel))};\n`
+          + `window.__ROTULOS_PAPEL__ = ${jsonParaScript(ROTULOS)};\n`
           + `window.__IMPLANTACAO__ = ${sessao.implantacao === true};`),
           'text/html; charset=utf-8', { 'Cache-Control': 'no-store' });
       }

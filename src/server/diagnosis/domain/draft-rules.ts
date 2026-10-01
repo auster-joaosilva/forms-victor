@@ -1,6 +1,7 @@
 import type { Answers } from './question-types'
 import { QUESTIONS, visibleQuestions } from './questions'
 
+export const FIRST_STEP = 1
 export const FORM_STEPS = 5
 export const REVIEW_STEP = 6
 export const RESULT_STEP = 7

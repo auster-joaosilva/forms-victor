@@ -30,5 +30,12 @@ export const Route = createFileRoute('/diagnosis/')({
 function DiagnosisRoute() {
   const bootstrap = Route.useLoaderData()
   const { resume } = Route.useSearch()
-  return <DiagnosisPage bootstrap={bootstrap} api={diagnosisApi} resume={resume === '1'} />
+  return (
+    <DiagnosisPage
+      bootstrap={bootstrap}
+      api={diagnosisApi}
+      resume={resume === '1'}
+      onDownloadReport={() => window.location.assign('/diagnosis/report?print=1')}
+    />
+  )
 }

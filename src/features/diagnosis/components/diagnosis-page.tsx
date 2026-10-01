@@ -1,16 +1,28 @@
 import { useLayoutEffect } from 'react'
 import { SiteHeader } from '@/components/brand/site-header'
+import { FIRST_STEP, REVIEW_STEP } from '@/server/diagnosis/domain/draft-rules'
+import { reviewItems } from '@/server/diagnosis/domain/review'
 import { stepOf } from '../hooks/form-state'
 import { useDiagnosisForm } from '../hooks/use-diagnosis-form'
 import type { DiagnosisApi, DiagnosisBootstrap } from '../types/diagnosis'
+import { ResultScreen } from './result-screen'
 import { ResumeBanner } from './resume-banner'
+import { ReviewScreen } from './review-screen'
 import { StepBar } from './step-bar'
 import { StepForm } from './step-form'
 import { TriageReferral } from './triage-referral'
 
-const FIRST_STEP = 1
-
-export function DiagnosisPage({ bootstrap, api, resume }: { bootstrap: DiagnosisBootstrap; api: DiagnosisApi; resume: boolean }) {
+export function DiagnosisPage({
+  bootstrap,
+  api,
+  resume,
+  onDownloadReport,
+}: {
+  bootstrap: DiagnosisBootstrap
+  api: DiagnosisApi
+  resume: boolean
+  onDownloadReport(): void
+}) {
   const form = useDiagnosisForm(bootstrap, { api, resume })
   const { state, actions } = form
   const { view } = state
@@ -39,6 +51,21 @@ export function DiagnosisPage({ bootstrap, api, resume }: { bootstrap: Diagnosis
             <StepBar current={step} onGoTo={actions.goTo} />
             <StepForm form={form} step={view.step} />
           </>
+        ) : null}
+        {view.kind === 'review' ? (
+          <>
+            <StepBar current={step} onGoTo={actions.goTo} />
+            <ReviewScreen review={reviewItems(state.answers)} onBack={actions.back} onNext={actions.next} onChange={actions.goToField} />
+          </>
+        ) : null}
+        {view.kind === 'result' && form.shownResult ? (
+          <ResultScreen
+            view={form.shownResult}
+            submission={state.submission}
+            onRetry={actions.retrySubmit}
+            onReview={() => actions.goTo(REVIEW_STEP)}
+            onDownload={onDownloadReport}
+          />
         ) : null}
       </main>
     </>

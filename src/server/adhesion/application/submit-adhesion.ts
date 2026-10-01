@@ -34,7 +34,11 @@ export function makeSubmitAdhesion(deps: {
 }) {
   const hashTerm = deps.hashTerm ?? computeTermHash
   let currentHash: Promise<string> | null = null
-  const termHash = () => (currentHash ??= hashTerm(CURRENT_TERM))
+  const termHash = () =>
+    (currentHash ??= hashTerm(CURRENT_TERM).catch((error: unknown) => {
+      currentHash = null
+      throw error
+    }))
 
   return async function submitAdhesion({ body, origin, userAgent }: { body: unknown; origin: SubmissionOrigin; userAgent: string | null }): Promise<SubmitAdhesionResult> {
     const now = deps.clock.now()
@@ -86,7 +90,12 @@ export function makeSubmitAdhesion(deps: {
         payload,
       })
       if (created === 'protocol_taken') continue
-      await deps.recordAudit({ action: 'adhesion_received', reference: protocol, detail: { id: created.id, modality: submission.modalidade } })
+      // A adesão já está gravada: falha na auditoria não pode virar erro, senão o cliente reenvia e duplica.
+      try {
+        await deps.recordAudit({ action: 'adhesion_received', reference: protocol, detail: { id: created.id, modality: submission.modalidade } })
+      } catch (error) {
+        console.error('falha ao auditar adhesion_received', error)
+      }
       const receipt = toReceipt({
         id: created.id,
         protocol,
@@ -101,6 +110,6 @@ export function makeSubmitAdhesion(deps: {
       })
       return { ok: true, receipt, receiptToken }
     }
-    throw new Error('não foi possível sortear um protocolo livre')
+    return { ok: false, error: 'não foi possível gerar o protocolo' }
   }
 }

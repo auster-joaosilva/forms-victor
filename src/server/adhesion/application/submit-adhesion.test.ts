@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { computeTermHash } from '../domain/term'
 import { auditSpy, counterReceiptTokens, fakeClock, memoryAdhesions, memoryInvitations, memoryResponseLookup, sequenceProtocols } from './testing/fakes'
 import { makeSubmitAdhesion } from './submit-adhesion'
@@ -34,11 +34,15 @@ function setup({
   protocols = ['ADS-20261001-AAAAA'],
   responses = {},
   invitations = [],
+  failHashOnce = false,
+  failAudit = false,
 }: {
   now?: string
   protocols?: string[]
   responses?: Record<string, number>
   invitations?: { token: string; companyName: string | null; cnpj: string | null; email: string | null }[]
+  failHashOnce?: boolean
+  failAudit?: boolean
 } = {}) {
   const clock = fakeClock(now)
   const adhesions = memoryAdhesions()
@@ -51,9 +55,10 @@ function setup({
     protocols: sequenceProtocols(protocols),
     receiptTokens: counterReceiptTokens(),
     clock,
-    recordAudit: audit.record,
+    recordAudit: failAudit ? async () => Promise.reject(new Error('auditoria fora do ar')) : audit.record,
     hashTerm: async (term) => {
       hashes++
+      if (failHashOnce && hashes === 1) throw new Error('falha no hash')
       return computeTermHash(term)
     },
   })
@@ -169,7 +174,7 @@ describe('submitAdhesion', () => {
   it('desiste depois de dez protocolos ocupados', async () => {
     const { submit } = setup({ protocols: ['ADS-20261001-AAAAA'] })
     await submit({ body: body(), origin, userAgent: null })
-    await expect(submit({ body: body(), origin, userAgent: null })).rejects.toThrow('não foi possível sortear um protocolo livre')
+    expect(await submit({ body: body(), origin, userAgent: null })).toEqual({ ok: false, error: 'não foi possível gerar o protocolo' })
   })
 
   it('cada confirmação é uma adesão nova, com protocolo e token de recibo próprios', async () => {
@@ -200,5 +205,22 @@ describe('submitAdhesion', () => {
       ok: true,
       receipt: { acceptedAt: '2026-10-01T16:00:00.000Z', acceptedAtDisplay: '01/10/2026, 13:00:00', modalidade: 'padrao', semManifestacao: null, empresa: company },
     })
+  })
+
+  it('devolve o recibo e guarda uma só adesão quando a auditoria falha', async () => {
+    const { submit, adhesions } = setup({ failAudit: true })
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const result = await submit({ body: body(), origin, userAgent: null })
+    expect(result).toMatchObject({ ok: true, receipt: { protocol: 'ADS-20261001-AAAAA' } })
+    expect(adhesions.rows.size).toBe(1)
+    expect(error).toHaveBeenCalled()
+    error.mockRestore()
+  })
+
+  it('não guarda o hash que falhou: a próxima confirmação recalcula', async () => {
+    const { submit, hashCount } = setup({ failHashOnce: true, protocols: ['ADS-20261001-AAAAA', 'ADS-20261001-BBBBB'] })
+    await expect(submit({ body: body(), origin, userAgent: null })).rejects.toThrow('falha no hash')
+    expect(await submit({ body: body(), origin, userAgent: null })).toMatchObject({ ok: true })
+    expect(hashCount()).toBe(2)
   })
 })

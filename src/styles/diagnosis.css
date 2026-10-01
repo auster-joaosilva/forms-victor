@@ -74,6 +74,7 @@ table.dx-matrix .is-unknown{border-left:1px solid var(--color-auster-border-stro
 }
 .dx-matrix-sum{font-size:12.5px;color:var(--color-auster-gray);margin-top:8px}
 .dx-matrix-sum.is-warning{color:var(--color-auster-medium)}
+.dx-fieldset{border:0;margin:0;padding:0;min-width:0}
 .dx-nav{display:flex;justify-content:space-between;margin-top:26px;padding-top:18px;border-top:1px solid var(--color-auster-border)}
 .dx-button{font-family:inherit;font-size:var(--text-body);font-weight:500;padding:12px 28px;
   border-radius:8px;border:1px solid var(--color-auster-dark);cursor:pointer;transition:background .12s,box-shadow .12s}

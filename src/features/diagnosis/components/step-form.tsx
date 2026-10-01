@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useHydrated } from '@tanstack/react-router'
 import { FIRST_STEP, FORM_STEPS } from '@/server/diagnosis/domain/draft-rules'
 import { BLOCKS, visibleQuestions } from '@/server/diagnosis/domain/questions'
 import type { DiagnosisForm } from '../hooks/use-diagnosis-form'
@@ -9,6 +10,7 @@ export function StepForm({ form, step }: { form: DiagnosisForm; step: number }) 
   const block = BLOCKS[step - 1]
   const root = useRef<HTMLDivElement>(null)
   const scrollToError = useRef(false)
+  const hydrated = useHydrated()
 
   useEffect(() => {
     if (!scrollToError.current) return
@@ -39,28 +41,30 @@ export function StepForm({ form, step }: { form: DiagnosisForm; step: number }) 
           ))}
         </dl>
       ) : null}
-      {questions.map((question) => (
-        <QuestionField
-          key={question.key}
-          question={question}
-          answers={state.answers}
-          error={state.errors[question.key]}
-          highlighted={state.highlight === question.key}
-          company={state.company}
-          onAnswer={actions.setAnswer}
-          onMatrixAnswer={actions.setMatrixAnswer}
-          onBlur={actions.blurField}
-          onHighlightEnd={actions.clearHighlight}
-        />
-      ))}
-      <div className="dx-nav">
-        <button type="button" className="dx-button is-secondary" disabled={step === FIRST_STEP} onClick={actions.back}>
-          Voltar
-        </button>
-        <button type="button" className="dx-button is-primary" onClick={next}>
-          {step === FORM_STEPS ? 'Conferir respostas' : 'Próximo'}
-        </button>
-      </div>
+      <fieldset className="dx-fieldset" disabled={!hydrated}>
+        {questions.map((question) => (
+          <QuestionField
+            key={question.key}
+            question={question}
+            answers={state.answers}
+            error={state.errors[question.key]}
+            highlighted={state.highlight === question.key}
+            company={state.company}
+            onAnswer={actions.setAnswer}
+            onMatrixAnswer={actions.setMatrixAnswer}
+            onBlur={actions.blurField}
+            onHighlightEnd={actions.clearHighlight}
+          />
+        ))}
+        <div className="dx-nav">
+          <button type="button" className="dx-button is-secondary" disabled={step === FIRST_STEP} onClick={actions.back}>
+            Voltar
+          </button>
+          <button type="button" className="dx-button is-primary" onClick={next}>
+            {step === FORM_STEPS ? 'Conferir respostas' : 'Próximo'}
+          </button>
+        </div>
+      </fieldset>
     </div>
   )
 }

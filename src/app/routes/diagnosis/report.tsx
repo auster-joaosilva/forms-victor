@@ -7,7 +7,7 @@ import { ReportDocument } from '@/features/diagnosis/components/report-document'
 import { printWhenReady } from '@/lib/print'
 
 export const Route = createFileRoute('/diagnosis/report')({
-  validateSearch: z.object({ print: z.coerce.string().pipe(z.literal('1')).optional().catch(undefined) }),
+  validateSearch: z.object({ print: z.literal(1).optional().catch(undefined) }),
   loader: () => getSubmittedReport(),
   head: ({ loaderData }) => ({ meta: [{ title: loaderData?.fileName ?? 'Plano de ação | auster' }] }),
   component: ReportRoute,
@@ -18,7 +18,7 @@ function ReportRoute() {
   const { print } = Route.useSearch()
 
   useEffect(() => {
-    if (sheets && print === '1') void printWhenReady(sheets.fileName)
+    if (sheets && print === 1) void printWhenReady(sheets.fileName)
   }, [sheets, print])
 
   return (

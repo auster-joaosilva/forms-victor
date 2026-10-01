@@ -2,15 +2,20 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { BackofficeShell } from '@/components/backoffice/backoffice-shell'
 import { LogoutButton } from '@/features/auth/components/logout-button'
+import { AuditPanel } from '@/features/backoffice-audit/components/audit-panel'
 import { InvitationsPanel } from '@/features/backoffice-invitations/components/invitations-panel'
 import { ResponsesPanel } from '@/features/backoffice-responses/components/responses-panel'
+import { OwnPasswordButton } from '@/features/backoffice-users/components/own-password-button'
+import { UsersPanel } from '@/features/backoffice-users/components/users-panel'
 import { RESPONSE_STATUSES } from '@/server/diagnosis/domain/response-status'
 
-const TAB_KEYS = ['responses', 'invitations'] as const
+const TAB_KEYS = ['responses', 'invitations', 'audit', 'users'] as const
 type TabKey = (typeof TAB_KEYS)[number]
 const TABS: { key: TabKey; label: string; adminOnly: boolean }[] = [
   { key: 'responses', label: 'Respostas', adminOnly: false },
   { key: 'invitations', label: 'Convites', adminOnly: false },
+  { key: 'audit', label: 'Auditoria', adminOnly: false },
+  { key: 'users', label: 'Usuários', adminOnly: true },
 ]
 
 export const Route = createFileRoute('/backoffice/')({
@@ -40,7 +45,7 @@ function BackofficeHome() {
     </div>
   )
   return (
-    <BackofficeShell userName={user.username} nav={nav} logout={<LogoutButton className="bo-logout" />}>
+    <BackofficeShell userName={user.username} nav={nav} account={<OwnPasswordButton username={user.username} />} logout={<LogoutButton className="bo-logout" />}>
       {tab === 'responses' ? (
         <ResponsesPanel
           key={`${search.status ?? ''}:${search.q ?? ''}`}
@@ -49,6 +54,8 @@ function BackofficeHome() {
         />
       ) : null}
       {tab === 'invitations' ? <InvitationsPanel /> : null}
+      {tab === 'audit' ? <AuditPanel /> : null}
+      {tab === 'users' && user.role === 'admin' ? <UsersPanel /> : null}
     </BackofficeShell>
   )
 }

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 
-export function BackofficeShell({ userName, nav, logout, children }: { userName: string; nav: ReactNode; logout: ReactNode; children: ReactNode }) {
+type Props = { userName: string; nav: ReactNode; account: ReactNode; logout: ReactNode; children: ReactNode }
+
+export function BackofficeShell({ userName, nav, account, logout, children }: Props) {
   return (
     <>
       <header className="bo-header">
@@ -13,6 +15,7 @@ export function BackofficeShell({ userName, nav, logout, children }: { userName:
         </div>
         <div className="bo-header-actions">
           <span className="bo-who">{userName}</span>
+          {account}
           {logout}
         </div>
       </header>

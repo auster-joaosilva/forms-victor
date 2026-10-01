@@ -216,8 +216,38 @@ describe('AdhesionForm', () => {
     await user.click(screen.getByRole('checkbox', { name: /Li o termo acima/ }))
     await user.click(screen.getByRole('button', { name: 'Confirmar a opção' }))
     expect(
-      await screen.findByText('Não consegui registrar: Failed to fetch. Tente de novo.'),
+      await screen.findByText('Não consegui registrar: não foi possível registrar. Tente de novo.'),
     ).toBeInTheDocument()
+    expect(screen.queryByText(/Failed to fetch/)).not.toBeInTheDocument()
+  })
+
+  it('não mostra o JSON de uma exceção de validação do servidor', async () => {
+    const user = userEvent.setup()
+    const raw = JSON.stringify([{ code: 'too_big', path: ['empresa', 'nomeEmpresa'] }])
+    render(<Harness api={fakeApi({ submit: vi.fn(async () => Promise.reject(new Error(raw))) })} />)
+    await fillValid(user)
+    await user.click(screen.getByRole('radio', { name: /^Opção 1/ }))
+    await user.click(screen.getByRole('checkbox', { name: /Li o termo acima/ }))
+    await user.click(screen.getByRole('button', { name: 'Confirmar a opção' }))
+    expect(
+      await screen.findByText('Não consegui registrar: não foi possível registrar. Tente de novo.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/too_big/)).not.toBeInTheDocument()
+  })
+
+  it('limita cada campo ao tamanho que o servidor aceita', () => {
+    render(<Harness api={fakeApi()} />)
+    const limits: [string, number][] = [
+      ['Razão social', 300],
+      ['CNPJ', 32],
+      ['Nome do representante legal', 200],
+      ['CPF do representante', 20],
+      ['E-mail', 254],
+      ['Telefone', 32],
+    ]
+    for (const [label, max] of limits) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('maxLength', String(max))
+    }
   })
 
   it('começa com o pré-preenchimento do convite', () => {

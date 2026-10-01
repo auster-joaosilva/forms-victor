@@ -9,6 +9,7 @@ import {
 } from '@/server/shared/http/adhesion-receipt-cookie'
 import { requestOrigin } from '@/server/shared/http/request-origin'
 import type { AdhesionBootstrap, SubmitAdhesionWire } from '../types/adhesion'
+import { guardSubmit } from './guard-submit'
 import { loadAdhesionPageInput, lookupAdhesionCompanyInput, submitAdhesionInput } from './schemas'
 
 export const loadAdhesionPage = createServerFn({ method: 'GET' })
@@ -32,11 +33,9 @@ export const submitAdhesion = createServerFn({ method: 'POST' })
   .inputValidator(submitAdhesionInput)
   .handler(async ({ data }): Promise<SubmitAdhesionWire> => {
     const headers = getRequest().headers
-    const result = await submitBody({
-      body: data,
-      origin: requestOrigin(headers),
-      userAgent: headers.get('user-agent'),
-    })
+    const result = await guardSubmit(() =>
+      submitBody({ body: data, origin: requestOrigin(headers), userAgent: headers.get('user-agent') }),
+    )
     if (!result.ok) return result
     writeAdhesionReceiptCookie(result.receiptToken)
     return { ok: true, receipt: result.receipt }

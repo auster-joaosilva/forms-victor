@@ -47,6 +47,8 @@ const emptyForm = (prefill: AdhesionPrefill = {}): AdhesionFormState => ({
   declara: false,
 })
 
+// Exceção (validação, rede, banco) nunca mostra a mensagem crua à pessoa.
+export const SEND_FALLBACK = 'não foi possível registrar'
 const sendFailure = (reason: string) => `Não consegui registrar: ${reason}. Tente de novo.`
 
 function scrollToError(field: ClientField) {
@@ -138,8 +140,8 @@ export function useAdhesionForm({
       } else {
         setSubmitError(sendFailure(result.error))
       }
-    } catch (error) {
-      setSubmitError(sendFailure(error instanceof Error ? error.message : 'não foi possível registrar'))
+    } catch {
+      setSubmitError(sendFailure(SEND_FALLBACK))
     } finally {
       setSending(false)
     }

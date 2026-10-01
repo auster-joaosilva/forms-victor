@@ -1,6 +1,7 @@
 import { ROLE_OPTIONS } from '@/server/adhesion/domain/client-rules'
 import type { AdhesionCompany } from '@/server/adhesion/domain/adhesion'
 import type { ClientField } from '@/server/adhesion/domain/client-rules'
+import { COMPANY_LIMITS } from '../api/schemas'
 import { CNPJ_HINT, errorId, type AdhesionFormController } from '../hooks/use-adhesion-form'
 
 function FieldError({ form, field }: { form: AdhesionFormController; field: ClientField }) {
@@ -33,6 +34,7 @@ function TextField({
       <label htmlFor={id}>{label}</label>
       <input
         id={id}
+        maxLength={COMPANY_LIMITS[field]}
         type={input.type ?? 'text'}
         value={form.form.empresa[field]}
         onChange={(event) => form.setCompany(field, event.target.value)}
@@ -55,6 +57,7 @@ export function IdentificationCard({ form }: { form: AdhesionFormController }) {
           <label htmlFor="adhesion-cnpj">CNPJ</label>
           <input
             id="adhesion-cnpj"
+            maxLength={COMPANY_LIMITS.cnpj}
             className="is-short"
             type="text"
             value={form.form.empresa.cnpj}

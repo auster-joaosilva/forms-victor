@@ -1,3 +1,4 @@
+import type { Role } from '@/server/shared/domain/permissions'
 import { normalizeCnpj } from '@/server/shared/domain/validation'
 import type { LegacyEvent, LegacyInvitation, LegacyResponse, LegacyUser } from './legacy-rows'
 
@@ -13,7 +14,7 @@ export interface ImportedUser {
   username: string
   name: string
   email: string
-  role: 'admin' | 'team'
+  role: Role
   banned: boolean
   banReason: string | null
   createdAt: Date
@@ -126,7 +127,7 @@ export const mapUser = (row: LegacyUser, id: string): ImportedUser => ({
   username: row.usuario,
   name: row.nome || row.usuario,
   email: `${row.usuario}@users.invalid`,
-  role: row.papel === 'admin' ? 'admin' : 'team',
+  role: row.papel === 'admin' ? 'admin' : 'operator',
   banned: row.ativo === 0,
   banReason: row.ativo === 0 ? 'desativado' : null,
   createdAt: new Date(row.criado_em),

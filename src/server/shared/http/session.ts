@@ -1,7 +1,8 @@
 import { auth } from '../auth/auth'
+import { toRole, type Role } from '../domain/permissions'
 import { CLIENT_IP_HEADER, requestOrigin } from './request-origin'
 
-export type SessionUser = { id: string; username: string; name: string; role: 'admin' | 'team' }
+export type SessionUser = { id: string; username: string; name: string; role: Role }
 
 export async function getSessionUser(headers: Headers): Promise<SessionUser | null> {
   const session = await auth.api.getSession({ headers })
@@ -10,7 +11,7 @@ export async function getSessionUser(headers: Headers): Promise<SessionUser | nu
     id: session.user.id,
     username: session.user.username ?? '',
     name: session.user.name,
-    role: session.user.role === 'admin' ? 'admin' : 'team',
+    role: toRole(session.user.role),
   }
 }
 

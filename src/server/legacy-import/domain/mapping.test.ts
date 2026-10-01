@@ -21,7 +21,7 @@ describe('legacy mapping', () => {
 
   it('maps users without password and with the synthetic e-mail', () => {
     expect(mapUser({ usuario: 'maria', nome: null, papel: 'equipe', ativo: 0, criado_em: '2026-08-02T12:00:00.000Z', acesso_em: null }, 'id-1')).toEqual({
-      id: 'id-1', username: 'maria', name: 'maria', email: 'maria@users.invalid', role: 'team', banned: true, banReason: 'desativado',
+      id: 'id-1', username: 'maria', name: 'maria', email: 'maria@users.invalid', role: 'operator', banned: true, banReason: 'desativado',
       createdAt: new Date('2026-08-02T12:00:00.000Z'), lastLoginAt: null,
     })
   })

@@ -2,12 +2,13 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { IdentityError, createUser, listUsers, updateUser } from '@/server/identity/composition'
 import type { Role } from '@/server/identity/domain/user'
+import { ROLES } from '@/server/shared/domain/permissions'
 import { adminMiddleware, sessionMiddleware } from '@/server/shared/http/session-middleware'
 
 export type UserRow = { id: string; username: string; name: string; role: Role; active: boolean; lastLoginAt: string | null; createdAt: string }
 export type Outcome = { ok: true } | { ok: false; message: string }
 
-const role = z.enum(['admin', 'team'])
+const role = z.enum(ROLES)
 const password = z.string().max(128)
 
 const outcome = async (run: () => Promise<unknown>): Promise<Outcome> => {

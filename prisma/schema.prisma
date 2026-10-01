@@ -9,7 +9,9 @@ datasource db {
 
 enum UserRole {
   admin
-  team
+  manager
+  regularization
+  operator
 }
 
 enum ResponseStatus {
@@ -73,7 +75,7 @@ model User {
   image           String?
   username        String?   @unique
   displayUsername String?   @map("display_username")
-  role            String    @default("team")
+  role            String    @default("operator")
   banned          Boolean   @default(false)
   banReason       String?   @map("ban_reason")
   banExpires      DateTime? @map("ban_expires") @db.Timestamptz

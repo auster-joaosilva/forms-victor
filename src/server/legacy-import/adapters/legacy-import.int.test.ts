@@ -63,7 +63,7 @@ describe('legacy import against a SQLite copy', () => {
       importer.close()
     }
     const maria = await prisma.user.findUniqueOrThrow({ where: { username: 'maria' } })
-    expect(maria).toMatchObject({ email: 'maria@users.invalid', role: 'team', banned: true, lastLoginAt: new Date('2026-09-10T12:00:00.000Z') })
+    expect(maria).toMatchObject({ email: 'maria@users.invalid', role: 'operator', banned: true, lastLoginAt: new Date('2026-09-10T12:00:00.000Z') })
     expect((await prisma.user.findUniqueOrThrow({ where: { username: 'victor' } })).name).toBe('Victor')
     expect(await prisma.account.count({ where: { userId: maria.id } })).toBe(0)
     expect(await prisma.invitation.findUniqueOrThrow({ where: { token: 'ABCDEFGHJK' } })).toMatchObject({ createdById: maria.id, openCount: 3 })

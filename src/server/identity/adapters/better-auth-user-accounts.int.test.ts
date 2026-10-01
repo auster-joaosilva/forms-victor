@@ -5,10 +5,17 @@ import { prisma } from '@/server/shared/prisma/client'
 import { IdentityError } from '../domain/user'
 import { betterAuthUserAccounts } from './better-auth-user-accounts'
 
-const input = { username: 'bia', name: 'Bia', password: 'x'.repeat(12), role: 'team' as const }
+const input = { username: 'bia', name: 'Bia', password: 'x'.repeat(12), role: 'operator' as const }
 
 describe('betterAuthUserAccounts.create', () => {
   beforeEach(resetDatabase)
+
+  it('creates each of the four roles', async () => {
+    for (const [username, role] of [['gil', 'manager'], ['rui', 'regularization'], ['ivo', 'operator'], ['ana', 'admin']] as const) {
+      expect((await betterAuthUserAccounts.create({ ...input, username, role })).role).toBe(role)
+    }
+    expect(await betterAuthUserAccounts.countActiveAdmins()).toBe(1)
+  })
 
   it('maps a duplicate username to username_taken', async () => {
     await betterAuthUserAccounts.create(input)

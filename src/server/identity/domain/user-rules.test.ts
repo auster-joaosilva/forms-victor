@@ -3,7 +3,7 @@ import { MINIMUM_PASSWORD, USERNAME_RULE, assertKeepsAnAdmin, assertMayChange, n
 import type { UserAccount } from './user'
 
 const admin: UserAccount = { id: 'a', username: 'ana', name: 'Ana', role: 'admin', active: true, lastLoginAt: null, createdAt: new Date(0) }
-const team: UserAccount = { ...admin, id: 't', username: 'bia', role: 'team' }
+const team: UserAccount = { ...admin, id: 't', username: 'bia', role: 'operator' }
 
 describe('user rules', () => {
   it('normalizes usernames', () => {
@@ -11,13 +11,23 @@ describe('user rules', () => {
     expect(() => normalizeUsername('1ana')).toThrow(/começando por letra/)
   })
   it('lets team members change only their own password', () => {
-    expect(() => assertMayChange({ id: 't', username: 'bia', role: 'team' }, team, { password: 'x'.repeat(12) })).not.toThrow()
-    expect(() => assertMayChange({ id: 't', username: 'bia', role: 'team' }, team, { name: 'B' })).toThrow('só administrador')
-    expect(() => assertMayChange({ id: 't', username: 'bia', role: 'team' }, admin, { password: 'x'.repeat(12) })).toThrow('só administrador')
+    expect(() => assertMayChange({ id: 't', username: 'bia', role: 'operator' }, team, { password: 'x'.repeat(12) })).not.toThrow()
+    expect(() => assertMayChange({ id: 't', username: 'bia', role: 'operator' }, team, { name: 'B' })).toThrow('só administrador')
+    expect(() => assertMayChange({ id: 't', username: 'bia', role: 'operator' }, admin, { password: 'x'.repeat(12) })).toThrow('só administrador')
   })
   it('refuses to remove the last active admin', () => {
     expect(() => assertKeepsAnAdmin(admin, { active: false }, 1)).toThrow(/único administrador/)
-    expect(() => assertKeepsAnAdmin(admin, { role: 'team' }, 2)).not.toThrow()
+    expect(() => assertKeepsAnAdmin(admin, { role: 'operator' }, 2)).not.toThrow()
+    for (const role of ['manager', 'regularization', 'operator'] as const) {
+      expect(() => assertKeepsAnAdmin(admin, { role }, 1)).toThrow(/único administrador/)
+    }
+    expect(() => assertKeepsAnAdmin(admin, { role: 'admin' }, 1)).not.toThrow()
+  })
+  it('lets only the admin change other users, whatever the other role', () => {
+    for (const role of ['manager', 'regularization', 'operator'] as const) {
+      expect(() => assertMayChange({ id: 't', username: 'bia', role }, team, { name: 'B' })).toThrow('só administrador')
+      expect(() => assertMayChange({ id: 't', username: 'bia', role }, team, { password: 'x'.repeat(12) })).not.toThrow()
+    }
   })
   it('matches the auth configuration', { timeout: 20_000 }, async () => {
     const shared = await import('@/server/shared/auth/auth')

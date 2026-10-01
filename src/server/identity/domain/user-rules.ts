@@ -25,6 +25,7 @@ export function assertMayChange(actor: Actor, target: UserAccount, changes: User
 }
 
 export function assertKeepsAnAdmin(target: UserAccount, changes: UserChanges, activeAdmins: number): void {
-  const losesAdmin = target.role === 'admin' && target.active && (changes.role === 'team' || changes.active === false)
+  const losesAdmin =
+    target.role === 'admin' && target.active && ((changes.role !== undefined && changes.role !== 'admin') || changes.active === false)
   if (losesAdmin && activeAdmins <= 1) throw new IdentityError('last_admin')
 }

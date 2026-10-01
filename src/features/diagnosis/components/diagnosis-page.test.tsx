@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import { buildActionPlan } from '@/server/diagnosis/domain/action-plan'
 import { diagnose } from '@/server/diagnosis/domain/diagnose'
@@ -18,6 +19,19 @@ const api = () => ({
 })
 
 describe('DiagnosisPage — form', () => {
+  it('keeps the step fields and buttons disabled until hydrated, so nothing typed early is lost', () => {
+    const host = document.createElement('div')
+    host.innerHTML = renderToString(<DiagnosisPage bootstrap={bootstrap()} api={api()} resume={false} onDownloadReport={() => undefined} />)
+    expect(host.querySelector<HTMLInputElement>('[data-field="nomeEmpresa"] input')?.matches(':disabled')).toBe(true)
+    expect([...host.querySelectorAll<HTMLButtonElement>('.dx-nav button')].every((button) => button.matches(':disabled'))).toBe(true)
+  })
+
+  it('enables the step fields once hydrated', () => {
+    render(<DiagnosisPage bootstrap={bootstrap()} api={api()} resume={false} onDownloadReport={() => undefined} />)
+    expect(screen.getByRole('textbox', { name: /Nome da empresa/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeEnabled()
+  })
+
   it('erases and stops saving the answer of a question that became invisible', async () => {
     const fake = api()
     render(<DiagnosisPage bootstrap={bootstrap()} api={fake} resume={false} onDownloadReport={() => undefined} />)

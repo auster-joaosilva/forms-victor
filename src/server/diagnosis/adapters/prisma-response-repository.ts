@@ -1,7 +1,7 @@
 import type { Prisma } from '@/server/shared/prisma/generated/client'
-import type { ResponseGetPayload } from '@/server/shared/prisma/generated/models'
+import type { ResponseGetPayload, ResponseWhereInput } from '@/server/shared/prisma/generated/models'
 import { prisma } from '@/server/shared/prisma/client'
-import type { ResponseRecord, ResponseRepository, ResponseWrite } from '../ports/response-repository'
+import type { ResponseBackofficeRepository, ResponseFilter, ResponseRecord, ResponseRepository, ResponseWrite } from '../ports/response-repository'
 
 export const responseInclude = { handledBy: { select: { username: true } } } as const
 
@@ -71,4 +71,44 @@ export const prismaResponseRepository: ResponseRepository = {
     const row = await prisma.response.findUnique({ where: { id }, include: responseInclude })
     return row ? toResponseRecord(row) : null
   },
+}
+
+function responseWhere({ status, search }: ResponseFilter): ResponseWhereInput {
+  const term = search?.trim()
+  if (!term) return status ? { status } : {}
+  const digits = term.replace(/[^0-9A-Za-z]/g, '').toUpperCase()
+  return {
+    ...(status ? { status } : {}),
+    OR: [
+      { companyName: { contains: term, mode: 'insensitive' } },
+      { cnpj: { contains: term } },
+      { protocol: { contains: term, mode: 'insensitive' } },
+      { requester: { contains: term, mode: 'insensitive' } },
+      ...(digits.length >= 2 ? [{ cnpjDigits: { contains: digits } }] : []),
+    ],
+  }
+}
+
+const newestFirst = [{ receivedAt: 'desc' as const }, { id: 'desc' as const }]
+
+export const prismaResponseBackofficeRepository: ResponseBackofficeRepository = {
+  async list(filter, { skip, take }) {
+    const where = responseWhere(filter)
+    const [rows, total] = await prisma.$transaction([
+      prisma.response.findMany({ where, include: responseInclude, orderBy: newestFirst, skip, take }),
+      prisma.response.count({ where }),
+    ])
+    return { items: rows.map(toResponseRecord), total }
+  },
+  async countByStatus() {
+    const counts = { new: 0, in_review: 0, validated: 0, discarded: 0 }
+    for (const group of await prisma.response.groupBy({ by: ['status'], _count: { _all: true } })) counts[group.status] = group._count._all
+    return counts
+  },
+  findById: prismaResponseRepository.findById,
+  listForExport: async (filter, limit) =>
+    (await prisma.response.findMany({ where: responseWhere(filter), include: responseInclude, orderBy: newestFirst, take: limit })).map(toResponseRecord),
+  setNote: async (id, note) => (await prisma.response.updateMany({ where: { id }, data: { internalNote: note } })).count > 0,
+  setStatus: async (id, { status, note, handledById, handledAt }) =>
+    (await prisma.response.updateMany({ where: { id }, data: { status, internalNote: note, handledById, handledAt } })).count > 0,
 }

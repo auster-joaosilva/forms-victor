@@ -26,3 +26,17 @@ export interface ResponseRepository {
   update(id: number, input: ResponseWrite & { updatedAt: Date }): Promise<void>
   findById(id: number): Promise<ResponseRecord | null>
 }
+
+export interface ResponseFilter {
+  status?: ResponseStatus
+  search?: string
+}
+
+export interface ResponseBackofficeRepository {
+  list(filter: ResponseFilter, page: { skip: number; take: number }): Promise<{ items: ResponseRecord[]; total: number }>
+  countByStatus(): Promise<Record<ResponseStatus, number>>
+  findById(id: number): Promise<ResponseRecord | null>
+  listForExport(filter: ResponseFilter, limit: number): Promise<ResponseRecord[]>
+  setNote(id: number, note: string): Promise<boolean>
+  setStatus(id: number, change: { status: ResponseStatus; note: string; handledById: string; handledAt: Date }): Promise<boolean>
+}

@@ -1,6 +1,7 @@
 import { createMiddleware, createStart } from '@tanstack/react-start'
 import { redirect } from '@tanstack/react-router'
 import { resolveLegacyRedirect } from './app/legacy-redirects'
+import { csrfProtection } from './app/csrf'
 import { withSecurityHeaders } from './app/security-headers'
 
 const MAX_BODY_BYTES = 256 * 1024
@@ -35,4 +36,4 @@ const securityHeaders = createMiddleware({ type: 'request' }).server(async ({ ne
   }
 })
 
-export const startInstance = createStart(() => ({ requestMiddleware: [securityHeaders, bodyLimit, legacyRedirects] }))
+export const startInstance = createStart(() => ({ requestMiddleware: [securityHeaders, csrfProtection, bodyLimit, legacyRedirects] }))

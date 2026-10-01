@@ -33,6 +33,17 @@ describe('ensureCapability', () => {
     expect(recordAccessDenied).toHaveBeenCalledWith({ id: 'u1', username: 'maria', role: 'regularization' }, 'export_responses', '/backoffice/responses.csv')
   })
 
+  it('still answers 403 when the refusal cannot be recorded', async () => {
+    getSessionUser.mockResolvedValue(user('operator', ['view_responses']))
+    recordAccessDenied.mockRejectedValue(new Error('connection refused: postgres'))
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const result = await ensureCapability(request(), 'export_responses')
+    expect((result as Response).status).toBe(403)
+    expect(await (result as Response).text()).toBe(ROLE_CANNOT_REACH)
+    expect(logged).toHaveBeenCalled()
+    logged.mockRestore()
+  })
+
   it('reads the role again on every request, so a demotion counts at once', async () => {
     getSessionUser.mockResolvedValueOnce(user('manager', ['export_responses'])).mockResolvedValueOnce(user('operator', ['view_responses']))
     expect(await ensureCapability(request(), 'export_responses')).toMatchObject({ username: 'maria', role: 'manager' })
@@ -68,7 +79,18 @@ describe('requireCapability', () => {
     await expect(result).rejects.toBeInstanceOf(AuthorizationError)
     await expect(result).rejects.toMatchObject({ reason: 'forbidden', message: ROLE_CANNOT_REACH })
     expect(next).not.toHaveBeenCalled()
-    expect(recordAccessDenied).toHaveBeenCalledWith({ id: 'u1', username: 'maria', role: 'operator' }, 'manage_users')
+    expect(recordAccessDenied).toHaveBeenCalledWith({ id: 'u1', username: 'maria', role: 'operator' }, 'manage_users', undefined)
+  })
+
+  it('still refuses with AuthorizationError, not the storage error, when the refusal cannot be recorded', async () => {
+    getSessionUser.mockResolvedValue(user('operator', ['view_responses']))
+    recordAccessDenied.mockRejectedValue(new Error('connection refused: postgres'))
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { next, result } = run('manage_users')
+    await expect(result).rejects.toMatchObject({ reason: 'forbidden', message: ROLE_CANNOT_REACH })
+    expect(next).not.toHaveBeenCalled()
+    expect(logged).toHaveBeenCalled()
+    logged.mockRestore()
   })
 
   it('hands the session user to the handler when the role has the capability', async () => {

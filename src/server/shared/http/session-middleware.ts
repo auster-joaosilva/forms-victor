@@ -13,7 +13,14 @@ export class AuthorizationError extends Error {
   }
 }
 
-const actorOf = ({ id, username, role }: SessionUser) => ({ id, username, role })
+// A recusa vale mesmo sem a trilha: o erro do banco não pode virar 500 nem chegar ao navegador.
+async function recordRefusal({ id, username, role }: SessionUser, capability: Capability, path?: string): Promise<void> {
+  try {
+    await recordAccessDenied({ id, username, role }, capability, path)
+  } catch (error) {
+    console.error(error)
+  }
+}
 
 // A única porta para a sessão no backoffice: função que não declara capacidade não alcança context.session.
 export function requireCapability(capability: Capability) {
@@ -21,7 +28,7 @@ export function requireCapability(capability: Capability) {
     const user = await getSessionUser(getRequest().headers)
     if (!user) throw new AuthorizationError('unauthenticated')
     if (!can(user.role, capability)) {
-      await recordAccessDenied(actorOf(user), capability)
+      await recordRefusal(user, capability)
       throw new AuthorizationError('forbidden')
     }
     return next({ context: { session: { user } } })
@@ -35,7 +42,7 @@ export async function ensureCapability(request: Request, capability: Capability)
   const user = await getSessionUser(request.headers)
   if (!user) return plain(ACCESS_RESTRICTED, 401)
   if (!can(user.role, capability)) {
-    await recordAccessDenied(actorOf(user), capability, new URL(request.url).pathname)
+    await recordRefusal(user, capability, new URL(request.url).pathname)
     return plain(ROLE_CANNOT_REACH, 403)
   }
   return user

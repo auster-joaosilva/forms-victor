@@ -54,3 +54,40 @@
 .ad-note-lead{margin-bottom:16px}
 .ad-note-after{margin-top:14px}
 @media (max-width:560px){ .ad{padding:20px 16px 40px} .ad-card{padding:22px 18px} }
+
+.ad-receipt-panel{background:var(--color-auster-dark);color:#fff;border-radius:12px;padding:32px 34px;margin-bottom:18px}
+.ad .ad-receipt-panel h2{color:#fff;font-size:var(--text-screen);font-weight:300;margin:0 0 10px}
+.ad-receipt-protocol{font-size:var(--text-title);color:var(--color-auster-light);letter-spacing:.5px}
+.ad-receipt-line{margin-top:8px;font-size:13.5px;color:#dbe7ee}
+.ad-receipt-line b{font-weight:500;color:#fff}
+.ad .ad-receipt-keep{margin-top:0}
+/* A folha do documento. Não existe na tela; existe no papel. */
+.ad-page .ad-doc{display:none}
+.ad-doc{page:adhesion}
+.ad-sheet h1{font-size:22px;font-weight:400;color:var(--color-auster-dark);margin:0 0 2px;text-align:center}
+.ad-sheet-subline{text-align:center;color:var(--color-auster-gray);font-size:13px;margin-bottom:20px}
+.ad-ident{width:100%;border-collapse:collapse;margin-bottom:6px}
+.ad-ident td{border:1px solid var(--color-auster-border-strong);padding:7px 9px;font-size:12.5px}
+.ad-ident td.is-label{background:#f2f6f9;font-weight:500;width:15%}
+.ad-box-last{margin:0}
+.ad-proof{border:1px solid var(--color-auster-border-strong);padding:12px 14px;margin-top:16px;font-size:11px;line-height:1.6;word-break:break-word}
+.ad-proof-title{font-weight:500;font-size:12.5px;margin-bottom:6px}
+.ad-sheet-footer{margin-top:22px;padding-top:10px;border-top:1px solid var(--color-auster-border);font-size:10.5px;color:var(--color-auster-gray);text-align:center}
+@page adhesion{margin:8mm}
+@media print{
+  /* Escopado em .ad-page: o diagnosis.css também tem @media print para o cabeçalho e o corpo. */
+  .ad-page{font-size:10pt}
+  .ad-page .dx-header{padding:0 14mm 7mm}
+  .ad-page .dx-header .dx-header-sub{display:none}
+  .ad{max-width:none;padding:0}
+  /* A margem de verdade mora AQUI, e não só em @page: a caixa de impressão do Chrome sobrepõe @page
+     quando a pessoa escolhe "margens: nenhuma", e aí o texto encosta na borda do papel. */
+  .ad-sheet{padding:0 14mm}
+  .ad-screen,.ad-receipt,.ad-page main>.ad-card{display:none !important}
+  .ad-doc{display:block !important}
+  .ad-box{background:#f6f6f6;border:1px solid #bbb;border-left:3px solid #666}
+  .ad h1,.ad h2,.ad h3{break-after:avoid;page-break-after:avoid}
+  /* O que não pode partir ao meio é curto: a caixa, a tabela e o registro do aceite. */
+  .ad-proof,.ad-ident,.ad-box{break-inside:avoid;page-break-inside:avoid}
+  .ad-term-section>.ad-label{break-after:avoid;page-break-after:avoid}
+}

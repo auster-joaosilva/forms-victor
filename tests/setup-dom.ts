@@ -3,3 +3,6 @@ import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
 afterEach(cleanup)
+
+window.scrollTo = () => undefined
+Element.prototype.scrollIntoView = () => undefined

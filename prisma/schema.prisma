@@ -170,11 +170,15 @@ model Invitation {
 }
 
 model DiagnosisDraft {
-  id        String   @id @default(uuid()) @db.Uuid
-  step      Int      @default(1)
-  payload   Json
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
-  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  id               String    @id @default(uuid()) @db.Uuid
+  step             Int       @default(1)
+  payload          Json
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz
+  responseId       Int?      @unique @map("response_id")
+  response         Response? @relation(fields: [responseId], references: [id], onDelete: SetNull)
+  invitationToken  String?   @map("invitation_token")
+  invitationOpened Boolean   @default(false) @map("invitation_opened")
 
   @@index([expiresAt])
   @@map("diagnosis_drafts")
@@ -186,6 +190,7 @@ model Response {
   invitationToken String?        @map("invitation_token")
   invitation      Invitation?    @relation(fields: [invitationToken], references: [token], onDelete: SetNull)
   receivedAt      DateTime       @default(now()) @map("received_at") @db.Timestamptz
+  updatedAt       DateTime?      @map("updated_at") @db.Timestamptz
   companyName     String?        @map("company_name")
   cnpj            String?
   cnpjDigits      String?        @map("cnpj_digits")
@@ -207,6 +212,7 @@ model Response {
   handledAt       DateTime?      @map("handled_at") @db.Timestamptz
   adhesions       Adhesion[]
   registrations   Registration[]
+  draft           DiagnosisDraft?
 
   @@index([status])
   @@index([receivedAt])

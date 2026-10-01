@@ -19,3 +19,5 @@ bapi.json
 CHANGELOG_CLAUDE.md
 09_Backups/
 .claude-flow/
+test-results/
+playwright-report/

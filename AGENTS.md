@@ -61,19 +61,20 @@ As fronteiras estão no `eslint.config.js`. Lint quebrado não entra.
 - O hash do termo e o diagnóstico gravado são calculados pelo servidor, nunca aceitos do navegador.
 - Os endpoints `/api/auth/admin/*` são fechados ao navegador. Gestão de usuário passa por `server/identity`.
 
-## Git — em toda implementação
+## Git — em toda implementação (durante a reescrita)
 
-1. `git switch main && git switch -c <tipo>/<assunto>`
+1. `git switch teste && git pull --ff-only && git switch -c <tipo>/<assunto>`
 2. Commits pequenos, Conventional Commits, descrição em português:
-   `feat(diagnostico): …`, `fix(adesao): …`. **Sem `Co-Authored-By`.**
-3. `pnpm db:up` e depois `pnpm lint && pnpm typecheck && pnpm test` — tudo limpo.
-4. `git switch main && git merge --no-ff <branch> -m "merge: <assunto>"`
-5. `git push origin main` e `git branch -d <branch>`.
-6. **Nunca** enviar outra branch ao remoto.
+   `feat(diagnostico): …`, `fix(backoffice): …`. **Sem `Co-Authored-By`.**
+3. `pnpm db:up && pnpm lint && pnpm typecheck && pnpm test` — tudo limpo.
+   Mudou fluxo de tela? Rode também `pnpm test:e2e`.
+4. `git switch teste && git merge --no-ff <branch> -m "merge: <assunto>" && git branch -d <branch>`
+5. `git push origin teste`.
+6. **Nunca** tocar nem enviar a `main`, e nunca enviar outra branch ao remoto.
 
-**Push na `main` é deploy.** O Dokploy publica a `main` em
+**Push na `teste` é deploy.** O Dokploy publica a `teste` em
 `hml-reforma.austercontabil.com.br` a cada push (compose "hml", arquivo
-`dokploy-compose.yml`). Depois da virada, é produção.
+`dokploy-compose.yml`). A `main` só volta a receber código na virada.
 
 O compose antigo "frontend" (portal legado em `reforma-tributaria.austercontabil.com.br`)
 está **congelado** até a virada. Não disparar deploy nele: ele buildaria este
@@ -88,6 +89,9 @@ código com a configuração velha.
   (`pnpm db:up`).
 - `pnpm sweep` e `pnpm sweep:weighted` medem a distribuição das saídas. Os pesos são
   premissa, não dado da carteira.
+- Componentes: `*.test.tsx`, projeto `dom` do Vitest (jsdom + Testing Library), `pnpm test:dom`.
+- Ponta a ponta: `pnpm test:e2e` (Playwright contra `pnpm dev` e o banco local). O global setup
+  só aceita banco em `localhost`, limpa o rate limit e cria ou reativa o usuário `e2e-admin`.
 
 ## Rodar
 
@@ -99,6 +103,8 @@ pnpm db:migrate
 pnpm db:seed
 pnpm auth:bootstrap-admin   # antes, preencha BOOTSTRAP_ADMIN_* no .env
 pnpm dev                # http://localhost:3000
+pnpm exec playwright install chromium   # uma vez, para o ponta a ponta
+pnpm test:e2e
 ```
 
 O banco de teste (`forms_victor_test`, usado por `pnpm test`) é criado sozinho por
@@ -108,3 +114,49 @@ existia antes disso, crie uma vez depois do `pnpm db:up`:
 ```bash
 docker compose exec postgres psql -U app -d forms_victor_dev -c "CREATE DATABASE forms_victor_test"
 ```
+
+## Migração do portal antigo (SQLite → Postgres)
+
+Roda no container do app novo, contra uma cópia **consistente** do `portal.db`. O arquivo
+tem dado de cliente: nunca entra no repositório nem fica no servidor depois.
+
+1. Pelo SSH da VPS, ache os containers: `docker ps --format '{{.Names}}'`. O antigo é o do
+   compose "frontend" (`/app/dados/portal.db`); o novo, o do compose "hml" (ou o de produção, na virada).
+2. Cópia consistente com o portal antigo no ar (ensaio em hml): o `VACUUM INTO` do SQLite
+   faz o mesmo que o `sqlite3 .backup` — um arquivo só, com o que estava no `-wal`:
+
+   ```bash
+   docker exec <antigo> node -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync('/app/dados/portal.db'); db.exec(\"VACUUM INTO '/tmp/portal-copia.db'\"); db.close()"
+   docker cp <antigo>:/tmp/portal-copia.db /root/portal-copia.db
+   docker exec <antigo> rm /tmp/portal-copia.db
+   ```
+
+   Na virada, com o portal antigo **parado** (`docker stop <antigo>`), copie os três arquivos
+   juntos — `portal.db`, `portal.db-wal` e `portal.db-shm` — do volume `dados` do compose antigo
+   (`docker volume ls | grep dados`):
+
+   ```bash
+   mkdir -p /root/migracao
+   docker run --rm -v <volume>:/dados -v /root/migracao:/out alpine sh -c 'cp /dados/portal.db* /out/'
+   ```
+
+   e use `/root/migracao/portal.db` no lugar de `/root/portal-copia.db` (com os `-wal`/`-shm` ao lado).
+3. Leve a cópia ao container novo e dê ao usuário `node` a posse:
+
+   ```bash
+   docker cp /root/portal-copia.db <novo>:/tmp/portal.db
+   docker exec -u root <novo> chown node:node /tmp/portal.db
+   ```
+
+4. Simulação: `docker exec <novo> node_modules/.bin/tsx scripts/migrate-legacy.ts /tmp/portal.db --dry-run`.
+   Confira as contagens, os avisos (protocolos com `-2`, convites órfãos, autores inexistentes,
+   ações sem equivalente) e se há **conflitos**. Com conflito, nada é gravado.
+5. De verdade: o mesmo comando sem `--dry-run`. Rode uma segunda vez: tudo deve vir como pulado
+   ("imported 0").
+6. No backoffice, aba Usuários, defina a senha de cada usuário migrado (eles chegam sem senha;
+   o resumo antigo é incompatível). Confira a aba Respostas e a linha "migração do portal antigo"
+   na Auditoria.
+7. Apague as cópias: `docker exec -u root <novo> rm /tmp/portal.db` e `rm -rf /root/portal-copia.db /root/migracao`.
+
+Localmente: `pnpm migrate:legacy <caminho> [--dry-run]` (o `node:sqlite` não pede flag a partir
+do Node 22.13).

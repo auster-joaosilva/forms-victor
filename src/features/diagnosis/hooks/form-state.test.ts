@@ -32,6 +32,15 @@ describe('form state', () => {
     expect(run(atTwo, { type: 'goTo', step: 4 }).view).toEqual({ kind: 'form', step: 2 })
   })
 
+  it('drops the resume offer on the first answer or matrix answer, keeping the current answers', () => {
+    const draft = { step: 3, answers: { nomeEmpresa: 'Antiga' }, savedAt: '2026-09-14T12:00:00.000Z', protocol: 'DS-260914-AB12' }
+    const offered = initialFormState({ today: '2026-09-15T13:00:00.000Z', draft, invitation: { token: 'ABCDEFGHJK', companyName: 'Convidada', cnpj: null } }, { resume: false })
+    const answered = run(offered, { type: 'answer', key: 'versaoFormulario', value: 'completo' })
+    expect(answered.resumable).toBeNull()
+    expect(answered.answers).toEqual({ nomeEmpresa: 'Convidada', versaoFormulario: 'completo' })
+    expect(run(offered, { type: 'answerMatrix', key: 'receitaPorCliente', row: 'pf', value: 'nao_sei' }).resumable).toBeNull()
+  })
+
   it('resets the submission when an answer changes after sending', () => {
     const sent: FormState = { ...empty(), submission: { status: 'failed', reason: 'x' } }
     expect(run(sent, { type: 'answer', key: 'telefone', value: '(34) 99999-9999' }).submission).toEqual({ status: 'idle' })

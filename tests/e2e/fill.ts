@@ -11,6 +11,8 @@ const TEXT: Record<string, string> = {
 }
 const CHOICE: Record<string, string> = { versaoFormulario: 'sintetico', regimeAtual: 'simples', ehSimei: 'nao', segmento: 'comercio' }
 
+export const nothingLocal = () => [localStorage.length, sessionStorage.length]
+
 let address = 0
 export async function useOwnAddress(page: Page) {
   address++

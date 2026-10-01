@@ -56,17 +56,36 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
   const [search, setSearch] = useState(filter.q ?? '')
   const [status, setStatus] = useState<ResponseStatus | ''>(filter.status ?? '')
   const [opening, setOpening] = useState<{ id: number; at: number; shown: ResponseDetailData | null } | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const detail = useQuery({ ...responseQuery(opening?.id ?? 0), enabled: opening !== null })
+  const fail = (message: string) => {
+    setOpening(null)
+    setError(message)
+  }
   // Freshness gates only the first display: a later refetch must not remount the sheet and drop a note being typed.
-  if (opening && !opening.shown && detail.isSuccess && !detail.isFetching && detail.dataUpdatedAt >= opening.at && detail.data) {
-    setOpening({ ...opening, shown: detail.data })
+  if (opening && !opening.shown && !detail.isFetching) {
+    if (detail.isError && detail.errorUpdatedAt >= opening.at) fail(`Falha ao carregar: ${detail.error.message}`)
+    else if (detail.isSuccess && detail.dataUpdatedAt >= opening.at) {
+      if (detail.data) setOpening({ ...opening, shown: detail.data })
+      else fail('Resposta não encontrada.')
+    }
+  }
+  const open = (id: number) => {
+    setError(null)
+    setOpening({ id, at: Date.now(), shown: null })
+  }
+  const close = () => {
+    setError(null)
+    setOpening(null)
   }
   const handle = useMutation({
     mutationFn: (input: { id: number; status: ResponseStatus | null; note: string }) => handleResponseFn({ data: input }),
-    onSuccess: async () => {
-      setOpening(null)
+    onSuccess: async (result) => {
+      if (!result.ok) return setError(result.message)
+      close()
       await queryClient.invalidateQueries({ queryKey: ['responses'] })
     },
+    onError: (failure) => setError(`Não deu para falar com o servidor: ${failure.message}`),
   })
 
   if (list.isPending) return <>carregando…</>
@@ -112,6 +131,7 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
           Baixar planilha (CSV)
         </a>
       </div>
+      {error && !opened ? <div className="bo-error">{error}</div> : null}
       {items.length ? (
         <table>
           <thead>
@@ -126,7 +146,7 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
           </thead>
           <tbody>
             {items.map((row) => (
-              <ResponseRow key={row.id} row={row} onOpen={() => setOpening({ id: row.id, at: Date.now(), shown: null })} />
+              <ResponseRow key={row.id} row={row} onOpen={() => open(row.id)} />
             ))}
           </tbody>
         </table>
@@ -147,16 +167,17 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
         alíquota — e é nesta tela que isso fica registrado, com autor e data.
       </p>
 
-      <Dialog.Root open={Boolean(opened)} onOpenChange={(open) => !open && setOpening(null)}>
+      <Dialog.Root open={Boolean(opened)} onOpenChange={(isOpen) => !isOpen && close()}>
         <Dialog.Overlay className="bo-overlay" />
         <Dialog.Content className="bo-dialog" aria-describedby={undefined}>
+          {opened && error ? <div className="bo-error">{error}</div> : null}
           {opened ? (
             <ResponseDetail
               key={`${opened.id}:${opening?.at}`}
               detail={opened}
               pending={handle.isPending}
               onHandle={(next, note) => handle.mutate({ id: opened.id, status: next, note })}
-              onClose={() => setOpening(null)}
+              onClose={close}
               Title={Dialog.Title}
             />
           ) : null}

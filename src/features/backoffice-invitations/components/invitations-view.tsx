@@ -8,7 +8,7 @@ type Props = {
   invitations: InvitationView[]
   error: string | null
   pending: boolean
-  onCreate(input: InvitationFields): void
+  onCreate(input: InvitationFields): Promise<boolean>
   onDelete(token: string): void
   onCopy(link: string): void
 }
@@ -63,6 +63,12 @@ export function InvitationsView({ invitations, error, pending, onCreate, onDelet
   const [companyName, setCompanyName] = useState('')
   const [cnpj, setCnpj] = useState('')
   const [email, setEmail] = useState('')
+  const create = async () => {
+    if (!(await onCreate({ companyName: companyName.trim(), cnpj: cnpj.trim(), email: email.trim() }))) return
+    setCompanyName('')
+    setCnpj('')
+    setEmail('')
+  }
   return (
     <>
       <h2 style={{ margin: '0 0 4px', fontSize: 'var(--text-title)', fontWeight: 400 }}>Um link por cliente</h2>
@@ -75,12 +81,7 @@ export function InvitationsView({ invitations, error, pending, onCreate, onDelet
         <input type="text" placeholder="Razão social" value={companyName} onChange={(event) => setCompanyName(event.target.value)} />
         <input type="text" placeholder="CNPJ" style={{ minWidth: 170 }} value={cnpj} onChange={(event) => setCnpj(event.target.value)} />
         <input type="text" placeholder="E-mail de contato (opcional)" value={email} onChange={(event) => setEmail(event.target.value)} />
-        <button
-          type="button"
-          className="bo-button"
-          disabled={pending}
-          onClick={() => onCreate({ companyName: companyName.trim(), cnpj: cnpj.trim(), email: email.trim() })}
-        >
+        <button type="button" className="bo-button" disabled={pending} onClick={() => void create()}>
           Gerar link
         </button>
       </div>

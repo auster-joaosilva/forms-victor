@@ -121,6 +121,24 @@ docker compose exec postgres psql -U app -d forms_victor_dev -c "CREATE DATABASE
 Roda no container do app novo, contra uma cópia **consistente** do `portal.db`. O arquivo
 tem dado de cliente: nunca entra no repositório nem fica no servidor depois.
 
+Os ids das respostas antigas são preservados, e um id que já existe no banco novo com outro
+protocolo é **conflito**: qualquer conflito aborta a importação inteira, sem gravar nada. Por isso:
+
+- **Ensaio em hml:** antes do passo 4, apague as respostas de teste do banco de hml (verificações
+  à mão, ponta a ponta, quem testou), que ocupam os ids 1, 2, 3… — os mesmos das antigas. No
+  `psql` do banco do compose "hml" (o do `DATABASE_URL` dele):
+
+  ```sql
+  DELETE FROM diagnosis_drafts;
+  DELETE FROM responses;
+  ```
+
+  Os rascunhos saem junto para nenhum navegador de teste retomar um preenchimento que perdeu a
+  resposta; adesões e inscrições que apontem para uma resposta ficam sem ela (`SET NULL`). A
+  Auditoria fica como está.
+- **Na virada:** rode a importação (passos 4 e 5) **antes** de abrir o tráfego do app novo. Uma
+  única resposta recebida antes ocupa um id e faz a importação recusar.
+
 1. Pelo SSH da VPS, ache os containers: `docker ps --format '{{.Names}}'`. O antigo é o do
    compose "frontend" (`/app/dados/portal.db`); o novo, o do compose "hml" (ou o de produção, na virada).
 2. Cópia consistente com o portal antigo no ar (ensaio em hml): o `VACUUM INTO` do SQLite

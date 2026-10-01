@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { changePhoneAndResubmit, completeDiagnosis, login } from './fill'
+import { changePhoneAndResubmit, completeDiagnosis, login, nothingLocal } from './fill'
 
 test('o backoffice lista, trata, avisa a alteração do cliente e baixa o CSV', async ({ page, browser }) => {
   const client = await (await browser.newContext()).newPage()
@@ -16,4 +16,16 @@ test('o backoffice lista, trata, avisa a alteração do cliente e baixa o CSV', 
   await page.getByRole('button', { name: 'Fechar' }).click()
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: 'Baixar planilha (CSV)' }).click()])
   expect(download.suggestedFilename()).toMatch(/^respostas-simples-\d{4}-\d{2}-\d{2}\.csv$/)
+})
+
+test('o login e as abas do backoffice não guardam nada local', async ({ page }) => {
+  await page.goto('/login')
+  expect(await page.evaluate(nothingLocal)).toEqual([0, 0])
+  await login(page)
+  expect(await page.evaluate(nothingLocal)).toEqual([0, 0])
+  for (const tab of ['Convites', 'Auditoria', 'Usuários', 'Respostas']) {
+    await page.getByRole('link', { name: tab }).click()
+    await expect(page.getByRole('link', { name: tab })).toHaveClass(/is-active/)
+    expect(await page.evaluate(nothingLocal)).toEqual([0, 0])
+  }
 })

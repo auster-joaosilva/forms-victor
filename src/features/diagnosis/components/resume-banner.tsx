@@ -1,3 +1,4 @@
+import { useHydrated } from '@tanstack/react-router'
 import { TIME_ZONE } from '@/server/diagnosis/domain/dates'
 import type { Resumable } from '../hooks/form-state'
 
@@ -11,6 +12,7 @@ function savedWhen(savedAt: string): string {
 
 export function ResumeBanner({ resumable, onResume, onStartOver }: { resumable: Resumable; onResume(): void; onStartOver(): void }) {
   const name = resumable.answers.nomeEmpresa
+  const hydrated = useHydrated()
   return (
     <div className="dx-resume">
       <div>
@@ -21,10 +23,10 @@ export function ResumeBanner({ resumable, onResume, onStartOver }: { resumable: 
         <span>Fica guardado só neste navegador — nada foi enviado.</span>
       </div>
       <div className="dx-resume-actions">
-        <button type="button" className="dx-button is-primary" onClick={onResume}>
+        <button type="button" className="dx-button is-primary" disabled={!hydrated} onClick={onResume}>
           Retomar
         </button>
-        <button type="button" className="dx-button is-secondary" onClick={onStartOver}>
+        <button type="button" className="dx-button is-secondary" disabled={!hydrated} onClick={onStartOver}>
           Começar de novo
         </button>
       </div>

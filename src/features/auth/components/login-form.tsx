@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useHydrated, useNavigate } from '@tanstack/react-router'
 import { authClient } from '@/lib/auth-client'
 import { AusterMark } from '@/components/brand/auster-mark'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const hydrated = useHydrated()
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -30,7 +31,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="w-full max-w-[400px] rounded-xl border border-[#e3e9ee] bg-white px-8 py-[34px] shadow-[0_1px_3px_rgba(5,44,71,.08)]">
+    <form method="post" onSubmit={submit} className="w-full max-w-[400px] rounded-xl border border-[#e3e9ee] bg-white px-8 py-[34px] shadow-[0_1px_3px_rgba(5,44,71,.08)]">
       <AusterMark caption="auster · uso interno" />
       <h1 className="mb-1.5 text-[21px] font-normal text-auster-dark">Conferência do Diagnóstico</h1>
       <p className="mb-[22px] text-[13px] leading-relaxed text-auster-gray">
@@ -45,7 +46,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
       <Input id="username" name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} required autoFocus className="mb-4 h-auto px-3.5 py-3" />
       <Label htmlFor="password" className="mb-1.5 block text-xs font-normal uppercase tracking-[.9px] text-auster-gray">Senha</Label>
       <Input id="password" name="password" type="password" autoComplete="current-password" required className="mb-4 h-auto px-3.5 py-3" />
-      <Button type="submit" disabled={pending} className="h-auto w-full py-[13px] font-medium hover:bg-[#0a3d60]">
+      <Button type="submit" disabled={pending || !hydrated} className="h-auto w-full py-[13px] font-medium hover:bg-[#0a3d60]">
         {pending ? 'Entrando…' : 'Entrar'}
       </Button>
     </form>

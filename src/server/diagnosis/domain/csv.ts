@@ -59,7 +59,7 @@ export function csvRows(responses: CsvResponse[]): string[][] {
 const cell = (value: string): string => (/[";\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)
 
 // Semicolon and BOM because the destination is Excel in Portuguese.
-export const toCsv = (rows: string[][]): string => `﻿${rows.map((row) => row.map(cell).join(';')).join('\r\n')}\r\n`
+export const toCsv = (rows: string[][]): string => `\uFEFF${rows.map((row) => row.map(cell).join(';')).join('\r\n')}\r\n`
 
 export function csvFileName(today: Date): string {
   const { year, month, day } = brasiliaDateParts(today)

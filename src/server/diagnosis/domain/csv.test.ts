@@ -40,7 +40,7 @@ describe('responses spreadsheet', () => {
 
   it('writes BOM, semicolons, CRLF and quotes what needs quoting', () => {
     const csv = toCsv(rows)
-    expect(csv.startsWith('﻿protocolo;recebido em;situacao;')).toBe(true)
+    expect(csv.startsWith('\uFEFFprotocolo;recebido em;situacao;')).toBe(true)
     expect(csv.endsWith('\r\n')).toBe(true)
     expect(csv.split('\r\n')).toHaveLength(3)
     expect(csv).toContain(';"Empresa ""A""; Filial";')

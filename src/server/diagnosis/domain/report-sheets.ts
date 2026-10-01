@@ -48,7 +48,7 @@ export interface ReportSheets {
 }
 
 export function reportFileName(companyName: string): string {
-  const plain = (companyName || 'Empresa').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const plain = (companyName || 'Empresa').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const clean = plain.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
   return `Plano-De-Acao-SN-${clean || 'Empresa'}`
 }

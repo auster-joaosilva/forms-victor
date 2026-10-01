@@ -46,7 +46,11 @@ export const betterAuthUserAccounts: UserAccounts = {
   },
   async setPassword(id, password) {
     const context = await auth.$context
-    await prisma.account.updateMany({ where: { userId: id, providerId: 'credential' }, data: { password: await context.password.hash(password) } })
+    const hash = await context.password.hash(password)
+    const updated = await prisma.account.updateMany({ where: { userId: id, providerId: 'credential' }, data: { password: hash } })
+    if (updated.count === 0) {
+      await prisma.account.create({ data: { id: crypto.randomUUID(), accountId: id, providerId: 'credential', userId: id, password: hash } })
+    }
     await prisma.session.deleteMany({ where: { userId: id } })
   },
 }

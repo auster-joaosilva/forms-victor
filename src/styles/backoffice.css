@@ -19,6 +19,8 @@
 .bo-tab{padding:9px 16px;border:1px solid var(--color-auster-border-strong);border-radius:7px;background:#fff;
   cursor:pointer;font-family:inherit;font-size:var(--text-body);color:var(--color-auster-dark);text-decoration:none;display:inline-block}
 .bo-tab.is-active{background:var(--color-auster-dark);color:#fff;border-color:var(--color-auster-dark)}
+.bo-password-form input{display:block;width:100%;margin-bottom:10px;padding:10px 12px;
+  border:1px solid var(--color-auster-border-strong);border-radius:7px;font:inherit}
 .bo-error{color:#a4262c;font-size:var(--text-meta);min-height:18px;margin-bottom:6px}
 .bo-role{font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;
   border:1px solid var(--color-auster-border-strong);border-radius:20px;padding:2px 9px}

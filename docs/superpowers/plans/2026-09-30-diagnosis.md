@@ -3701,7 +3701,7 @@ Porte (de `git show 22b3cfc:legacy/modelo.html`):
 | `window.irParaCampo` + `.campo.destacado` | `QuestionField` com `highlighted` | `scrollIntoView({ behavior: 'smooth', block: 'center' })`, classe `is-highlighted` por 1 800 ms, depois `onHighlightEnd()` |
 | `window.avancar` (rolagem ao primeiro erro) | `StepForm` | depois de um "Próximo" com erro, rola até o primeiro `.dx-field` com `.dx-error` |
 
-A primeira linha da `ResumeBanner` vai inteira dentro de um `<b>` (como no antigo). Frase alterada na `ResumeBanner`: a segunda linha do antigo dizia "Fica guardado só neste navegador — nada foi enviado.", o que deixou de ser verdade (o rascunho fica no servidor, ligado ao navegador pelo cookie). Use: **"Fica guardado por 7 dias, ligado a este navegador — nada foi enviado à equipe."** A primeira linha fica: `Você tem um preenchimento começado${data}${nome ? `, de ${nome}` : ''}.` com `data = ` de ${dd/mm/aaaa} às ${hh:mm}`` a partir de `resumable.savedAt` (`toLocaleDateString('pt-BR')` e `toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })`, com `timeZone: 'America/Sao_Paulo'`).
+A primeira linha da `ResumeBanner` vai inteira dentro de um `<b>` (como no antigo). A segunda linha fica como no antigo, sem mudança (decisão do usuário em 2026-10-01: nenhum texto muda nesta etapa): **"Fica guardado só neste navegador — nada foi enviado."** A primeira linha fica: `Você tem um preenchimento começado${data}${nome ? `, de ${nome}` : ''}.` com `data = ` de ${dd/mm/aaaa} às ${hh:mm}`` a partir de `resumable.savedAt` (`toLocaleDateString('pt-BR')` e `toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })`, com `timeZone: 'America/Sao_Paulo'`).
 
 Acessibilidade: campo de texto, e-mail, telefone, CNPJ, `select` e `textarea` têm `id={`field-${key}`}` e o rótulo `<label htmlFor>`; grupos de opção são `<div className="dx-options" role="radiogroup" aria-labelledby={`label-${key}`}>`, com o enunciado em `<label id={`label-${key}`}>`. Cada `.dx-field` leva `data-field={key}` (o ponta a ponta e o "alterar" da conferência usam).
 
@@ -3826,7 +3826,7 @@ describe('DiagnosisPage — form', () => {
     const draft = { step: 2, answers: { versaoFormulario: 'completo', nomeEmpresa: 'Antiga Ltda' }, savedAt: '2026-09-14T15:30:00.000Z', protocol: null }
     render(<DiagnosisPage bootstrap={bootstrap({ draft })} api={fake} resume={false} />)
     expect(screen.getByText(/Você tem um preenchimento começado de 14\/09\/2026 às 12:30, de Antiga Ltda\./)).toBeInTheDocument()
-    expect(screen.getByText('Fica guardado por 7 dias, ligado a este navegador — nada foi enviado à equipe.')).toBeInTheDocument()
+    expect(screen.getByText('Fica guardado só neste navegador — nada foi enviado.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Começar de novo' }))
     expect(fake.discardDraft).toHaveBeenCalledTimes(1)
     expect(screen.queryByText(/preenchimento começado/)).not.toBeInTheDocument()

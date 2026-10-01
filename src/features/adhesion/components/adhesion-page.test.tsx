@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { TERM_V4, TERM_V5 } from '@/server/adhesion/domain/term'
 import type { AdhesionReceipt } from '@/server/adhesion/domain/adhesion'
 import type { AdhesionApi, AdhesionBootstrap } from '../types/adhesion'
 import { AdhesionPage } from './adhesion-page'
@@ -82,6 +83,22 @@ describe('AdhesionPage', () => {
     await user.click(screen.getByRole('button', { name: 'Baixar o termo (PDF)' }))
     expect(print).toHaveBeenCalledWith('Termo-Opcao-SN-PADARIA-BOA-MASSA-LTDA')
     expect(container.querySelector('.ad-doc')?.textContent).toContain('versão do termo V5')
+  })
+
+  it('a via de um recibo V4 sai com o texto da V4, e não o da versão corrente', () => {
+    const { container } = render(
+      <AdhesionPage
+        bootstrap={bootstrap({
+          receipt: { ...receipt, modalidade: 'hibrido', semManifestacao: 'manter', termVersion: 'V4' },
+        })}
+        api={api()}
+        print={vi.fn()}
+      />,
+    )
+    const doc = container.querySelector('.ad-doc')?.textContent ?? ''
+    expect(doc).toContain(TERM_V4.semManifestacao.enunciado)
+    expect(doc).toContain('versão do termo V4')
+    expect(doc).not.toContain(TERM_V5.semManifestacao.enunciado)
   })
 
   it('"Nova confirmação" apaga o cookie e volta ao formulário vazio', async () => {

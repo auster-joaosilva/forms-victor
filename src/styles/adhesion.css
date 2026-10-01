@@ -63,7 +63,7 @@
 .ad .ad-receipt-keep{margin-top:0}
 /* A folha do documento. Não existe na tela; existe no papel. */
 .ad-page .ad-doc{display:none}
-.ad-doc{page:adhesion}
+.ad-page{page:adhesion}
 .ad-sheet h1{font-size:22px;font-weight:400;color:var(--color-auster-dark);margin:0 0 2px;text-align:center}
 .ad-sheet-subline{text-align:center;color:var(--color-auster-gray);font-size:13px;margin-bottom:20px}
 .ad-ident{width:100%;border-collapse:collapse;margin-bottom:6px}

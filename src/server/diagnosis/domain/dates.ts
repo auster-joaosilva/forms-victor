@@ -1,4 +1,4 @@
-const TIME_ZONE = 'America/Sao_Paulo'
+export const TIME_ZONE = 'America/Sao_Paulo'
 
 export function brasiliaDateParts(date: Date): { year: string; month: string; day: string } {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)

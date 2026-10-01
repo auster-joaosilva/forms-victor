@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { formatShortDateTime } from '@/server/diagnosis/domain/dates'
 import { RESPONSE_STATUSES, RESPONSE_STATUS_LABELS, isResponseStatus, type ResponseStatus } from '@/server/diagnosis/domain/response-status'
 import { responseQuery, responsesQuery, type ResponsesFilter } from '../api/queries'
-import { handleResponseFn, type ResponseSummary } from '../api/responses'
+import { handleResponseFn, type ResponseDetail as ResponseDetailData, type ResponseSummary } from '../api/responses'
 import { ResponseDetail } from './response-detail'
 
 function csvHref({ status, q }: ResponsesFilter) {
@@ -55,8 +55,12 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
   const list = useQuery({ ...responsesQuery(filter), placeholderData: keepPreviousData })
   const [search, setSearch] = useState(filter.q ?? '')
   const [status, setStatus] = useState<ResponseStatus | ''>(filter.status ?? '')
-  const [opening, setOpening] = useState<{ id: number; at: number } | null>(null)
+  const [opening, setOpening] = useState<{ id: number; at: number; shown: ResponseDetailData | null } | null>(null)
   const detail = useQuery({ ...responseQuery(opening?.id ?? 0), enabled: opening !== null })
+  // Freshness gates only the first display: a later refetch must not remount the sheet and drop a note being typed.
+  if (opening && !opening.shown && detail.isSuccess && !detail.isFetching && detail.dataUpdatedAt >= opening.at && detail.data) {
+    setOpening({ ...opening, shown: detail.data })
+  }
   const handle = useMutation({
     mutationFn: (input: { id: number; status: ResponseStatus | null; note: string }) => handleResponseFn({ data: input }),
     onSuccess: async () => {
@@ -71,8 +75,7 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
   const { counts, items, page, pageCount } = list.data
   const applyFilter = () => onFilterChange({ status: status || undefined, q: search.trim() || undefined, page: 1 })
   const goTo = (next: number) => onFilterChange({ ...filter, page: next })
-  const fresh = opening !== null && detail.isSuccess && !detail.isFetching && detail.dataUpdatedAt >= opening.at
-  const opened = fresh ? detail.data : null
+  const opened = opening?.shown ?? null
 
   return (
     <>
@@ -123,7 +126,7 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
           </thead>
           <tbody>
             {items.map((row) => (
-              <ResponseRow key={row.id} row={row} onOpen={() => setOpening({ id: row.id, at: Date.now() })} />
+              <ResponseRow key={row.id} row={row} onOpen={() => setOpening({ id: row.id, at: Date.now(), shown: null })} />
             ))}
           </tbody>
         </table>
@@ -149,7 +152,7 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
         <Dialog.Content className="bo-dialog" aria-describedby={undefined}>
           {opened ? (
             <ResponseDetail
-              key={`${opened.id}:${detail.dataUpdatedAt}`}
+              key={`${opened.id}:${opening?.at}`}
               detail={opened}
               pending={handle.isPending}
               onHandle={(next, note) => handle.mutate({ id: opened.id, status: next, note })}

@@ -9,4 +9,4 @@ export const responsesQuery = (filter: ResponsesFilter) =>
 
 export const responseQuery = (id: number) =>
   // The sheet seeds the note a colleague may have just changed, so it is always fetched again on opening.
-  queryOptions({ queryKey: ['responses', 'detail', id], queryFn: () => getResponseFn({ data: { id } }), staleTime: 0 })
+  queryOptions({ queryKey: ['responses', 'detail', id], queryFn: () => getResponseFn({ data: { id } }), staleTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false })

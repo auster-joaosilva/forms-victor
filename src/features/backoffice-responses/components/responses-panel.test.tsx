@@ -47,4 +47,26 @@ describe('ResponsesPanel', () => {
     release(detail('nota da colega'))
     expect(within(await screen.findByRole('dialog')).getByRole('textbox')).toHaveValue('nota da colega')
   })
+
+  it('keeps the open sheet and the note being typed when the detail is fetched again', async () => {
+    listResponsesFn.mockResolvedValue(list)
+    getResponseFn.mockReset().mockResolvedValueOnce(detail('')).mockResolvedValueOnce(detail('do servidor'))
+    const client = createQueryClient()
+    render(
+      <QueryClientProvider client={client}>
+        <ResponsesPanel filter={{ page: 1 }} onFilterChange={() => undefined} />
+      </QueryClientProvider>,
+    )
+
+    await userEvent.click(await screen.findByText('Padaria Boa'))
+    const note = within(await screen.findByRole('dialog')).getByRole('textbox')
+    await userEvent.type(note, 'digitando')
+    await client.invalidateQueries({ queryKey: ['responses'] })
+    window.dispatchEvent(new Event('focus'))
+
+    await waitFor(() => expect(getResponseFn).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).getByRole('textbox')).toBe(note)
+    expect(note).toHaveValue('digitando')
+  })
 })

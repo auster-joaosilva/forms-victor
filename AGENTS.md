@@ -92,6 +92,7 @@ código com a configuração velha.
 - Componentes: `*.test.tsx`, projeto `dom` do Vitest (jsdom + Testing Library), `pnpm test:dom`.
 - Ponta a ponta: `pnpm test:e2e` (Playwright contra `pnpm dev` e o banco local). O global setup
   só aceita banco em `localhost`, limpa o rate limit e cria ou reativa o usuário `e2e-admin`.
+  Porta 3000 ocupada? `E2E_PORT=3100 pnpm test:e2e` sobe o `pnpm dev` nessa porta.
 
 ## Rodar
 

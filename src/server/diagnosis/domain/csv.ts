@@ -1,3 +1,4 @@
+export { toCsv } from '../../shared/domain/csv-format'
 import { brasiliaDateParts } from '../../shared/domain/dates'
 import type { Question } from './question-types'
 import { QUESTIONS } from './questions'
@@ -55,17 +56,6 @@ export function csvRows(responses: CsvResponse[]): string[][] {
   })
   return [header, ...body]
 }
-
-// A leading =, +, -, @, tab or CR makes Excel read client-typed text as a formula.
-const neutralised = (value: string): string => (/^[=+\-@\t\r]/.test(value) ? `'${value}` : value)
-
-const cell = (raw: string): string => {
-  const value = neutralised(raw)
-  return /[";\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
-}
-
-// Semicolon and BOM because the destination is Excel in Portuguese.
-export const toCsv = (rows: string[][]): string => `\uFEFF${rows.map((row) => row.map(cell).join(';')).join('\r\n')}\r\n`
 
 export function csvFileName(today: Date): string {
   const { year, month, day } = brasiliaDateParts(today)

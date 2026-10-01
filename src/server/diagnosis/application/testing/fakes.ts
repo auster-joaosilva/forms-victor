@@ -26,10 +26,6 @@ export function memoryDrafts() {
       if (row) rows.set(id, { ...row, requesterInQsa: value })
     },
     delete: async (id) => void rows.delete(id),
-    linkResponse: async (id, responseId) => {
-      const row = rows.get(id)
-      if (row) rows.set(id, { ...row, responseId })
-    },
   }
   const patch = (id: string, extra: Partial<DraftRecord>) => {
     const row = rows.get(id)
@@ -43,7 +39,7 @@ export function memoryDrafts() {
   return { rows, repository, seed, patch }
 }
 
-export function memoryResponses() {
+export function memoryResponses(drafts?: ReturnType<typeof memoryDrafts>) {
   const rows = new Map<number, ResponseRecord>()
   let sequence = 0
   const repository: ResponseRepository = {
@@ -51,6 +47,12 @@ export function memoryResponses() {
     create: async (input) => {
       const record: ResponseRecord = { ...input, id: ++sequence, updatedAt: null, status: 'new', internalNote: null, handledByUsername: null, handledAt: null }
       rows.set(record.id, record)
+      return record
+    },
+    createForDraft: async (draftId, input) => {
+      if (drafts?.rows.get(draftId)?.responseId) return null
+      const record = await repository.create(input)
+      drafts?.patch(draftId, { responseId: record.id })
       return record
     },
     update: async (id, input) => {

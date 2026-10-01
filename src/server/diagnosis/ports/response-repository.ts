@@ -21,6 +21,8 @@ export interface ResponseWrite extends ResponseProjections {
 export interface ResponseRepository {
   protocolExists(protocol: string): Promise<boolean>
   create(input: ResponseWrite & { protocol: string; invitationToken: string | null; receivedAt: Date }): Promise<ResponseRecord>
+  /** Creates the response and links it to the draft atomically; null when another submission already claimed the draft. */
+  createForDraft(draftId: string, input: ResponseWrite & { protocol: string; invitationToken: string | null; receivedAt: Date }): Promise<ResponseRecord | null>
   update(id: number, input: ResponseWrite & { updatedAt: Date }): Promise<void>
   findById(id: number): Promise<ResponseRecord | null>
 }

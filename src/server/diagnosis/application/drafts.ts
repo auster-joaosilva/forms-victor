@@ -44,7 +44,7 @@ export function makeDraftUseCases({ drafts, responses, clock, rateLimiter, invit
       const existing = await currentDraft(drafts, clock, input.draftId)
       let draftId: string
       if (existing) {
-        await drafts.save(existing.id, { step, answers, requesterInQsa: existing.requesterInQsa, expiresAt })
+        await drafts.save(existing.id, { step, answers, expiresAt })
         draftId = existing.id
       } else {
         const decision = await rateLimiter.check('diagnosis-draft', input.origin)

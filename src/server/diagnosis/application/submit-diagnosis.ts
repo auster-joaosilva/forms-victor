@@ -63,8 +63,8 @@ export function makeSubmitDiagnosis(deps: {
       return { ok: true, protocol: existing.protocol, result, created: false, updated: true }
     }
     const protocol = await uniqueProtocol(now)
-    const created = await deps.responses.create({ ...write, protocol, invitationToken: draft.invitationToken, receivedAt: now })
-    await deps.drafts.linkResponse(draft.id, created.id)
+    const created = await deps.responses.createForDraft(draft.id, { ...write, protocol, invitationToken: draft.invitationToken, receivedAt: now })
+    if (!created) return submitDiagnosis({ draftId, origin })
     await deps.recordAudit({ action: 'response_received', reference: protocol, detail: { id: created.id, company } })
     return { ok: true, protocol, result, created: true, updated: false }
   }

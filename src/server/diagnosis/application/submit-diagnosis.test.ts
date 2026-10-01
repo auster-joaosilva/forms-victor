@@ -10,7 +10,7 @@ const answers = applicableFill(7)
 
 function setup(decisions: Parameters<typeof fakeRateLimiter>[0] = []) {
   const drafts = memoryDrafts()
-  const responses = memoryResponses()
+  const responses = memoryResponses(drafts)
   const clock = fakeClock('2026-10-01T02:30:00Z')
   const rate = fakeRateLimiter(decisions)
   const audits: { action: string; reference: string }[] = []

@@ -28,15 +28,20 @@ export const prismaDraftRepository: DraftRepository = {
   },
   create: async ({ step, answers, expiresAt }) =>
     toRecord(await prisma.diagnosisDraft.create({ data: { step, payload: payload(answers, null), expiresAt } })),
-  save: async (id, { step, answers, requesterInQsa, expiresAt }) =>
-    void (await prisma.diagnosisDraft.update({ where: { id }, data: { step, payload: payload(answers, requesterInQsa), expiresAt } })),
-  // One statement on the JSON key alone: a read-then-write would overwrite answers saved by a concurrent debounced save.
+  // Each writer touches only its own JSON key in one statement: a whole-payload write would wipe the other's concurrent update.
+  save: async (id, { step, answers, expiresAt }) => {
+    await prisma.$executeRaw`
+      UPDATE diagnosis_drafts
+      SET step = ${step}, expires_at = ${expiresAt}, updated_at = now(),
+          payload = jsonb_set(COALESCE(payload, '{}'::jsonb), '{answers}', ${JSON.stringify(answers)}::jsonb)
+      WHERE id = ${id}::uuid`
+  },
   setRequesterInQsa: async (id, value) => {
     await prisma.$executeRaw`
       UPDATE diagnosis_drafts
-      SET payload = jsonb_set(payload, '{requesterInQsa}', COALESCE(to_jsonb(${value}::boolean), 'null'::jsonb))
+      SET updated_at = now(),
+          payload = jsonb_set(COALESCE(payload, '{}'::jsonb), '{requesterInQsa}', COALESCE(to_jsonb(${value}::boolean), 'null'::jsonb))
       WHERE id = ${id}::uuid`
   },
   delete: async (id) => void (await prisma.diagnosisDraft.deleteMany({ where: { id } })),
-  linkResponse: async (id, responseId) => void (await prisma.diagnosisDraft.update({ where: { id }, data: { responseId } })),
 }

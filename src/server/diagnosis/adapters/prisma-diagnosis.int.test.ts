@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { prisma } from '@/server/shared/prisma/client'
 import { resetDatabase } from '../../../../tests/integration/db'
 import { makeDraftUseCases } from '../application/drafts'
+import { makeSubmitDiagnosis } from '../application/submit-diagnosis'
+import { applicableFill } from '../domain/testing/applicable-fill'
 import { prismaDraftRepository } from './prisma-draft-repository'
 import { prismaResponseRepository } from './prisma-response-repository'
 import { createRandomProtocolGenerator } from './random-protocol-generator'
@@ -15,7 +17,7 @@ describe('diagnosis persistence', () => {
   it('creates, saves, links and deletes drafts', async () => {
     const draft = await prismaDraftRepository.create({ step: 1, answers: { versaoFormulario: 'sintetico' }, expiresAt: new Date(Date.now() + 86_400_000) })
     await prismaDraftRepository.setRequesterInQsa(draft.id, true)
-    await prismaDraftRepository.save(draft.id, { step: 3, answers: { versaoFormulario: 'completo' }, requesterInQsa: true, expiresAt: new Date(Date.now() + 2 * 86_400_000) })
+    await prismaDraftRepository.save(draft.id, { step: 3, answers: { versaoFormulario: 'completo' }, expiresAt: new Date(Date.now() + 2 * 86_400_000) })
     expect(await prismaDraftRepository.find(draft.id)).toMatchObject({ step: 3, answers: { versaoFormulario: 'completo' }, requesterInQsa: true, responseId: null })
     await prismaDraftRepository.delete(draft.id)
     await prismaDraftRepository.delete(draft.id)
@@ -29,6 +31,33 @@ describe('diagnosis persistence', () => {
     await prismaDraftRepository.setRequesterInQsa(draft.id, null)
     expect(await prismaDraftRepository.find(draft.id)).toMatchObject({ answers: { versaoFormulario: 'sintetico' }, requesterInQsa: null })
     await prismaDraftRepository.setRequesterInQsa('1b4e28ba-2fa1-11d2-883f-0016d3cca427', true)
+  })
+
+  it('keeps the QSA check when answers are saved afterwards', async () => {
+    const draft = await prismaDraftRepository.create({ step: 1, answers: {}, expiresAt: new Date(Date.now() + 86_400_000) })
+    await prismaDraftRepository.setRequesterInQsa(draft.id, true)
+    await prismaDraftRepository.save(draft.id, { step: 4, answers: { versaoFormulario: 'completo' }, expiresAt: new Date(Date.now() + 86_400_000) })
+    expect(await prismaDraftRepository.find(draft.id)).toMatchObject({ step: 4, answers: { versaoFormulario: 'completo' }, requesterInQsa: true })
+  })
+
+  it('creates a single response when the same draft is submitted twice at once', async () => {
+    const audits: string[] = []
+    const submit = makeSubmitDiagnosis({
+      drafts: prismaDraftRepository,
+      responses: prismaResponseRepository,
+      protocols: createRandomProtocolGenerator(),
+      clock: { now: () => new Date() },
+      rateLimiter: { check: async () => ({ allowed: true }) },
+      recordAudit: async (entry) => void audits.push(entry.action),
+    })
+    const draft = await prismaDraftRepository.create({ step: 7, answers: applicableFill(7), expiresAt: new Date(Date.now() + 86_400_000) })
+    const results = await Promise.all([submit({ draftId: draft.id, origin: null }), submit({ draftId: draft.id, origin: null })])
+    expect(results.every((result) => result.ok)).toBe(true)
+    expect(await prisma.response.count()).toBe(1)
+    expect(audits).toEqual(['response_received'])
+    const stored = await prisma.response.findFirstOrThrow()
+    expect(results.map((result) => result.ok && result.protocol)).toEqual([stored.protocol, stored.protocol])
+    expect((await prismaDraftRepository.find(draft.id))?.responseId).toBe(stored.id)
   })
 
   it('deletes an expired draft on access and treats a cookie without row as no draft', async () => {

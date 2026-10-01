@@ -459,10 +459,10 @@ async function verAdesoes() {
           ${contagem.aProtocolar === 1 ? 'empresa autorizou' : 'empresas autorizaram'} a opção
           pelo Híbrido e ainda não ${contagem.aProtocolar === 1 ? 'foi feita' : 'foram feitas'}
           no Portal do Simples Nacional. ${janelaEncerrada()
-            ? '<b>O prazo terminou em 30/09/2026.</b> Estas não podem mais ser '
+            ? `<b>O prazo terminou em ${fimDaJanela()}.</b> Estas não podem mais ser `
               + 'protocoladas: trate uma a uma e registre o que foi combinado com '
               + 'cada empresa.'
-            : '<b>O prazo é 30/09/2026.</b>'}</div>`
+            : `<b>O prazo é ${fimDaJanela()}.</b>`}</div>`
       : ''}
     <div class="filtros">
       <input type="text" id="buscaAdesao" placeholder="Empresa, CNPJ, protocolo ou representante"
@@ -542,6 +542,11 @@ const TEMAS_DE_CAPA = [['marca', 'Marca — o símbolo, grande, na borda'],
    que nenhum aviso. */
 const janelaEncerrada = () =>
   (typeof window !== 'undefined' && window.__JANELA__ === 'encerrada');
+
+/** A data do corte vem do servidor, nunca escrita à mão aqui: prorrogação é
+ *  coisa que acontece, e aviso com data velha é pior que aviso nenhum. */
+const fimDaJanela = () =>
+  (typeof window !== 'undefined' && window.__JANELA_FIM__) || 'o prazo legal';
 
 const SITUACOES_EVENTO = { rascunho:'Rascunho', publicado:'Publicado', encerrado:'Encerrado' };
 const SITUACOES_INSCRICAO = { inscrita:'Inscrita', confirmada:'Confirmada',

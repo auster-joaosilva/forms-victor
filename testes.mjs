@@ -263,10 +263,28 @@ const INVARIANTES = [
     checar: ({ plano }) => [...plano.clienteAgora, ...plano.clienteDepois]
       .every(i => i.executor === 'cliente') },
 
-  { nome: 'familia hibrido traz a janela de novembro',
-    porque: 'recomendar optar sem dizer que da para cancelar e esconder a protecao',
+  /* Antes esta invariante pedia so "30 de novembro". A Resolucao CGSN 194/2026
+     trocou o prazo unico por uma JANELA com comeco — 3/11 a 20/12 — e exigir so
+     o fim deixaria passar a tela que promete cancelamento sem avisar que ele nao
+     existe em outubro. Agora ela cobra as duas pontas. */
+  { nome: 'familia hibrido traz as duas pontas da janela de cancelamento',
+    porque: 'prometer cancelamento sem dizer quando ele abre e esconder que outubro nao tem saida',
     checar: ({ d, htmlResultado }) => d.posicao.familia !== 'hibrido'
-      || htmlResultado.includes('30 de novembro') },
+      || (htmlResultado.includes('3 de novembro') && htmlResultado.includes('20 de dezembro')) },
+
+  /* As TRES pecas, nao so a tela. Duas correcoes vieram de mutacao deliberada:
+     (1) a primeira versao olhava so `htmlResultado`, e o prazo velho reposto no
+     documento impresso passava verde — justamente a peca que vai para a mao do
+     cliente; (2) a segunda procurava a data solta, e batia na linha "Emitido em
+     30 de setembro de 2026", que e a data de emissao do relatorio e nao promessa
+     nenhuma. Por isso agora ela cobra a data COMO PRAZO: so com "ate" na frente.
+     Incluir "em" na busca repetia o erro, porque casava com "Emitido em". */
+  { nome: 'nenhuma peca ainda promete o prazo velho',
+    porque: 'data revogada e pior que data nenhuma: o cliente planeja por ela',
+    checar: ({ htmlResultado, htmlRevisao, htmlRelatorio }) =>
+      [htmlResultado, htmlRevisao, htmlRelatorio].every(h =>
+        !/at[ée]\s+30 de (setembro|novembro)/.test(h)
+        && !h.includes('30/09/2026') && !h.includes('30/11/2026')) },
 
   { nome: 'nenhuma afirmacao de merito economico na tela',
     porque: 'o motor nao calcula custo; afirmar qual sai mais barato e conclusao sem conta',

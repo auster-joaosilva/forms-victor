@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Diagnóstico — Simples padrão ou híbrido | auster</title>
-<meta name="description" content="Em 4 a 10 minutos, descubra se a sua empresa do Simples Nacional deve recolher IBS e CBS na guia única ou por fora do DAS. A opção é feita até 30 de setembro de 2026.">
+<meta name="description" content="Em 4 a 10 minutos, descubra se a sua empresa do Simples Nacional deve recolher IBS e CBS na guia única ou por fora do DAS. A opção é feita até 30 de outubro de 2026.">
 <meta name="author" content="Auster Inteligência Contábil">
 <meta name="theme-color" content="#052C47">
 <!-- Não indexar: o público é a carteira e os convidados da palestra, por link
@@ -12,7 +12,7 @@
 <meta name="robots" content="noindex, nofollow">
 <!-- Cartão de compartilhamento no WhatsApp e no LinkedIn. -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="Simples padrão ou híbrido: qual a sua empresa deve escolher até 30 de setembro">
+<meta property="og:title" content="Simples padrão ou híbrido: qual a sua empresa deve escolher até 30 de outubro">
 <meta property="og:description" content="Diagnóstico gratuito da Auster Inteligência Contábil sobre o recolhimento de IBS e CBS em 2027. De 4 a 10 minutos.">
 <meta property="og:locale" content="pt_BR">
 <meta name="twitter:card" content="summary">
@@ -500,7 +500,7 @@ button:disabled{opacity:.35;cursor:default}
          Auster\Inteligencia Contabil\Logo_Positiva_Compl.png (papel)
          Recortado pelo canal ALFA (o RGB sob o alfa é preto) e reduzido a 84 px de
          altura, embutido em data URI para o arquivo seguir único.
-         É a marca da Inteligencia CONTABIL: a decisão de setembro é obrigação
+         É a marca da Inteligencia CONTABIL: a decisão de outubro é obrigação
          recorrente da carteira. As frentes de consultoria no relatório são
          atribuídas à Inteligencia Tributaria, no próprio texto. -->
     <!-- Duas versoes da mesma marca, porque o fundo muda de suporte:
@@ -1088,7 +1088,7 @@ function renderRelatorio() {
     <div class="doc">
       <section class="folha capa">
         <div class="selo-doc">Diagnóstico preliminar</div>
-        <h1>Simples padrão ou híbrido:<br>o que a sua empresa deve fazer até 30 de setembro</h1>
+        <h1>Simples padrão ou híbrido:<br>o que a sua empresa deve fazer até 30 de outubro</h1>
         <table class="cabecalho-doc"><tbody>
           <tr><td>Empresa</td><th>${esc(R.nomeEmpresa || '—')}</th></tr>
           <tr><td>CNPJ</td><th>${esc(R.cnpj || '—')}</th></tr>
@@ -1142,9 +1142,11 @@ function renderRelatorio() {
         ${d.posicao.familia === 'hibrido' || d.posicao.familia === 'a_definir' ? `
           <h3>Os prazos, em ordem</h3>
           <table class="prazos"><tbody>
-            <tr><td>30 de setembro de 2026</td><th>Último dia para protocolar a opção. Não se
+            <tr><td>30 de outubro de 2026</td><th>Último dia para protocolar a opção. Não se
               recupera: a janela seguinte é março de 2027, com efeito só no 2º semestre.</th></tr>
-            <tr><td>30 de novembro de 2026</td><th>Último dia para <b>cancelar</b> a solicitação,
+            <tr><td>3 de novembro de 2026</td><th>Abre o prazo para <b>cancelar</b> a solicitação.
+              Antes disso o cancelamento não está disponível.</th></tr>
+            <tr><td>20 de dezembro de 2026</td><th>Último dia para <b>cancelar</b> a solicitação,
               sem efeito nenhum — como se nunca tivesse sido feita.</th></tr>
             <tr><td>1º de janeiro de 2027</td><th>A opção começa a valer, para todo o primeiro
               semestre. Dali em diante, só cabe <b>renunciar</b>, nas janelas de março e setembro.</th></tr>
@@ -1156,7 +1158,7 @@ function renderRelatorio() {
 
       <section class="folha">
         <h2>O que fazer na sua empresa</h2>
-        ${plano.clienteAgora.length ? `<h3>Antes de 30 de setembro</h3>
+        ${plano.clienteAgora.length ? `<h3>Antes de 30 de outubro</h3>
           ${plano.clienteAgora.map((i, n) => acao(i, n + 1)).join('')}` : ''}
         ${plano.clienteDepois.length ? `<h3>Nos próximos meses</h3>
           ${plano.clienteDepois.map((i, n) => acao(i, plano.clienteAgora.length + n + 1)).join('')}` : ''}
@@ -1184,12 +1186,13 @@ function renderRelatorio() {
       <section class="folha">
         <h2>Três coisas para não errar</h2>
         <ol class="doc-ressalvas">
-          <li><b>A opção do híbrido pode ser cancelada até 30 de novembro de 2026.</b>
-            Pedida em setembro, produz efeito a partir de 1º de janeiro de 2027. Até 30 de
-            novembro a solicitação pode ser cancelada, sem consequência nenhuma. Depois, só cabe
-            renunciar, nas janelas semestrais de março e setembro. Quem receber ressarcimento de
-            crédito fica impedido de voltar ao recolhimento unificado no ano corrente e no
-            seguinte.</li>
+          <li><b>A opção do híbrido pode ser cancelada entre 3 de novembro e 20 de dezembro
+            de 2026.</b> Pedida em outubro, produz efeito a partir de 1º de janeiro de 2027.
+            Nessa janela a solicitação pode ser cancelada, sem consequência nenhuma — mas só
+            nela: antes de 3 de novembro o cancelamento não está disponível, e o cancelamento
+            feito é irretratável. Depois, só cabe renunciar, nas janelas semestrais de março e
+            setembro. Quem receber ressarcimento de crédito fica impedido de voltar ao
+            recolhimento unificado no ano corrente e no seguinte.</li>
           <li><b>O MEI não pode optar pelo regime regular</b> — e não aproveita nem transfere
             crédito. Nas compras é tratado como consumo final. Há duas exceções de crédito
             presumido para quem compra do MEI: transporte autônomo de carga e bem móvel usado
@@ -1256,12 +1259,13 @@ function renderResultado() {
             '<span class="prefixo">Indicação preliminar —</span> '}<b>${esc(d.saida.titulo)}</b>
             ${esc(d.saida.resumo)}</p>`}
       ${d.posicao.detalhe && !d.leituraPreliminar ? `<p class="det">${esc(d.posicao.detalhe)}</p>` : ''}
-      ${['hibrido', 'a_definir'].includes(d.posicao.familia) ? `<p class="trava"><b>Setembro não volta; novembro ainda dá.</b>
+      ${['hibrido', 'a_definir'].includes(d.posicao.familia) ? `<p class="trava"><b>Outubro não volta; a janela de cancelamento ainda dá.</b>
         São duas coisas diferentes, e o sistema as chama por nomes diferentes:
-        <b>cancelar</b> é desfazer a solicitação até <b>30 de novembro de 2026</b>, antes de
-        qualquer efeito, como se nunca tivesse sido feita; <b>renunciar</b> é sair depois que
+        <b>cancelar</b> é desfazer a solicitação <b>entre 3 de novembro e 20 de dezembro de
+        2026</b>, antes de qualquer efeito, como se nunca tivesse sido feita — e fora dessa
+        janela não dá, nem antes nem depois; <b>renunciar</b> é sair depois que
         ela já vale, e isso só acontece nas janelas semestrais de março e setembro.
-        Já o prazo para pedir encerra em 30 de setembro e não se recupera — a janela
+        Já o prazo para pedir encerra em 30 de outubro e não se recupera — a janela
         seguinte tem efeito só no 2º semestre de 2027.
         <span class="fonte">LC 123/2006, art. 13, §§ 9º e 10 (LC 227/2026); Manual da Opção pelo
         Regime Regular do IBS e da CBS, item 4.2 (CGSN, 01/09/2026).</span></p>` : ''}
@@ -1289,7 +1293,7 @@ function renderResultado() {
           : d.diasCorridosAteFimDaJanela === 0 ? 'hoje é o último dia'
           : d.diasCorridosAteFimDaJanela === 1 ? 'termina amanhã'
           : d.diasCorridosAteFimDaJanela + ' dias'}</div>
-        <div class="nota-mini">Até <b>30 de setembro de 2026</b>, em dias de calendário. É o único
+        <div class="nota-mini">Até <b>30 de outubro de 2026</b>, em dias de calendário. É o único
         prazo que a lei fixa aqui — e o único que não volta.</div></div>
       <div class="mini"><div class="rot">Protocolar até</div>
         <div class="val" style="font-size:16px">${d.dentroDaAntecedencia ? esc(d.dataLimiteProtocolo) : 'o quanto antes'}</div>
@@ -1307,7 +1311,7 @@ function renderResultado() {
 
     <div class="cartao" style="margin-bottom:20px">
       <h2>O que fazer na sua empresa</h2>
-      ${plano.clienteAgora.length ? `<h3>Antes de 30 de setembro</h3>${plano.clienteAgora.map(item).join('')}` : ''}
+      ${plano.clienteAgora.length ? `<h3>Antes de 30 de outubro</h3>${plano.clienteAgora.map(item).join('')}` : ''}
       ${plano.clienteDepois.length ? `<h3>Nos próximos meses</h3>${plano.clienteDepois.map(item).join('')}` : ''}
       ${!plano.clienteAgora.length && !plano.clienteDepois.length
         ? '<p style="font-size:var(--t-corpo);color:var(--cinza)">Nada a fazer de imediato do seu lado.</p>' : ''}
@@ -1322,7 +1326,7 @@ function renderResultado() {
       com você — nenhuma depende de você fazer antes.</p>
       ${plano.auster.map(itemAuster).join('')}
       <div class="encaixe">
-        <div class="t">Quer tratar a Reforma além da escolha de setembro?</div>
+        <div class="t">Quer tratar a Reforma além da escolha de outubro?</div>
         <p>A decisão do Simples é uma peça. A Avaliação Prévia da Reforma Tributária olha a empresa
         inteira — cadeia, preço, margem, estrutura societária — e é a partir dela que marcamos a
         reunião com a consultoria.</p>
@@ -1356,10 +1360,11 @@ function renderResultado() {
       <h2 style="margin-top:0">Três coisas para não errar</h2>
 
       <div class="atencao forte"><div class="num">1</div><div>
-        <div class="t">A opção do híbrido pode ser cancelada até 30 de novembro de 2026.</div>
-        <div class="c">Pedida em setembro, ela produz efeito a partir de 1º de janeiro de 2027.
-        Até 30 de novembro a solicitação pode ser <b>cancelada</b>, sem consequência nenhuma,
-        porque nada começou a valer. Depois dessa data só cabe <b>renunciar</b> ao regime
+        <div class="t">A opção do híbrido pode ser cancelada entre 3 de novembro e 20 de dezembro de 2026.</div>
+        <div class="c">Pedida em outubro, ela produz efeito a partir de 1º de janeiro de 2027.
+        Dentro dessa janela a solicitação pode ser <b>cancelada</b>, sem consequência nenhuma,
+        porque nada começou a valer — e só dentro dela: antes de 3 de novembro o serviço não
+        está disponível. Depois dessa data só cabe <b>renunciar</b> ao regime
         regular, e a renúncia só acontece nas janelas semestrais de março e setembro.
         Quem chegar a receber ressarcimento de crédito fica impedido de voltar ao
         recolhimento unificado no ano corrente e no seguinte.

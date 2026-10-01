@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { diagnosisReports, responseBackoffice } from '@/server/diagnosis/composition'
 import { RESPONSE_STATUSES } from '@/server/diagnosis/domain/response-status'
-import { sessionMiddleware } from '@/server/shared/http/session-middleware'
+import { requireCapability } from '@/server/shared/http/session-middleware'
 
 export type { ResponseDetail, ResponseList, ResponseSummary } from '@/server/diagnosis/composition'
 
@@ -14,21 +14,21 @@ const filterInput = z.object({
 const idInput = z.object({ id: z.number().int().positive() })
 
 export const listResponsesFn = createServerFn({ method: 'GET' })
-  .middleware([sessionMiddleware])
+  .middleware([requireCapability('view_responses')])
   .inputValidator(filterInput)
   .handler(({ data }) => responseBackoffice.listResponses(data))
 
 export const getResponseFn = createServerFn({ method: 'GET' })
-  .middleware([sessionMiddleware])
+  .middleware([requireCapability('view_responses')])
   .inputValidator(idInput)
   .handler(({ data }) => responseBackoffice.getResponse(data.id))
 
 export const handleResponseFn = createServerFn({ method: 'POST' })
-  .middleware([sessionMiddleware])
+  .middleware([requireCapability('handle_responses')])
   .inputValidator(idInput.extend({ status: z.enum(RESPONSE_STATUSES).nullable(), note: z.string().max(5000) }))
   .handler(({ data, context }) => responseBackoffice.handleResponse({ id: context.session.user.id, username: context.session.user.username }, data))
 
 export const getResponseReportFn = createServerFn({ method: 'GET' })
-  .middleware([sessionMiddleware])
+  .middleware([requireCapability('view_responses')])
   .inputValidator(idInput)
   .handler(({ data }) => diagnosisReports.responseReport(data.id))

@@ -50,7 +50,7 @@ function ResponseRow({ row, onOpen }: { row: ResponseSummary; onOpen(): void }) 
   )
 }
 
-export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFilter; onFilterChange(next: ResponsesFilter): void }) {
+export function ResponsesPanel({ filter, canExport, onFilterChange }: { filter: ResponsesFilter; canExport: boolean; onFilterChange(next: ResponsesFilter): void }) {
   const queryClient = useQueryClient()
   const list = useQuery({ ...responsesQuery(filter), placeholderData: keepPreviousData })
   const [search, setSearch] = useState(filter.q ?? '')
@@ -127,9 +127,11 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
         <button type="button" className="bo-button is-light" onClick={applyFilter}>
           Filtrar
         </button>
-        <a className="bo-button is-light" href={csvHref(filter)}>
-          Baixar planilha (CSV)
-        </a>
+        {canExport ? (
+          <a className="bo-button is-light" href={csvHref(filter)}>
+            Baixar planilha (CSV)
+          </a>
+        ) : null}
       </div>
       {error && !opened ? <div className="bo-error">{error}</div> : null}
       {items.length ? (

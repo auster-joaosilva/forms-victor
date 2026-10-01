@@ -8,14 +8,16 @@ import { ResponsesPanel } from '@/features/backoffice-responses/components/respo
 import { OwnPasswordButton } from '@/features/backoffice-users/components/own-password-button'
 import { UsersPanel } from '@/features/backoffice-users/components/users-panel'
 import { RESPONSE_STATUSES } from '@/server/diagnosis/domain/response-status'
+import type { Capability } from '@/server/shared/domain/permissions'
 
 const TAB_KEYS = ['responses', 'invitations', 'audit', 'users'] as const
 type TabKey = (typeof TAB_KEYS)[number]
-const TABS: { key: TabKey; label: string; adminOnly: boolean }[] = [
-  { key: 'responses', label: 'Respostas', adminOnly: false },
-  { key: 'invitations', label: 'Convites', adminOnly: false },
-  { key: 'audit', label: 'Auditoria', adminOnly: false },
-  { key: 'users', label: 'Usuários', adminOnly: true },
+// A tela só esconde; quem fecha é o requireCapability de cada server function.
+const TABS: { key: TabKey; label: string; capability: Capability }[] = [
+  { key: 'responses', label: 'Respostas', capability: 'view_responses' },
+  { key: 'invitations', label: 'Convites', capability: 'view_invitations' },
+  { key: 'audit', label: 'Auditoria', capability: 'view_audit' },
+  { key: 'users', label: 'Usuários', capability: 'manage_users' },
 ]
 
 export const Route = createFileRoute('/backoffice/')({
@@ -34,10 +36,11 @@ function BackofficeHome() {
   const { user } = Route.useRouteContext()
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
-  const tab = search.tab ?? 'responses'
+  const allowed = TABS.filter((item) => user.capabilities.includes(item.capability))
+  const tab = allowed.some((item) => item.key === search.tab) ? search.tab : allowed[0]?.key
   const nav = (
     <div className="bo-tabs">
-      {TABS.filter((item) => !item.adminOnly || user.role === 'admin').map((item) => (
+      {allowed.map((item) => (
         <Link key={item.key} to="/backoffice" search={{ tab: item.key }} className={item.key === tab ? 'bo-tab is-active' : 'bo-tab'}>
           {item.label}
         </Link>
@@ -48,6 +51,7 @@ function BackofficeHome() {
     <BackofficeShell userName={user.username} nav={nav} account={<OwnPasswordButton username={user.username} />} logout={<LogoutButton className="bo-logout" />}>
       {tab === 'responses' ? (
         <ResponsesPanel
+          canExport={user.capabilities.includes('export_responses')}
           key={`${search.status ?? ''}:${search.q ?? ''}`}
           filter={{ status: search.status, q: search.q, page: search.page ?? 1 }}
           onFilterChange={(next) => void navigate({ search: { tab: 'responses', status: next.status, q: next.q, page: next.page } })}
@@ -55,7 +59,7 @@ function BackofficeHome() {
       ) : null}
       {tab === 'invitations' ? <InvitationsPanel /> : null}
       {tab === 'audit' ? <AuditPanel /> : null}
-      {tab === 'users' && user.role === 'admin' ? <UsersPanel /> : null}
+      {tab === 'users' ? <UsersPanel /> : null}
     </BackofficeShell>
   )
 }

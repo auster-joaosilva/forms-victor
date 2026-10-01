@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './diagnosis.css';
 @import './backoffice.css';
+@import './adhesion.css';
 
 @theme static {
   --font-sans: Kanit, Montserrat, Raleway, Arial, sans-serif;

@@ -24,7 +24,7 @@ export function InvitationsPanel() {
       invitations={list.data}
       error={error ?? (create.error ?? remove.error)?.message ?? null}
       pending={create.isPending || remove.isPending}
-      onCreate={(input) => create.mutate(input)}
+      onCreate={(input) => create.mutateAsync(input).then((result) => result.ok, () => false)}
       onDelete={(token) => remove.mutate(token)}
       onCopy={(link) => void copyLink(link)}
     />

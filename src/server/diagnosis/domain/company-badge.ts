@@ -12,6 +12,10 @@ export interface CompanyBadge {
 
 export type CompanyBadgeLookup = { ok: true; company: CompanyBadge; requesterInQsa: boolean | null } | { ok: false; reason: string }
 
+export type CompanyBadgeResult =
+  | { ok: true; company: CompanyBadgeSource; requesterInQsa: boolean | null }
+  | { ok: false; reason: string }
+
 export interface CompanyBadgeSource {
   legalName: string | null
   city: string | null
@@ -31,6 +35,10 @@ export const toCompanyBadge = (company: CompanyBadgeSource): CompanyBadge => ({
   active: company.active,
   registrationStatus: company.registrationStatus ?? '',
 })
+
+// The only exit of the registry data: the partners (QSA) are dropped here and only the requester check goes on.
+export const toCompanyBadgeLookup = (result: CompanyBadgeResult): CompanyBadgeLookup =>
+  result.ok ? { ok: true, company: toCompanyBadge(result.company), requesterInQsa: result.requesterInQsa } : { ok: false, reason: result.reason }
 
 // Only what the respondent left blank is filled: the registry never overwrites an answer.
 export function applyCompanyPrefill(answers: Answers, company: CompanyBadge): Answers {

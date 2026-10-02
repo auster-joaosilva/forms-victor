@@ -91,13 +91,28 @@ test('a regularização vê a adesão, marca Protocolei e tira a via, sem planil
   expect((await page.request.get('/backoffice/adhesions.csv')).status()).toBe(403)
 })
 
-test('o operador não alcança adesão: sem aba, sem via, sem planilha, e a recusa vai para a auditoria', async ({ page }) => {
+test('o operador não alcança adesão: sem aba, sem via, sem planilha, e a recusa vai para a auditoria', async ({ page, browser }) => {
+  const client = await (await browser.newContext()).newPage()
+  await useOwnAddress(client)
+  await client.goto('/adhesion')
+  await client.getByLabel('Razão social').fill(`Recusar ${Date.now()}`)
+  const protocol = await confirmHybrid(client)
+  await login(page)
+  await page.getByRole('link', { name: 'Adesões' }).click()
+  await page.getByPlaceholder('Empresa, CNPJ, protocolo ou representante').fill(protocol)
+  await page.getByRole('button', { name: 'Filtrar' }).click()
+  const termPath = await page.locator('tr', { hasText: protocol }).getByRole('link', { name: 'Termo (PDF)' }).getAttribute('href')
+  expect(termPath).toMatch(/^\/backoffice\/adhesions\/\d+\/term$/)
+  await page.context().clearCookies()
+
   await login(page, E2E_OPERATOR)
   await expect(page.getByRole('link', { name: 'Respostas' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Adesões' })).toHaveCount(0)
   await page.goto('/backoffice?tab=adhesions')
   await expect(page.getByPlaceholder('Empresa, CNPJ, protocolo ou representante')).toHaveCount(0)
-  await page.goto('/backoffice/adhesions/1/term')
+  const refused = await page.goto(termPath ?? '')
+  expect(refused?.status()).toBe(200)
+  await expect(page.getByText('o seu papel não alcança esta área')).toBeVisible()
   await expect(page.getByText('Registro do aceite eletrônico')).toHaveCount(0)
   expect((await page.request.get('/backoffice/adhesions.csv')).status()).toBe(403)
 

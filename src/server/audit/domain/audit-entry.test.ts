@@ -7,6 +7,10 @@ describe('audit actions', () => {
     expect(AUDIT_ACTIONS).toContain('legacy_imported')
   })
 
+  it('records the reset of the hml test data', () => {
+    expect(AUDIT_ACTION_LABELS.test_data_reset).toBe('dados de teste apagados')
+  })
+
   it('labels every action in Portuguese', () => {
     for (const action of AUDIT_ACTIONS) expect(AUDIT_ACTION_LABELS[action]).toMatch(/^[a-zà-ú ]+$/)
   })

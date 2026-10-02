@@ -7,3 +7,9 @@ export interface LegacySource {
   adhesions(): Promise<LegacyAdhesion[]>
   events(): Promise<LegacyEvent[]>
 }
+
+export interface LegacyDatabase {
+  path: string
+  isAvailable(): Promise<boolean>
+  snapshot(): Promise<LegacySource>
+}

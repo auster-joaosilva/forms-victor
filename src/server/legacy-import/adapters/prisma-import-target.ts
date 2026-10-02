@@ -41,5 +41,6 @@ export const prismaImportTarget: ImportTarget = {
     prisma.$transaction(async (tx) => {
       if (rows.length) await tx.auditLog.createMany({ data: rows.map((row) => ({ ...row, detail: json(row.detail) })) })
     }, LONG_TRANSACTION),
-  recordImport: async (detail) => void (await prisma.auditLog.create({ data: { action: 'legacy_imported', actorUsername: 'migracao', detail } })),
+  recordImport: async (detail, actor) =>
+    void (await prisma.auditLog.create({ data: { action: 'legacy_imported', actorId: actor?.id ?? null, actorUsername: actor?.username ?? 'migracao', detail } })),
 }

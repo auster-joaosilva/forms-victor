@@ -1,5 +1,10 @@
 import type { ImportedAdhesion, ImportedAuditEntry, ImportedInvitation, ImportedResponse, ImportedUser } from '../domain/mapping'
 
+export interface ImportActor {
+  id: string
+  username: string
+}
+
 export interface ImportTarget {
   existingUsernames(): Promise<Map<string, string>>
   existingInvitationTokens(): Promise<Set<string>>
@@ -13,5 +18,5 @@ export interface ImportTarget {
   insertResponses(rows: ImportedResponse[]): Promise<void>
   insertAdhesions(rows: ImportedAdhesion[]): Promise<void>
   insertAuditEntries(rows: ImportedAuditEntry[]): Promise<void>
-  recordImport(detail: Record<string, number>): Promise<void>
+  recordImport(detail: Record<string, number>, actor?: ImportActor): Promise<void>
 }

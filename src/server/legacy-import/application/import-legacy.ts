@@ -2,7 +2,7 @@ import {
   adhesionConflicts, assignProtocols, emptyRequiredFields, mapAdhesion, mapAuditEvent, mapInvitation,
   mapResponse, mapUser, translateAuditAction, translateRole, type ImportedAdhesion, type ImportedResponse,
 } from '../domain/mapping'
-import type { ImportTarget } from '../ports/import-target'
+import type { ImportActor, ImportTarget } from '../ports/import-target'
 import type { LegacySource } from '../ports/legacy-source'
 
 export interface TableReport {
@@ -30,7 +30,7 @@ export function makeImportLegacy({ source, target, newUserId, knownTermVersions 
   newUserId: () => string
   knownTermVersions: ReadonlySet<string>
 }) {
-  return async function importLegacy({ dryRun }: { dryRun: boolean }): Promise<ImportReport> {
+  return async function importLegacy({ dryRun, actor }: { dryRun: boolean; actor?: ImportActor }): Promise<ImportReport> {
     const [users, invitations, responses, adhesions, events] = await Promise.all([
       source.users(), source.invitations(), source.responses(), source.adhesions(), source.events(),
     ])
@@ -128,7 +128,7 @@ export function makeImportLegacy({ source, target, newUserId, knownTermVersions 
     await target.insertResponses(newResponses)
     await target.insertAdhesions(newAdhesions)
     await target.insertAuditEntries(newEvents.map((row) => mapAuditEvent(row, userIds)))
-    await target.recordImport({ users: newUsers.length, invitations: newInvitations.length, responses: newResponses.length, adhesions: newAdhesions.length, audit: newEvents.length })
+    await target.recordImport({ users: newUsers.length, invitations: newInvitations.length, responses: newResponses.length, adhesions: newAdhesions.length, audit: newEvents.length }, actor)
     return report
   }
 }

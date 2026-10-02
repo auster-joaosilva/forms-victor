@@ -93,7 +93,7 @@ export const STATUS_MAP: Record<string, ImportedStatus> = { nova: 'new', em_anal
 export const ROLE_MAP: Record<string, Role> = { admin: 'admin', gestor: 'manager', regularizacao: 'regularization', operador: 'operator', equipe: 'operator' }
 
 export function translateRole(papel: string): { role: Role; known: boolean } {
-  const role = Object.hasOwn(ROLE_MAP, papel) ? ROLE_MAP[papel] : undefined
+  const role = lookup(ROLE_MAP, papel)
   return role ? { role, known: true } : { role: 'operator', known: false }
 }
 
@@ -137,8 +137,13 @@ export interface ImportedAdhesion {
 
 const date = (value: string | null): Date | null => (value ? new Date(value) : null)
 
+// Herdados como constructor ou toString não são valores do banco antigo.
+const lookup = <T>(map: Record<string, T>, key: string): T | undefined => (Object.hasOwn(map, key) ? map[key] : undefined)
+
+const isDate = (value: string) => !Number.isNaN(new Date(value).getTime())
+
 export function translateAuditAction(legacy: string): { action: ImportedAuditAction; extra: Record<string, unknown>; known: boolean } {
-  const found = AUDIT_ACTION_MAP[legacy]
+  const found = lookup(AUDIT_ACTION_MAP, legacy)
   return found ? { action: found.action, extra: found.extra ?? {}, known: true } : { action: 'legacy_imported', extra: { legacyAction: legacy }, known: false }
 }
 
@@ -212,7 +217,7 @@ export function mapResponse(row: LegacyResponse, context: { protocol: string; in
     confidence: row.confianca,
     requesterInQsa: requesterInQsaFrom(row.solicitante_no_qsa),
     payload: parseJson(row.pacote) ?? {},
-    status: STATUS_MAP[row.situacao] ?? 'new',
+    status: lookup(STATUS_MAP, row.situacao) ?? 'new',
     internalNote: row.nota_interna,
     handledById: row.tratado_por ? (context.userIds.get(row.tratado_por) ?? null) : null,
     handledAt: date(row.tratado_em),
@@ -227,13 +232,25 @@ export function emptyRequiredFields(row: LegacyAdhesion): string[] {
 
 const textField = (record: Record<string, unknown>, key: string): string | null => (typeof record[key] === 'string' && record[key] ? record[key] : null)
 
+// What the adhesion cannot carry over as it is; any of these stops the whole import before the first write.
+export function adhesionConflicts(row: LegacyAdhesion): string[] {
+  const conflicts: string[] = []
+  if (!lookup(MODALITY_MAP, row.modalidade)) conflicts.push(`modalidade ${row.modalidade} sem equivalente`)
+  if (!lookup(ADHESION_STATUS_MAP, row.situacao)) conflicts.push(`situação ${row.situacao} sem equivalente`)
+  if (row.sem_manifestacao && !lookup(WITHOUT_MANIFESTATION_MAP, row.sem_manifestacao)) conflicts.push(`sem manifestação ${row.sem_manifestacao} sem equivalente`)
+  if (!isDate(row.aceito_em)) conflicts.push(`aceite em ${row.aceito_em} não é uma data`)
+  if (row.tratado_em && !isDate(row.tratado_em)) conflicts.push(`tratada em ${row.tratado_em} não é uma data`)
+  return conflicts
+}
+
 // The stored hash and version are the proof of what was accepted: copied as they are, never recomputed.
 export function mapAdhesion(
   row: LegacyAdhesion,
   context: { protocol: string; invitationTokens: Set<string>; responseIds: Set<number>; userIds: Map<string, string> },
 ): ImportedAdhesion | null {
-  const modality = Object.hasOwn(MODALITY_MAP, row.modalidade) ? MODALITY_MAP[row.modalidade] : undefined
-  if (!modality) return null
+  const modality = lookup(MODALITY_MAP, row.modalidade)
+  const status = lookup(ADHESION_STATUS_MAP, row.situacao)
+  if (!modality || !status || adhesionConflicts(row).length) return null
   const payload = parseJson(row.pacote) ?? {}
   const pacote = typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {}
   return {
@@ -251,7 +268,7 @@ export function mapAdhesion(
     email: row.email ?? '',
     phone: row.telefone || null,
     modality,
-    withoutManifestation: row.sem_manifestacao ? (WITHOUT_MANIFESTATION_MAP[row.sem_manifestacao] ?? null) : null,
+    withoutManifestation: row.sem_manifestacao ? (lookup(WITHOUT_MANIFESTATION_MAP, row.sem_manifestacao) ?? null) : null,
     wantsProposal: row.quer_proposta === 1,
     termVersion: row.versao_termo,
     termHash: row.resumo_termo,
@@ -260,7 +277,7 @@ export function mapAdhesion(
     forwardedChain: textField(pacote, 'cadeia'),
     userAgent: row.agente,
     payload,
-    status: ADHESION_STATUS_MAP[row.situacao] ?? 'received',
+    status,
     internalNote: row.nota_interna,
     handledById: row.tratado_por ? (context.userIds.get(row.tratado_por) ?? null) : null,
     handledAt: date(row.tratado_em),

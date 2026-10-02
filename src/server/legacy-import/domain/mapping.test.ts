@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AUDIT_ACTIONS } from '@/server/audit/domain/audit-entry'
-import { AUDIT_ACTION_MAP, assignProtocols, emptyRequiredFields, mapAdhesion, mapResponse, mapUser, requesterInQsaFrom, translateAuditAction, translateRole } from './mapping'
+import { AUDIT_ACTION_MAP, adhesionConflicts, assignProtocols, emptyRequiredFields, mapAdhesion, mapResponse, mapUser, requesterInQsaFrom, translateAuditAction, translateRole } from './mapping'
 import type { LegacyAdhesion } from './legacy-rows'
 
 describe('legacy mapping', () => {
@@ -69,12 +69,41 @@ describe('legacy mapping', () => {
       status: 'filed', internalNote: null, handledById: 'u-regina', handledAt: new Date('2026-09-26T12:00:00.000Z'),
     })
 
-    const orphan = { ...row, resposta_id: 99, token_convite: 'ORFAOXXXXX', cpf: null, cargo: null, cnpj: null, modalidade: 'padrao', sem_manifestacao: null, situacao: 'esquisita', tratado_por: 'fantasma', pacote: 'não é json' }
+    const orphan = { ...row, resposta_id: 99, token_convite: 'ORFAOXXXXX', cpf: null, cargo: null, cnpj: null, modalidade: 'padrao', sem_manifestacao: null, situacao: 'recebida', tratado_por: 'fantasma', pacote: 'não é json' }
     expect(mapAdhesion(orphan, context)).toMatchObject({
       responseId: null, invitationToken: null, cpf: '', representativeRole: '', cnpj: '', cnpjDigits: '', modality: 'standard',
       withoutManifestation: null, status: 'received', handledById: null, originSource: null, forwardedChain: null, payload: { raw: 'não é json' },
     })
     expect(emptyRequiredFields(orphan)).toEqual(['CNPJ', 'CPF', 'cargo'])
     expect(mapAdhesion({ ...row, modalidade: 'outra' }, context)).toBeNull()
+  })
+
+  it('names what in an adhesion has no equivalent or is not a date, so the import stops before writing', () => {
+    const row: LegacyAdhesion = {
+      id: 4, protocolo: 'ADS-1', resposta_id: null, token_convite: null, aceito_em: '2026-09-25 13:00:00', nome_empresa: 'Padaria', cnpj: null,
+      representante: 'Ana', cpf: null, cargo: null, email: null, telefone: null, modalidade: 'padrao', sem_manifestacao: null, quer_proposta: 0,
+      versao_termo: 'V4', resumo_termo: 'h', origem: null, agente: null, pacote: '{}', situacao: 'recebida', nota_interna: null, tratado_por: null, tratado_em: null,
+    }
+    const context = { protocol: 'ADS-1', invitationTokens: new Set<string>(), responseIds: new Set<number>(), userIds: new Map<string, string>() }
+    expect(adhesionConflicts(row)).toEqual([])
+    expect(adhesionConflicts({ ...row, sem_manifestacao: 'manter', tratado_em: '2026-09-26T12:00:00.000Z' })).toEqual([])
+    expect(adhesionConflicts({ ...row, aceito_em: 'ontem' })).toEqual(['aceite em ontem não é uma data'])
+    expect(adhesionConflicts({ ...row, tratado_em: '31/02/2026' })).toEqual(['tratada em 31/02/2026 não é uma data'])
+    expect(adhesionConflicts({ ...row, situacao: 'esquisita' })).toEqual(['situação esquisita sem equivalente'])
+    expect(adhesionConflicts({ ...row, situacao: 'constructor', sem_manifestacao: 'toString', modalidade: '__proto__' })).toEqual([
+      'modalidade __proto__ sem equivalente', 'situação constructor sem equivalente', 'sem manifestação toString sem equivalente',
+    ])
+    expect(mapAdhesion({ ...row, aceito_em: 'ontem' }, context)).toBeNull()
+    expect(mapAdhesion({ ...row, situacao: 'constructor' }, context)).toBeNull()
+  })
+
+  it('does not take inherited names for legacy values', () => {
+    expect(translateAuditAction('constructor')).toEqual({ action: 'legacy_imported', extra: { legacyAction: 'constructor' }, known: false })
+    const response = {
+      id: 1, protocolo: 'DS-1', token_convite: null, recebido_em: '2026-09-15T12:00:00.000Z', nome_empresa: null, cnpj: null, solicitante: null, email: null,
+      telefone: null, versao: null, saida: null, posicao: null, certeza: null, urgencia: null, confianca: null, solicitante_no_qsa: null,
+      pacote: '{}', situacao: 'constructor', nota_interna: null, tratado_por: null, tratado_em: null,
+    }
+    expect(mapResponse(response, { protocol: 'DS-1', invitationTokens: new Set(), userIds: new Map() }).status).toBe('new')
   })
 })

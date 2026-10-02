@@ -1,5 +1,5 @@
 import {
-  ADHESION_STATUS_MAP, WITHOUT_MANIFESTATION_MAP, assignProtocols, emptyRequiredFields, mapAdhesion, mapAuditEvent, mapInvitation,
+  adhesionConflicts, assignProtocols, emptyRequiredFields, mapAdhesion, mapAuditEvent, mapInvitation,
   mapResponse, mapUser, translateAuditAction, translateRole, type ImportedAdhesion, type ImportedResponse,
 } from '../domain/mapping'
 import type { ImportTarget } from '../ports/import-target'
@@ -91,9 +91,10 @@ export function makeImportLegacy({ source, target, newUserId, knownTermVersions 
         conflicts.push(`adesão ${row.id}: o protocolo ${protocol} já é da adesão ${owner}`)
         continue
       }
+      const unmappable = adhesionConflicts(row)
       const mapped = mapAdhesion(row, { protocol, invitationTokens: tokens, responseIds, userIds })
-      if (!mapped) {
-        conflicts.push(`adesão ${row.id}: modalidade ${row.modalidade} sem equivalente`)
+      if (unmappable.length || !mapped) {
+        conflicts.push(...unmappable.map((reason) => `adesão ${row.id}: ${reason}`))
         continue
       }
       if (protocol !== row.protocolo) notes.push(`adesão ${row.id}: protocolo ${row.protocolo} gravado como ${protocol}`)
@@ -102,8 +103,6 @@ export function makeImportLegacy({ source, target, newUserId, knownTermVersions 
       if (row.tratado_por && !userIds.has(row.tratado_por)) notes.push(`adesão ${row.id}: tratada por ${row.tratado_por}, que não existe; fica sem autor`)
       for (const field of emptyRequiredFields(row)) notes.push(`adesão ${row.id}: ${field} vazio no banco antigo; gravado em branco`)
       if (!knownTermVersions.has(row.versao_termo)) notes.push(`adesão ${row.id}: versão do termo ${row.versao_termo} não está no sistema; a via vai responder que o texto não existe`)
-      if (!ADHESION_STATUS_MAP[row.situacao]) notes.push(`adesão ${row.id}: situação ${row.situacao} sem equivalente; gravada como recebida`)
-      if (row.sem_manifestacao && !WITHOUT_MANIFESTATION_MAP[row.sem_manifestacao]) notes.push(`adesão ${row.id}: sem manifestação ${row.sem_manifestacao} sem equivalente; gravada em branco`)
       newAdhesions.push(mapped)
     }
 

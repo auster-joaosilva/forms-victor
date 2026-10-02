@@ -139,4 +139,26 @@ describe('importLegacy', () => {
     expect(memory.imported).toHaveLength(0)
     expect(memory.users).toHaveLength(0)
   })
+
+  it('stops on the dry run and on the real run, before writing any table, when an adhesion has a bad date or an unknown value', async () => {
+    const rows = [
+      adhesion(1, 'ADS-1', { aceito_em: 'ontem' }),
+      adhesion(2, 'ADS-2', { situacao: 'constructor' }),
+      adhesion(3, 'ADS-3', { sem_manifestacao: 'talvez', tratado_em: 'não sei' }),
+    ]
+    const expected = [
+      'adesão 1: aceite em ontem não é uma data',
+      'adesão 2: situação constructor sem equivalente',
+      'adesão 3: sem manifestação talvez sem equivalente',
+      'adesão 3: tratada em não sei não é uma data',
+    ]
+    for (const dryRun of [true, false]) {
+      const memory = memoryTarget()
+      const report = await makeImportLegacy({ source: source([response(1, 'DS-1')], rows), target: memory.target, newUserId: () => 'x', knownTermVersions: VERSIONS })({ dryRun })
+      expect(report.conflicts).toEqual(expected)
+      expect(report.adhesions).toMatchObject({ found: 3, imported: 0 })
+      expect([memory.users, memory.invitations, memory.imported, memory.audit, memory.imports].map((rows) => rows.length)).toEqual([0, 0, 0, 0, 0])
+      expect(memory.responses.size).toBe(0)
+    }
+  })
 })

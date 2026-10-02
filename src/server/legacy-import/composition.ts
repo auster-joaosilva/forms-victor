@@ -1,14 +1,12 @@
 import { termVersions } from '@/server/adhesion/composition'
-import { openLegacySource } from './adapters/node-sqlite-legacy-source'
+import { readLegacySnapshot } from './adapters/node-sqlite-legacy-source'
 import { prismaImportTarget } from './adapters/prisma-import-target'
 import { makeImportLegacy } from './application/import-legacy'
+import type { LegacySource } from './ports/legacy-source'
 
-export function legacyImporter(path: string) {
-  const source = openLegacySource(path)
-  return {
-    run: makeImportLegacy({ source, target: prismaImportTarget, newUserId: () => crypto.randomUUID(), knownTermVersions: new Set(termVersions) }),
-    close: () => source.close(),
-  }
-}
+const importerFor = (source: LegacySource) =>
+  makeImportLegacy({ source, target: prismaImportTarget, newUserId: () => crypto.randomUUID(), knownTermVersions: new Set(termVersions) })
+
+export const importLegacyFile = (path: string, options: { dryRun: boolean }) => importerFor(readLegacySnapshot(path))(options)
 
 export type { ImportReport } from './application/import-legacy'

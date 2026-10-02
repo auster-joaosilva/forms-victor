@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { ensureCapability, exportResponses } = vi.hoisted(() => ({ ensureCapability: vi.fn(), exportResponses: vi.fn() }))
-vi.mock('@/server/shared/http/session-middleware', () => ({ ensureCapability }))
+vi.mock('@/server/shared/http/route-capability', () => ({ ensureCapability }))
 vi.mock('@/server/diagnosis/composition', () => ({ responseBackoffice: { exportResponses } }))
 
 const { Route } = await import('./responses[.]csv')

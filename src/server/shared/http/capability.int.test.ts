@@ -7,7 +7,7 @@ vi.mock('@tanstack/react-start/server', () => ({ setCookie: () => undefined, get
 const { auth } = await import('@/server/shared/auth/auth')
 const { prisma } = await import('@/server/shared/prisma/client')
 const { betterAuthUserAccounts } = await import('@/server/identity/adapters/better-auth-user-accounts')
-const { ensureCapability } = await import('./session-middleware')
+const { ensureCapability } = await import('./route-capability')
 
 async function signedInRequest(username: string, password: string): Promise<Request> {
   const response = await auth.api.signInUsername({ body: { username, password }, asResponse: true })

@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { adhesionBackoffice } from '@/server/adhesion/composition'
 import { isAdhesionStatus, isModality } from '@/server/adhesion/domain/adhesion'
 import { csvAttachment } from '@/server/shared/http/csv-response'
-import { ensureCapability } from '@/server/shared/http/session-middleware'
+import { ensureCapability } from '@/server/shared/http/route-capability'
 
 // The /backoffice beforeLoad does not run for server handlers, so the capability is checked here.
 export const Route = createFileRoute('/backoffice/adhesions.csv')({

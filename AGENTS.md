@@ -121,15 +121,21 @@ docker compose exec postgres psql -U app -d forms_victor_dev -c "CREATE DATABASE
 ## Migração do portal antigo (SQLite → Postgres)
 
 Roda pela aba **Migração** do backoffice (só administrador), sem SSH. O app lê o `portal.db` do volume `dados` do
-compose "frontend", montado em `/legacy`, **só para leitura** e numa única transação: uma fotografia consistente
-mesmo com o portal antigo no ar. O arquivo nunca é copiado nem alterado.
+compose "frontend", montado em `/legacy` com `:ro`, numa única transação: uma fotografia consistente
+mesmo com o portal antigo no ar. O arquivo nunca é copiado nem alterado. Sem o `portal.db-wal` e o `portal.db-shm`
+ao lado (portal antigo parado, ou só o `portal.db` restaurado), o SQLite precisaria criar o `-shm` num diretório
+que o app não grava: a aba mostra "o portal antigo precisa estar no ar" e não importa.
 
 Os ids das respostas e das adesões antigas são preservados, e um id que já existe no banco novo com outro
 protocolo é **conflito**: qualquer conflito aborta a importação inteira, sem gravar nada. As adesões e as respostas
 de teste do hml (verificações à mão, ponta a ponta, quem testou) ocupam os ids 1, 2, 3… — os mesmos das antigas.
 
 - **Na virada:** importe **antes** de abrir o tráfego do app novo. Uma única resposta ou adesão recebida antes
-  ocupa um id e faz a importação recusar.
+  ocupa um id e faz a importação recusar. Corte o tráfego público do portal antigo, mas deixe o container dele
+  **no ar** durante a importação (ou confira que `portal.db-wal` e `portal.db-shm` existem no volume).
+- **Depois da virada:** tire do `dokploy-compose.yml` a montagem `legacy-data:/legacy:ro` e o bloco `volumes:` do
+  topo, e apague `LEGACY_VOLUME_NAME` do painel. Senão, quando o volume antigo for apagado, todo deploy falha com
+  "external volume not found".
 
 1. No painel do Dokploy, no compose do app (o "hml" no ensaio, o de produção na virada), defina `LEGACY_VOLUME_NAME`
    com o nome do volume `dados` do compose "frontend" e faça o deploy. `ALLOW_TEST_DATA_RESET=true` **só no hml**;

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type {
   AdhesionCompany,
   AdhesionReceipt,
@@ -73,6 +73,8 @@ export function useAdhesionForm({
   const [sending, setSending] = useState(false)
   const [receipt, setReceipt] = useState<AdhesionReceipt | null>(initialReceipt)
   const [link, setLink] = useState<string | null>(invitationToken)
+  // O botão só trava quando sending re-renderiza; o segundo clique de um duplo clique chega antes disso.
+  const inFlight = useRef(false)
 
   const setCompany = (field: keyof AdhesionCompany, value: string) =>
     setForm((current) => ({ ...current, empresa: { ...current.empresa, [field]: value } }))
@@ -114,6 +116,7 @@ export function useAdhesionForm({
   }
 
   async function submit() {
+    if (inFlight.current) return
     const found = clientErrors(form)
     setErrors(found)
     const first = CLIENT_FIELD_ORDER.find((field) => found[field])
@@ -123,6 +126,7 @@ export function useAdhesionForm({
       return
     }
     setSubmitError('')
+    inFlight.current = true
     setSending(true)
     try {
       const result = await api.submit({
@@ -143,6 +147,7 @@ export function useAdhesionForm({
     } catch {
       setSubmitError(sendFailure(SEND_FALLBACK))
     } finally {
+      inFlight.current = false
       setSending(false)
     }
   }

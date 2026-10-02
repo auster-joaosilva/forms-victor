@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
@@ -182,6 +182,24 @@ describe('AdhesionForm', () => {
       querProposta: false,
       declara: true,
     })
+    expect(await screen.findByText('recibo ADS-20261001-AB2CD')).toBeInTheDocument()
+  })
+
+  it('um duplo clique antes de o botão travar registra uma adesão só', async () => {
+    const user = userEvent.setup()
+    let release: () => void = () => undefined
+    const submit = vi.fn(() => new Promise<{ ok: true; receipt: typeof receipt }>((resolve) => (release = () => resolve({ ok: true, receipt }))))
+    render(<Harness api={fakeApi({ submit })} />)
+    await fillValid(user)
+    await user.click(screen.getByRole('radio', { name: /^Opção 1/ }))
+    await user.click(screen.getByRole('checkbox', { name: /Li o termo acima/ }))
+    const button = screen.getByRole('button', { name: 'Confirmar a opção' })
+    act(() => {
+      button.click()
+      button.click()
+    })
+    expect(submit).toHaveBeenCalledTimes(1)
+    await act(async () => release())
     expect(await screen.findByText('recibo ADS-20261001-AB2CD')).toBeInTheDocument()
   })
 

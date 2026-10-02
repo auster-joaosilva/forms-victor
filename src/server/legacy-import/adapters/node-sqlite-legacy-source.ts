@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import type { LegacyAdhesion, LegacyEvent, LegacyInvitation, LegacyResponse, LegacyUser } from '../domain/legacy-rows'
-import type { LegacySource } from '../ports/legacy-source'
+import type { LegacyDatabase, LegacySource } from '../ports/legacy-source'
 
 type Row = Record<string, unknown>
 
@@ -45,6 +45,12 @@ export function readLegacySnapshot(path: string): LegacySource {
     db.close()
   }
 }
+
+export const legacyDatabase = (path: string): LegacyDatabase => ({
+  path,
+  isAvailable: async () => canOpenReadOnly(path),
+  snapshot: async () => readLegacySnapshot(path),
+})
 
 function readAll(db: DatabaseSync) {
   const exists = (table: string) => db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table) !== undefined

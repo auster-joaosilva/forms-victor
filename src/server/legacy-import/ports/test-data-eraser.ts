@@ -1,4 +1,4 @@
-export interface ErasedTestData {
+export type ErasedTestData = {
   drafts: number
   adhesions: number
   responses: number

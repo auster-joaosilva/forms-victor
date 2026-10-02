@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
+import { NEEDS_LIVE_PORTAL, type LegacyAvailability } from '../domain/migration'
 import type { LegacyAdhesion, LegacyEvent, LegacyInvitation, LegacyResponse, LegacyUser } from '../domain/legacy-rows'
 import type { LegacyDatabase, LegacySource } from '../ports/legacy-source'
 
@@ -9,18 +10,24 @@ const text = (row: Row, key: string): string | null => (row[key] === null || row
 const required = (row: Row, key: string): string => text(row, key) ?? ''
 const integer = (row: Row, key: string): number => Number(row[key] ?? 0)
 
-export function canOpenReadOnly(path: string): boolean {
-  if (!existsSync(path)) return false
+// Sem o -wal/-shm (portal antigo parado), quem só lê um banco em WAL precisa criar o -shm, e o diretório do volume
+// não é do app: o SQLite recusa com READONLY_CANTINIT (1544) ou CANTOPEN (14).
+const NEEDS_SHM = new Set([1544, 14])
+
+export function probeReadOnly(path: string): LegacyAvailability {
+  if (!existsSync(path)) return { available: false }
   try {
     const db = new DatabaseSync(path, { readOnly: true })
     try {
       db.prepare('SELECT count(*) FROM sqlite_master').get()
-      return true
+      return { available: true }
     } finally {
       db.close()
     }
-  } catch {
-    return false
+  } catch (error) {
+    const errcode = (error as { errcode?: unknown }).errcode
+    if (typeof errcode === 'number' && NEEDS_SHM.has(errcode)) return { available: false, reason: NEEDS_LIVE_PORTAL }
+    return { available: false, reason: error instanceof Error ? error.message : String(error) }
   }
 }
 
@@ -48,7 +55,7 @@ export function readLegacySnapshot(path: string): LegacySource {
 
 export const legacyDatabase = (path: string): LegacyDatabase => ({
   path,
-  isAvailable: async () => canOpenReadOnly(path),
+  probe: async () => probeReadOnly(path),
   snapshot: async () => readLegacySnapshot(path),
 })
 

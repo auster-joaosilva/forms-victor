@@ -5,5 +5,5 @@ export type ErasedTestData = {
 }
 
 export interface TestDataEraser {
-  eraseTestData(): Promise<ErasedTestData>
+  eraseTestData(actor: { id: string; username: string }): Promise<ErasedTestData>
 }

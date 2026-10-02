@@ -1,5 +1,4 @@
 import { termVersions } from '@/server/adhesion/composition'
-import { recordAudit } from '@/server/audit/composition'
 import { getEnv } from '@/server/shared/env'
 import { legacyDatabase, readLegacySnapshot } from './adapters/node-sqlite-legacy-source'
 import { prismaImportTarget } from './adapters/prisma-import-target'
@@ -18,7 +17,6 @@ const manageMigration = makeManageMigration({
   legacy: legacyDatabase(env.LEGACY_DB_PATH),
   runImport: (source, options) => importerFor(source)(options),
   eraser: prismaTestDataEraser,
-  recordAudit,
   allowReset: env.ALLOW_TEST_DATA_RESET,
 })
 

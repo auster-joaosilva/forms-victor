@@ -1,5 +1,9 @@
 export const RESET_CONFIRMATION = 'APAGAR'
 
+export const NEEDS_LIVE_PORTAL = 'o portal antigo precisa estar no ar (o SQLite cria o portal.db-shm); suba o container antigo e recarregue'
+
+export type LegacyAvailability = { available: boolean; reason?: string }
+
 export type MigrationErrorReason = 'forbidden' | 'unavailable' | 'busy' | 'reset_disabled' | 'reset_unconfirmed'
 
 const MESSAGES: Record<Exclude<MigrationErrorReason, 'unavailable'>, string> = {
@@ -12,8 +16,12 @@ const MESSAGES: Record<Exclude<MigrationErrorReason, 'unavailable'>, string> = {
 export class MigrationError extends Error {
   constructor(
     readonly reason: MigrationErrorReason,
-    path = '',
+    unavailable?: { path: string; cause?: string },
   ) {
-    super(reason === 'unavailable' ? `o banco do portal antigo não está disponível em ${path}` : MESSAGES[reason])
+    super(
+      reason === 'unavailable'
+        ? `o banco do portal antigo não está disponível em ${unavailable?.path ?? ''}${unavailable?.cause ? `: ${unavailable.cause}` : ''}`
+        : MESSAGES[reason],
+    )
   }
 }

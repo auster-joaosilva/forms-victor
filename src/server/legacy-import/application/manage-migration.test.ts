@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import type { LegacySource } from '../ports/legacy-source'
-import type { ErasedTestData } from '../ports/test-data-eraser'
 import type { ImportReport } from './import-legacy'
 import { makeManageMigration } from './manage-migration'
 
@@ -12,15 +11,14 @@ const report = (dryRun: boolean, conflicts: string[] = []): ImportReport => ({
 })
 const emptySource: LegacySource = { users: async () => [], invitations: async () => [], responses: async () => [], adhesions: async () => [], events: async () => [] }
 
-function setup({ available = true, conflicts = [] as string[], allowReset = false } = {}) {
+function setup({ available = true, reason = undefined as string | undefined, conflicts = [] as string[], allowReset = false } = {}) {
   const runs: { dryRun: boolean; actor?: { id: string; username: string } }[] = []
   const snapshots: LegacySource[] = []
-  const audit: { action: string; actorId: string; actorUsername: string; detail: ErasedTestData }[] = []
-  let erased = 0
+  const erasedBy: { id: string; username: string }[] = []
   const migration = makeManageMigration({
     legacy: {
       path: '/legacy/portal.db',
-      isAvailable: async () => available,
+      probe: async () => (available ? { available } : { available, reason }),
       snapshot: async () => {
         const source = { ...emptySource }
         snapshots.push(source)
@@ -32,17 +30,24 @@ function setup({ available = true, conflicts = [] as string[], allowReset = fals
       runs.push(options)
       return report(options.dryRun, conflicts)
     },
-    eraser: { eraseTestData: async () => (erased++, { drafts: 2, adhesions: 3, responses: 4 }) },
-    recordAudit: async (entry) => void audit.push(entry),
+    eraser: { eraseTestData: async (actor) => (erasedBy.push(actor), { drafts: 2, adhesions: 3, responses: 4 }) },
     allowReset,
   })
-  return { migration, runs, snapshots, audit, erased: () => erased }
+  return { migration, runs, snapshots, erasedBy }
 }
 
 describe('manage migration', () => {
   it('tells where the old database is expected and whether it opens', async () => {
-    expect(await setup().migration.legacyStatus()).toEqual({ available: true, path: '/legacy/portal.db', resetAllowed: false })
-    expect(await setup({ available: false, allowReset: true }).migration.legacyStatus()).toEqual({ available: false, path: '/legacy/portal.db', resetAllowed: true })
+    expect(await setup().migration.legacyStatus(admin)).toEqual({ available: true, path: '/legacy/portal.db', resetAllowed: false })
+    expect(await setup({ available: false, allowReset: true }).migration.legacyStatus(admin)).toEqual({ available: false, path: '/legacy/portal.db', resetAllowed: true })
+    expect(await setup({ available: false, reason: 'file is not a database' }).migration.legacyStatus(admin)).toEqual({
+      available: false, reason: 'file is not a database', path: '/legacy/portal.db', resetAllowed: false,
+    })
+  })
+
+  it('says why the database does not open when it refuses to read it', async () => {
+    const { migration } = setup({ available: false, reason: 'file is not a database' })
+    await expect(migration.simulate(admin)).rejects.toThrow('o banco do portal antigo não está disponível em /legacy/portal.db: file is not a database')
   })
 
   it('refuses to simulate or import without the database, and reads nothing', async () => {
@@ -71,13 +76,14 @@ describe('manage migration', () => {
     expect(snapshots).toHaveLength(1)
   })
 
-  it('only lets an administrator simulate, import or reset', async () => {
-    const { migration, runs, erased } = setup({ allowReset: true })
+  it('only lets an administrator see the status, simulate, import or reset', async () => {
+    const { migration, runs, erasedBy } = setup({ allowReset: true })
+    await expect(migration.legacyStatus(operator)).rejects.toThrow('só administrador')
     await expect(migration.simulate(operator)).rejects.toThrow('só administrador')
     await expect(migration.importNow(operator)).rejects.toThrow('só administrador')
     await expect(migration.resetTestData(operator, 'APAGAR')).rejects.toThrow('só administrador')
     expect(runs).toEqual([])
-    expect(erased()).toBe(0)
+    expect(erasedBy).toEqual([])
   })
 
   it('runs one migration at a time', async () => {
@@ -89,24 +95,22 @@ describe('manage migration', () => {
   })
 
   it('refuses the reset when the environment does not allow it', async () => {
-    const { migration, audit, erased } = setup({ allowReset: false })
+    const { migration, erasedBy } = setup({ allowReset: false })
     await expect(migration.resetTestData(admin, 'APAGAR')).rejects.toThrow('apagar dados de teste está desligado neste ambiente')
-    expect(erased()).toBe(0)
-    expect(audit).toEqual([])
+    expect(erasedBy).toEqual([])
   })
 
   it('refuses the reset without the exact confirmation', async () => {
-    const { migration, audit, erased } = setup({ allowReset: true })
+    const { migration, erasedBy } = setup({ allowReset: true })
     for (const confirmation of ['', 'apagar', 'APAGAR ', 'SIM']) {
       await expect(migration.resetTestData(admin, confirmation)).rejects.toThrow('digite APAGAR para confirmar')
     }
-    expect(erased()).toBe(0)
-    expect(audit).toEqual([])
+    expect(erasedBy).toEqual([])
   })
 
-  it('erases the test data and audits the counts', async () => {
-    const { migration, audit } = setup({ allowReset: true })
+  it('erases the test data on behalf of the actor, who goes into the audit of the same transaction', async () => {
+    const { migration, erasedBy } = setup({ allowReset: true })
     expect(await migration.resetTestData(admin, 'APAGAR')).toEqual({ drafts: 2, adhesions: 3, responses: 4 })
-    expect(audit).toEqual([{ action: 'test_data_reset', actorId: 'v1', actorUsername: 'victor', detail: { drafts: 2, adhesions: 3, responses: 4 } }])
+    expect(erasedBy).toEqual([{ id: 'v1', username: 'victor' }])
   })
 })

@@ -6,7 +6,7 @@ import {
 import { requireCapability } from '@/server/shared/http/session-middleware'
 
 export type { ErasedTestData, ImportReport, TableReport } from '@/server/legacy-import/composition'
-export type MigrationStatus = { available: boolean; path: string; resetAllowed: boolean }
+export type MigrationStatus = { available: boolean; reason?: string; path: string; resetAllowed: boolean }
 export type ReportOutcome = { ok: true; report: ImportReport } | { ok: false; message: string }
 export type ResetOutcome = { ok: true; erased: ErasedTestData } | { ok: false; message: string }
 
@@ -17,7 +17,7 @@ const refusal = (error: unknown): { ok: false; message: string } => {
 
 export const migrationStatusFn = createServerFn({ method: 'GET' })
   .middleware([requireCapability('manage_users')])
-  .handler((): Promise<MigrationStatus> => legacyStatus())
+  .handler(({ context }): Promise<MigrationStatus> => legacyStatus(context.session.user))
 
 export const simulateMigrationFn = createServerFn({ method: 'POST' })
   .middleware([requireCapability('manage_users')])

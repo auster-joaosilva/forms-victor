@@ -1,3 +1,4 @@
+import type { LegacyAvailability } from '../domain/migration'
 import type { LegacyAdhesion, LegacyEvent, LegacyInvitation, LegacyResponse, LegacyUser } from '../domain/legacy-rows'
 
 export interface LegacySource {
@@ -10,6 +11,6 @@ export interface LegacySource {
 
 export interface LegacyDatabase {
   path: string
-  isAvailable(): Promise<boolean>
+  probe(): Promise<LegacyAvailability>
   snapshot(): Promise<LegacySource>
 }

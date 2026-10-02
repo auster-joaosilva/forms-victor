@@ -2,12 +2,15 @@ import { prisma } from '@/server/shared/prisma/client'
 import type { TestDataEraser } from '../ports/test-data-eraser'
 
 export const prismaTestDataEraser: TestDataEraser = {
-  eraseTestData: () =>
+  eraseTestData: (actor) =>
     prisma.$transaction(async (tx) => {
       // Os rascunhos saem junto para nenhum navegador de teste retomar um preenchimento que perdeu a resposta.
       const drafts = await tx.diagnosisDraft.deleteMany({})
       const adhesions = await tx.adhesion.deleteMany({})
       const responses = await tx.response.deleteMany({})
-      return { drafts: drafts.count, adhesions: adhesions.count, responses: responses.count }
+      const erased = { drafts: drafts.count, adhesions: adhesions.count, responses: responses.count }
+      // Na mesma transação: nada é apagado sem ficar a linha na Auditoria.
+      await tx.auditLog.create({ data: { action: 'test_data_reset', actorId: actor.id, actorUsername: actor.username, detail: erased } })
+      return erased
     }),
 }

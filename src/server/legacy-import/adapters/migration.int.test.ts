@@ -3,7 +3,6 @@ import { rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
-import { recordAudit } from '@/server/audit/composition'
 import { prisma } from '@/server/shared/prisma/client'
 import { resetDatabase } from '../../../../tests/integration/db'
 import { buildLegacyDatabase } from '../../../../tests/integration/legacy-portal'
@@ -20,7 +19,6 @@ const migration = makeManageMigration({
   legacy: legacyDatabase(path),
   runImport: (source, options) => makeImportLegacy({ source, target: prismaImportTarget, newUserId: () => randomUUID(), knownTermVersions: new Set(['V4', 'V5']) })(options),
   eraser: prismaTestDataEraser,
-  recordAudit,
   allowReset: true,
 })
 
@@ -38,9 +36,9 @@ describe('migration from the backoffice', () => {
   afterAll(() => rmSync(path, { force: true }))
 
   it('says the database is missing until the file is there', async () => {
-    expect(await migration.legacyStatus()).toEqual({ available: false, path, resetAllowed: true })
+    expect(await migration.legacyStatus(admin)).toEqual({ available: false, path, resetAllowed: true })
     buildLegacyDatabase(path)
-    expect(await migration.legacyStatus()).toMatchObject({ available: true })
+    expect(await migration.legacyStatus(admin)).toMatchObject({ available: true })
   })
 
   it('refuses to import over the hml test data, then imports once they are erased, on behalf of the actor', async () => {

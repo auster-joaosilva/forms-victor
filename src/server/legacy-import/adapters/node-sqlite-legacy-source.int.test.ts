@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildLegacyDatabase } from '../../../../tests/integration/legacy-portal'
-import { canOpenReadOnly, readLegacySnapshot } from './node-sqlite-legacy-source'
+import { legacyDatabase, probeReadOnly, readLegacySnapshot } from './node-sqlite-legacy-source'
 
 const paths: string[] = []
 const newPath = () => {
@@ -89,13 +89,37 @@ describe('legacy SQLite source', () => {
 
   it('tells whether the file exists and opens as a SQLite database, without creating it', () => {
     const missing = newPath()
-    expect(canOpenReadOnly(missing)).toBe(false)
+    expect(probeReadOnly(missing)).toEqual({ available: false })
     expect(existsSync(missing)).toBe(false)
     const garbage = newPath()
     writeFileSync(garbage, 'não é um banco')
-    expect(canOpenReadOnly(garbage)).toBe(false)
+    expect(probeReadOnly(garbage)).toEqual({ available: false, reason: 'file is not a database' })
     const path = newPath()
     buildLegacyDatabase(path)
-    expect(canOpenReadOnly(path)).toBe(true)
+    expect(probeReadOnly(path)).toEqual({ available: true })
+  })
+
+  // Reproduz o volume do portal antigo: diretório que o app não grava e um banco em WAL fechado sem o -shm.
+  it.skipIf(process.getuid?.() === 0)('says the old portal must be running when SQLite cannot create the -shm', async () => {
+    const dir = join(tmpdir(), `legacy-${randomUUID()}`)
+    mkdirSync(dir)
+    const path = join(dir, 'portal.db')
+    buildLegacyDatabase(path)
+    const portal = new DatabaseSync(path)
+    portal.exec('PRAGMA journal_mode = WAL')
+    portal.close()
+    chmodSync(dir, 0o555)
+    try {
+      expect(existsSync(`${path}-shm`)).toBe(false)
+      expect(probeReadOnly(path)).toEqual({
+        available: false,
+        reason: 'o portal antigo precisa estar no ar (o SQLite cria o portal.db-shm); suba o container antigo e recarregue',
+      })
+      const db = legacyDatabase(path)
+      expect(await db.probe()).toMatchObject({ available: false })
+    } finally {
+      chmodSync(dir, 0o755)
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

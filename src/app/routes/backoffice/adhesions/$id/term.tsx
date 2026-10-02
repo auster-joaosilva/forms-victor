@@ -4,9 +4,13 @@ import { TermDocument } from '@/features/adhesion/components/term-document'
 import { getAdhesionTermFn } from '@/features/backoffice-adhesions/api/adhesions'
 import { printWhenReady } from '@/lib/print'
 import { termFileName } from '@/server/adhesion/domain/labels'
+import { ROLE_CANNOT_REACH } from '@/server/shared/http/access-messages'
 
 export const Route = createFileRoute('/backoffice/adhesions/$id/term')({
-  loader: async ({ params }) => {
+  // O papel sem a via recebe a recusa aqui, sem chamar o servidor: a recusa da server function viraria 500 no SSR.
+  beforeLoad: ({ context }) => ({ canReprint: context.user.capabilities.includes('reprint_term') }),
+  loader: async ({ params, context }) => {
+    if (!context.canReprint) return { ok: false as const, reason: 'forbidden' as const, message: ROLE_CANNOT_REACH }
     const id = Number(params.id)
     if (!Number.isInteger(id) || id < 1) throw notFound()
     const copy = await getAdhesionTermFn({ data: { id } })
@@ -21,9 +25,9 @@ export const Route = createFileRoute('/backoffice/adhesions/$id/term')({
       <div className="dx-card">Adesão não encontrada.</div>
     </main>
   ),
-  errorComponent: ({ error }) => (
+  errorComponent: () => (
     <main className="dx">
-      <div className="dx-card">{error instanceof Error ? error.message : String(error)}</div>
+      <div className="dx-card">Não foi possível abrir a via do termo.</div>
     </main>
   ),
   component: AdhesionTerm,

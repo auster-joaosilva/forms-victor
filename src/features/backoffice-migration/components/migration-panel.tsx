@@ -11,14 +11,16 @@ export function MigrationPanel() {
   const [notice, setNotice] = useState<string | null>(null)
   const status = useQuery({ queryKey: ['migration-status'], queryFn: () => migrationStatusFn() })
 
-  const unreachable = (failure: Error) => setError(`Não deu para falar com o servidor: ${failure.message}`)
+  // O fetch rejeita com TypeError quando não chega ao servidor; o resto é erro que o servidor devolveu.
+  const failed = (failure: Error) =>
+    setError(failure instanceof TypeError ? `Não deu para falar com o servidor: ${failure.message}` : `A operação falhou: ${failure.message}`)
   const showReport = (result: ReportOutcome) => {
     setNotice(null)
     setError(result.ok ? null : result.message)
     if (result.ok) setReport(result.report)
   }
-  const simulate = useMutation({ mutationFn: () => simulateMigrationFn(), onSuccess: showReport, onError: unreachable })
-  const importNow = useMutation({ mutationFn: () => importMigrationFn(), onSuccess: showReport, onError: unreachable })
+  const simulate = useMutation({ mutationFn: () => simulateMigrationFn(), onSuccess: showReport, onError: failed })
+  const importNow = useMutation({ mutationFn: () => importMigrationFn(), onSuccess: showReport, onError: failed })
   const reset = useMutation({
     mutationFn: (confirmation: string) => resetTestDataFn({ data: { confirmation } }),
     onSuccess: (result) => {
@@ -29,7 +31,7 @@ export function MigrationPanel() {
       const { drafts, adhesions, responses } = result.erased
       setNotice(`Apagados: ${drafts} rascunhos, ${adhesions} adesões e ${responses} respostas. Simule de novo antes de importar.`)
     },
-    onError: unreachable,
+    onError: failed,
   })
 
   if (status.isPending) return <>carregando…</>

@@ -84,6 +84,25 @@ describe('MigrationPanel', () => {
     expect(screen.getByRole('button', { name: 'Simular' })).toBeDisabled()
   })
 
+  it('shows why the database does not open instead of saying it is missing', async () => {
+    const reason = 'o portal antigo precisa estar no ar (o SQLite cria o portal.db-shm); suba o container antigo e recarregue'
+    migrationStatusFn.mockResolvedValue({ ...status, available: false, reason })
+    renderPanel()
+    expect(await screen.findByText(reason)).toBeInTheDocument()
+    expect(screen.queryByText('não encontrado')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Simular' })).toBeDisabled()
+  })
+
+  it('tells a failure of the server apart from a failure to reach it', async () => {
+    migrationStatusFn.mockResolvedValue(status)
+    simulateMigrationFn.mockRejectedValueOnce(new Error('database is locked')).mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    renderPanel()
+    await userEvent.click(await screen.findByRole('button', { name: 'Simular' }))
+    expect(await screen.findByText('A operação falhou: database is locked')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Simular' }))
+    expect(await screen.findByText('Não deu para falar com o servidor: Failed to fetch')).toBeInTheDocument()
+  })
+
   it('shows the message when the server refuses', async () => {
     migrationStatusFn.mockResolvedValue(status)
     simulateMigrationFn.mockResolvedValue({ ok: false, message: 'já há uma operação de migração em andamento; espere ela terminar' })

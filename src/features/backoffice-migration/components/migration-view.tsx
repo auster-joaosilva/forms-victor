@@ -78,9 +78,10 @@ export function MigrationView({ status, report, error, notice, pending, onSimula
         conflito faz a importação recusar sem gravar nada. Na virada, importe antes de abrir o tráfego.
       </p>
       <p className="bo-note" style={{ margin: '0 0 18px' }}>
-        Banco: <code>{status.path}</code> — <b>{status.available ? 'disponível' : 'não encontrado'}</b>
-        {status.available ? null : '. Monte o volume do portal antigo no app (LEGACY_VOLUME_NAME no painel) e recarregue.'}
+        Banco: <code>{status.path}</code> — <b>{status.available ? 'disponível' : status.reason ? 'não abre' : 'não encontrado'}</b>
+        {status.available || status.reason ? null : '. Monte o volume do portal antigo no app (LEGACY_VOLUME_NAME no painel) e recarregue.'}
       </p>
+      {status.reason ? <div className="bo-alert">{status.reason}</div> : null}
       <div className="bo-filters">
         <button type="button" className="bo-button" disabled={pending || !status.available} onClick={onSimulate}>
           Simular

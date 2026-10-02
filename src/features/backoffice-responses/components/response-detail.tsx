@@ -1,5 +1,5 @@
 import { Fragment, useState, type ElementType, type ReactNode } from 'react'
-import { formatShortDateTime } from '@/server/diagnosis/domain/dates'
+import { formatShortDateTime } from '@/server/shared/domain/dates'
 import { RESPONSE_STATUSES, RESPONSE_STATUS_LABELS, type ResponseStatus } from '@/server/diagnosis/domain/response-status'
 import type { DetailValue } from '@/server/diagnosis/domain/stored-payload'
 import type { ResponseDetail as Detail } from '../api/responses'

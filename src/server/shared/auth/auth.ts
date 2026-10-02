@@ -41,7 +41,7 @@ export const auth = betterAuth({
   },
   plugins: [
     username({ minUsernameLength: 3, maxUsernameLength: 32, usernameValidator: (value) => USERNAME_RULE.test(value) }),
-    admin({ defaultRole: 'team', adminRoles: ['admin'] }),
+    admin({ defaultRole: 'operator', adminRoles: ['admin'] }),
     tanstackStartCookies(),
   ],
   hooks: {

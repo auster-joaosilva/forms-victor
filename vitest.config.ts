@@ -9,7 +9,7 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: 'unit', include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'], exclude: ['**/*.int.test.ts'] },
+        test: { name: 'unit', include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'tests/architecture/**/*.test.ts'], exclude: ['**/*.int.test.ts'] },
       },
       {
         extends: true,

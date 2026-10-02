@@ -20,7 +20,7 @@ Leitura: `git show origin/main:<arquivo>` (`src/termo.js`, `src/motor.js`, `src/
 | A3 | **Conteúdo fiel à `main`.** Termo, faixas de prazo, mensagens de tela e de servidor, rótulos e colunas do CSV ficam como na `main`, inclusive a validação mais frouxa do servidor (telefone opcional, sem dígito verificador). As sobras de "20/11" no V5 também ficam (seção 9). |
 | A4 | **Duas correções de comportamento.** (a) O recibo sobrevive ao F5, por cookie com um token aleatório. (b) O vínculo com o diagnóstico usa a resposta mais recente com o mesmo `cnpjDigits`, no lugar do `LIKE` do antigo. |
 | A5 | **O termo é prova.** `TERM_V4` não muda. `TERM_V5` entra palavra por palavra e na mesma ordem de chaves da `main`. Hashes: V4 `94667b1747b65c3e177416ee98e63a79b10599c1a5240b3a0836c094c0788441`, V5 `27bfd24bb5f55bf12b0dd3935769cb51bf434f6a63c515aed1e5254399f8f004`. A via sai sempre com o texto da versão aceita. |
-| A6 | **Capacidade por função.** A tabela de `papeis.mjs` vira `server/identity/domain/permissions.ts`. O backoffice só obtém a sessão por `requireCapability(cap)`. Um teste de cobertura falha se uma server function ou rota CSV do backoffice não declarar a capacidade. |
+| A6 | **Capacidade por função.** A tabela de `papeis.mjs` vira `server/shared/domain/permissions.ts`. O backoffice só obtém a sessão por `requireCapability(cap)`. Um teste de cobertura falha se uma server function ou rota CSV do backoffice não declarar a capacidade. |
 | A7 | **Aba Adesões: porte fiel + quem tratou.** É a aba antiga, mais "tratado por fulano em data" na lista e o CSV com a proteção contra fórmula do CSV de respostas. Sem ficha e sem nota. |
 | A8 | **Protocolo `ADS-AAAAMMDD-XXXXX` com a data de Brasília**, como o `DS-` da Etapa 1. O antigo usava UTC. |
 | A9 | **Sem rate limit e sem trava de duplicata no envio**, como no antigo, que deixou `/api/adesao` fora de propósito. Cada confirmação é uma adesão nova, com protocolo novo. |
@@ -43,7 +43,7 @@ Leitura: `git show origin/main:<arquivo>` (`src/termo.js`, `src/motor.js`, `src/
 
 ## 2. Papéis e permissões
 
-`server/identity/domain/permissions.ts`, puro:
+`server/shared/domain/permissions.ts`, puro (em `shared/domain` porque `server/shared/http` só importa dali; `identity/domain/user.ts` reexporta o `Role`):
 
 | Papel (`role`) | Rótulo | Capacidades |
 |---|---|---|

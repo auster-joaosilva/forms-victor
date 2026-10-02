@@ -21,24 +21,37 @@ const sent = { status: 'sent' as const, protocol: 'DS-260915-AB12', result: view
 const draw = (view: ResultView, submission: SubmissionState = sent, onDownload = () => undefined) =>
   render(<ResultScreen view={view} submission={submission} onRetry={() => undefined} onReview={() => undefined} onDownload={onDownload} />)
 
+function eachDrawnText(check: (text: string) => void) {
+  for (const view of views.slice(0, 200)) {
+    const { container, unmount } = draw(view)
+    check(container.textContent ?? '')
+    unmount()
+  }
+}
+
 describe('ResultScreen', () => {
-  it('shows the November protection on hybrid decisions', () => {
+  it('shows both ends of the withdrawal window on hybrid decisions', () => {
     const hybrid = views.find((view) => view.decision.family === 'hibrido')
     if (!hybrid) throw new Error('a amostra não gerou decisão híbrida')
     draw(hybrid)
-    expect(screen.getByText('Setembro não volta; novembro ainda dá.')).toBeInTheDocument()
-    expect(document.body.textContent).toContain('30 de novembro de 2026')
+    expect(screen.getByText('Outubro não volta; a janela de cancelamento ainda dá.')).toBeInTheDocument()
+    expect(document.body.textContent).toContain('entre 3 de novembro e 20 de dezembro de 2026')
   })
 
   it('never shows undefined, NaN, null or an economic merit claim, and dropped WhatsApp and the engine panel', { timeout: 20_000 }, () => {
-    for (const view of views.slice(0, 200)) {
-      const { container, unmount } = draw(view)
-      const text = container.textContent ?? ''
+    eachDrawnText((text) => {
       expect(text).not.toMatch(/\b(undefined|NaN|null)\b/)
       expect(affirmsMerit(text)).toBeNull()
       expect(text).not.toMatch(/WhatsApp|dados do motor/)
-      unmount()
-    }
+    })
+  })
+
+  it('never promises a revoked deadline', { timeout: 20_000 }, () => {
+    eachDrawnText((text) => {
+      expect(text).not.toMatch(/at[ée]\s+30 de (setembro|novembro)/)
+      expect(text).not.toContain('30/09/2026')
+      expect(text).not.toContain('30/11/2026')
+    })
   })
 
   it('keeps the three cautions and the two closing buttons', async () => {

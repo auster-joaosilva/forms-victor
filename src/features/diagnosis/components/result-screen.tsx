@@ -74,10 +74,10 @@ function Decision({ decision }: { decision: ResultView['decision'] }) {
       {decision.detail ? <p className="dx-decision-detail">{decision.detail}</p> : null}
       {decision.showWithdrawalNotice ? (
         <p className="dx-decision-notice">
-          <b>Setembro não volta; novembro ainda dá.</b> São duas coisas diferentes, e o sistema as chama por nomes diferentes: <b>cancelar</b> é desfazer a solicitação até{' '}
-          <b>30 de novembro de 2026</b>, antes de qualquer efeito, como se nunca tivesse sido feita; <b>renunciar</b> é sair depois que ela já vale, e isso só acontece nas
-          janelas semestrais de março e setembro. Já o prazo para pedir encerra em 30 de setembro e não se recupera — a janela seguinte tem efeito só no 2º semestre de
-          2027.{' '}
+          <b>Outubro não volta; a janela de cancelamento ainda dá.</b> São duas coisas diferentes, e o sistema as chama por nomes diferentes: <b>cancelar</b> é desfazer a
+          solicitação <b>entre 3 de novembro e 20 de dezembro de 2026</b>, antes de qualquer efeito, como se nunca tivesse sido feita — e fora dessa janela não dá, nem antes
+          nem depois; <b>renunciar</b> é sair depois que ela já vale, e isso só acontece nas janelas semestrais de março e setembro. Já o prazo para pedir encerra em 30 de
+          outubro e não se recupera — a janela seguinte tem efeito só no 2º semestre de 2027.{' '}
           <span className="dx-decision-source">
             LC 123/2006, art. 13, §§ 9º e 10 (LC 227/2026); Manual da Opção pelo Regime Regular do IBS e da CBS, item 4.2 (CGSN, 01/09/2026).
           </span>
@@ -138,7 +138,7 @@ export function ResultScreen({
           <div className="dx-mini-label">Janela legal</div>
           <div className="dx-mini-value is-large">{view.windowText}</div>
           <div className="dx-mini-note">
-            Até <b>30 de setembro de 2026</b>, em dias de calendário. É o único prazo que a lei fixa aqui — e o único que não volta.
+            Até <b>30 de outubro de 2026</b>, em dias de calendário. É o único prazo que a lei fixa aqui — e o único que não volta.
           </div>
         </div>
         <div className="dx-mini">
@@ -185,7 +185,7 @@ export function ResultScreen({
         <h2>O que fazer na sua empresa</h2>
         {plan.clientNow.length ? (
           <>
-            <h3>Antes de 30 de setembro</h3>
+            <h3>Antes de 30 de outubro</h3>
             {plan.clientNow.map((item) => (
               <ClientAction key={item.id} item={item} />
             ))}
@@ -214,7 +214,7 @@ export function ResultScreen({
             <AusterAction key={item.id} item={item} />
           ))}
           <div className="dx-fit">
-            <div className="dx-fit-title">Quer tratar a Reforma além da escolha de setembro?</div>
+            <div className="dx-fit-title">Quer tratar a Reforma além da escolha de outubro?</div>
             <p>
               A decisão do Simples é uma peça. A Avaliação Prévia da Reforma Tributária olha a empresa inteira — cadeia, preço, margem, estrutura societária — e é a partir
               dela que marcamos a reunião com a consultoria.
@@ -234,10 +234,11 @@ export function ResultScreen({
         <div className="dx-caution is-strong">
           <div className="dx-caution-number">1</div>
           <div>
-            <div className="dx-caution-title">A opção do híbrido pode ser cancelada até 30 de novembro de 2026.</div>
+            <div className="dx-caution-title">A opção do híbrido pode ser cancelada entre 3 de novembro e 20 de dezembro de 2026.</div>
             <div className="dx-caution-text">
-              Pedida em setembro, ela produz efeito a partir de 1º de janeiro de 2027. Até 30 de novembro a solicitação pode ser <b>cancelada</b>, sem consequência nenhuma,
-              porque nada começou a valer. Depois dessa data só cabe <b>renunciar</b> ao regime regular, e a renúncia só acontece nas janelas semestrais de março e setembro.
+              Pedida em outubro, ela produz efeito a partir de 1º de janeiro de 2027. Dentro dessa janela a solicitação pode ser <b>cancelada</b>, sem consequência nenhuma,
+              porque nada começou a valer — e só dentro dela: antes de 3 de novembro o serviço não está disponível. Depois dessa data só cabe <b>renunciar</b> ao regime
+              regular, e a renúncia só acontece nas janelas semestrais de março e setembro.
               Quem chegar a receber ressarcimento de crédito fica impedido de voltar ao recolhimento unificado no ano corrente e no seguinte.{' '}
               <span className="dx-caution-source">
                 LC 123/2006, art. 13, §§ 9º e 10 (LC 227/2026); Manual da Opção pelo Regime Regular do IBS e da CBS, item 4.2 (CGSN, 01/09/2026); LC 214/2025, art. 41, §

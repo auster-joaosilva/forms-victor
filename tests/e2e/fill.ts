@@ -1,6 +1,8 @@
 import { expect, type Page } from '@playwright/test'
 
-export const E2E_ADMIN = { username: 'e2e-admin', password: 'senha-local-do-e2e-1' }
+import { E2E_ADMIN } from './users'
+
+export { E2E_ADMIN, E2E_OPERATOR, E2E_REGULARIZATION } from './users'
 
 const TEXT: Record<string, string> = {
   cnpj: '12.ABC.345/01DE-35',
@@ -96,10 +98,11 @@ export async function changePhoneAndResubmit(page: Page, phone: string) {
   await expect(page.getByText('Respostas enviadas automaticamente.')).toBeVisible()
 }
 
-export async function login(page: Page) {
+export async function login(page: Page, user: { username: string; password: string } = E2E_ADMIN) {
+  await useOwnAddress(page)
   await page.goto('/login')
-  await page.getByLabel('Usuário').fill(E2E_ADMIN.username)
-  await page.getByLabel('Senha').fill(E2E_ADMIN.password)
+  await page.getByLabel('Usuário').fill(user.username)
+  await page.getByLabel('Senha').fill(user.password)
   await page.getByRole('button', { name: 'Entrar' }).click()
   await page.waitForURL(/\/backoffice/)
 }

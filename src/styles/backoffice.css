@@ -53,6 +53,14 @@
 .bo-badge[data-level="ALTA"]{background:#fdeceb;color:var(--color-auster-high)}
 .bo-badge[data-level="MÉDIA"]{background:#fdf4e3;color:var(--color-auster-medium)}
 .bo-badge[data-level="BAIXA"]{background:#eaf5ee;color:var(--color-auster-low)}
+.bo-badge[data-status="received"]{background:#fdf4e3;color:#7a5200}
+.bo-badge[data-status="filed"]{background:#eaf5ee;color:#1f5c3b}
+.bo-badge[data-status="cancelled"]{background:#f1f1f1;color:#5b6b78}
+.bo-badge[data-flag="proposal"]{background:#fdf4e3;color:#7a5200}
+.bo-deadline{background:#fdf4e3;border:1px solid #e3d3ab;border-left:4px solid var(--color-auster-medium);
+  border-radius:9px;padding:14px 16px;margin-bottom:16px}
+.bo td.bo-actions{white-space:nowrap}
+.bo td.bo-actions > * + *{margin-left:6px}
 .bo-counts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
 .bo-count{background:#fff;border:1px solid var(--color-auster-border);border-radius:9px;padding:13px 17px;
   box-shadow:var(--shadow-auster);min-width:118px}

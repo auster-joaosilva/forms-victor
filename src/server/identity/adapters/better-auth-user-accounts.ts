@@ -1,4 +1,5 @@
 import { auth } from '@/server/shared/auth/auth'
+import { DEFAULT_ROLE, toRole } from '@/server/shared/domain/permissions'
 import { prisma } from '@/server/shared/prisma/client'
 import { IdentityError, type UserAccount } from '../domain/user'
 import type { UserAccounts } from '../ports/user-accounts'
@@ -9,7 +10,7 @@ const toAccount = (row: Row): UserAccount => ({
   id: row.id,
   username: row.username ?? '',
   name: row.name,
-  role: row.role === 'admin' ? 'admin' : 'team',
+  role: toRole(row.role),
   active: !row.banned,
   lastLoginAt: row.lastLoginAt,
   createdAt: row.createdAt,
@@ -31,12 +32,14 @@ export const betterAuthUserAccounts: UserAccounts = {
   countActiveAdmins: () => prisma.user.count({ where: { role: 'admin', banned: false } }),
   async create({ username, name, password, role }) {
     try {
-      await auth.api.createUser({ body: { email: `${username}@users.invalid`, password, name, ...(role === 'admin' ? { role: 'admin' as const } : {}), data: { username, displayUsername: username } } })
+      // O better-auth cria com o defaultRole; o papel escolhido é gravado em seguida, sem depender de como o plugin valida papéis.
+      await auth.api.createUser({ body: { email: `${username}@users.invalid`, password, name, data: { username, displayUsername: username } } })
     } catch (error) {
       if (isDuplicate(error)) throw new IdentityError('username_taken')
       throw error
     }
-    return toAccount((await prisma.user.findUniqueOrThrow({ where: { username }, select })))
+    if (role !== DEFAULT_ROLE) await prisma.user.update({ where: { username }, data: { role } })
+    return toAccount(await prisma.user.findUniqueOrThrow({ where: { username }, select }))
   },
   rename: async (id, name) => void (await prisma.user.update({ where: { id }, data: { name } })),
   setRole: async (id, role) => void (await prisma.user.update({ where: { id }, data: { role } })),

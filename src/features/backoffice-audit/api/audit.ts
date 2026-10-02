@@ -1,11 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import { listAudit } from '@/server/audit/composition'
-import { sessionMiddleware } from '@/server/shared/http/session-middleware'
+import { requireCapability } from '@/server/shared/http/session-middleware'
 
 export type AuditRow = { id: number; occurredAt: string; actorUsername: string | null; action: string; reference: string | null; detail: string }
 
 export const listAuditFn = createServerFn({ method: 'GET' })
-  .middleware([sessionMiddleware])
+  .middleware([requireCapability('view_audit')])
   .handler(async (): Promise<AuditRow[]> =>
     (await listAudit(200)).map((entry) => ({
       id: entry.id,

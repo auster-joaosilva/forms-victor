@@ -1,4 +1,6 @@
-export type Role = 'admin' | 'team'
+import type { Role } from '../../shared/domain/permissions'
+
+export type { Role }
 
 export interface UserAccount {
   id: string

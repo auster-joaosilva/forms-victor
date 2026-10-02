@@ -15,3 +15,12 @@ export function formatShortDateTime(iso: string | null): string {
   const date = new Date(iso)
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: TIME_ZONE })
 }
+
+export function formatBrasiliaDateTime(date: Date): string {
+  return date.toLocaleString('pt-BR', { timeZone: TIME_ZONE })
+}
+
+export function isoDateToBr(iso: string): string {
+  const [year, month, day] = iso.split('-')
+  return `${day}/${month}/${year}`
+}

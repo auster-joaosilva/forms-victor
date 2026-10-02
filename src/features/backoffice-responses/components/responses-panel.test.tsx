@@ -25,21 +25,35 @@ const detail = (internalNote: string): ResponseDetail => ({
   answers: { blocks: [], outsideForm: [], total: 0 }, internalNote, handledBy: null, handledAt: null, changedAfterHandling: false,
 })
 
-const renderPanel = (client = createQueryClient()) =>
+const renderPanel = (client = createQueryClient(), canExport = true) =>
   render(
     <QueryClientProvider client={client}>
-      <ResponsesPanel filter={{ page: 1 }} onFilterChange={() => undefined} />
+      <ResponsesPanel filter={{ page: 1 }} canExport={canExport} onFilterChange={() => undefined} />
     </QueryClientProvider>,
   )
 
 describe('ResponsesPanel', () => {
+  it('shows the spreadsheet button to who can export', async () => {
+    listResponsesFn.mockResolvedValue(list)
+    renderPanel()
+    expect(await screen.findByText('Padaria Boa')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Baixar planilha (CSV)' })).toBeInTheDocument()
+  })
+
+  it('hides the spreadsheet button from who cannot export', async () => {
+    listResponsesFn.mockResolvedValue(list)
+    renderPanel(createQueryClient(), false)
+    expect(await screen.findByText('Padaria Boa')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Baixar planilha (CSV)' })).not.toBeInTheDocument()
+  })
+
   it('fetches the sheet again on every opening and seeds the note from the fresh copy', async () => {
     listResponsesFn.mockResolvedValue(list)
     let release: (value: ResponseDetail) => void = () => undefined
     getResponseFn.mockResolvedValueOnce(detail('nota antiga')).mockReturnValueOnce(new Promise((resolve) => (release = resolve)))
     render(
       <QueryClientProvider client={createQueryClient()}>
-        <ResponsesPanel filter={{ page: 1 }} onFilterChange={() => undefined} />
+        <ResponsesPanel filter={{ page: 1 }} canExport onFilterChange={() => undefined} />
       </QueryClientProvider>,
     )
 
@@ -61,7 +75,7 @@ describe('ResponsesPanel', () => {
     const client = createQueryClient()
     render(
       <QueryClientProvider client={client}>
-        <ResponsesPanel filter={{ page: 1 }} onFilterChange={() => undefined} />
+        <ResponsesPanel filter={{ page: 1 }} canExport onFilterChange={() => undefined} />
       </QueryClientProvider>,
     )
 

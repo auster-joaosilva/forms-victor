@@ -17,7 +17,7 @@ export const Route = createFileRoute('/diagnosis/')({
       {
         name: 'description',
         content:
-          'Em 4 a 10 minutos, descubra se a sua empresa do Simples Nacional deve recolher IBS e CBS na guia única ou por fora do DAS. A opção é feita até 30 de setembro de 2026.',
+          'Em 4 a 10 minutos, descubra se a sua empresa do Simples Nacional deve recolher IBS e CBS na guia única ou por fora do DAS. A opção é feita até 30 de outubro de 2026.',
       },
       { name: 'theme-color', content: '#052C47' },
     ],

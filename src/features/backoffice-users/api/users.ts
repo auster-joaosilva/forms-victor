@@ -2,12 +2,13 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { IdentityError, createUser, listUsers, updateUser } from '@/server/identity/composition'
 import type { Role } from '@/server/identity/domain/user'
-import { adminMiddleware, sessionMiddleware } from '@/server/shared/http/session-middleware'
+import { ROLES } from '@/server/shared/domain/permissions'
+import { requireCapability } from '@/server/shared/http/session-middleware'
 
 export type UserRow = { id: string; username: string; name: string; role: Role; active: boolean; lastLoginAt: string | null; createdAt: string }
 export type Outcome = { ok: true } | { ok: false; message: string }
 
-const role = z.enum(['admin', 'team'])
+const role = z.enum(ROLES)
 const password = z.string().max(128)
 
 const outcome = async (run: () => Promise<unknown>): Promise<Outcome> => {
@@ -21,18 +22,18 @@ const outcome = async (run: () => Promise<unknown>): Promise<Outcome> => {
 }
 
 export const listUsersFn = createServerFn({ method: 'GET' })
-  .middleware([adminMiddleware])
+  .middleware([requireCapability('manage_users')])
   .handler(async (): Promise<UserRow[]> =>
     (await listUsers()).map((user) => ({ ...user, lastLoginAt: user.lastLoginAt?.toISOString() ?? null, createdAt: user.createdAt.toISOString() })),
   )
 
 export const createUserFn = createServerFn({ method: 'POST' })
-  .middleware([adminMiddleware])
+  .middleware([requireCapability('manage_users')])
   .inputValidator(z.object({ username: z.string().max(64), name: z.string().max(120), password, role }))
   .handler(({ data, context }) => outcome(() => createUser(context.session.user, data)))
 
 export const updateUserFn = createServerFn({ method: 'POST' })
-  .middleware([adminMiddleware])
+  .middleware([requireCapability('manage_users')])
   .inputValidator(
     z.object({
       username: z.string().max(64),
@@ -42,6 +43,6 @@ export const updateUserFn = createServerFn({ method: 'POST' })
   .handler(({ data, context }) => outcome(() => updateUser(context.session.user, data.username, data.changes)))
 
 export const changeOwnPasswordFn = createServerFn({ method: 'POST' })
-  .middleware([sessionMiddleware])
+  .middleware([requireCapability('own_access')])
   .inputValidator(z.object({ password }))
   .handler(({ data, context }) => outcome(() => updateUser(context.session.user, context.session.user.username, { password: data.password })))

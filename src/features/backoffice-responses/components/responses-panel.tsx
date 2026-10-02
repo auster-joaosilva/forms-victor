@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog } from 'radix-ui'
 import { useState } from 'react'
-import { formatShortDateTime } from '@/server/diagnosis/domain/dates'
+import { formatShortDateTime } from '@/server/shared/domain/dates'
 import { RESPONSE_STATUSES, RESPONSE_STATUS_LABELS, isResponseStatus, type ResponseStatus } from '@/server/diagnosis/domain/response-status'
 import { responseQuery, responsesQuery, type ResponsesFilter } from '../api/queries'
 import { handleResponseFn, type ResponseDetail as ResponseDetailData, type ResponseSummary } from '../api/responses'
@@ -50,7 +50,7 @@ function ResponseRow({ row, onOpen }: { row: ResponseSummary; onOpen(): void }) 
   )
 }
 
-export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFilter; onFilterChange(next: ResponsesFilter): void }) {
+export function ResponsesPanel({ filter, canExport, onFilterChange }: { filter: ResponsesFilter; canExport: boolean; onFilterChange(next: ResponsesFilter): void }) {
   const queryClient = useQueryClient()
   const list = useQuery({ ...responsesQuery(filter), placeholderData: keepPreviousData })
   const [search, setSearch] = useState(filter.q ?? '')
@@ -127,9 +127,11 @@ export function ResponsesPanel({ filter, onFilterChange }: { filter: ResponsesFi
         <button type="button" className="bo-button is-light" onClick={applyFilter}>
           Filtrar
         </button>
-        <a className="bo-button is-light" href={csvHref(filter)}>
-          Baixar planilha (CSV)
-        </a>
+        {canExport ? (
+          <a className="bo-button is-light" href={csvHref(filter)}>
+            Baixar planilha (CSV)
+          </a>
+        ) : null}
       </div>
       {error && !opened ? <div className="bo-error">{error}</div> : null}
       {items.length ? (

@@ -1,16 +1,20 @@
+import { capabilitiesOf, toRole, type Capability, type Role } from '../domain/permissions'
 import { auth } from '../auth/auth'
 import { CLIENT_IP_HEADER, requestOrigin } from './request-origin'
 
-export type SessionUser = { id: string; username: string; name: string; role: 'admin' | 'team' }
+export type SessionUser = { id: string; username: string; name: string; role: Role; capabilities: readonly Capability[] }
 
+// Sem cookieCache no better-auth: getSession lê o usuário do banco a cada pedido, então rebaixar alguém vale no pedido seguinte.
 export async function getSessionUser(headers: Headers): Promise<SessionUser | null> {
   const session = await auth.api.getSession({ headers })
   if (!session || session.user.banned) return null
+  const role = toRole(session.user.role)
   return {
     id: session.user.id,
     username: session.user.username ?? '',
     name: session.user.name,
-    role: session.user.role === 'admin' ? 'admin' : 'team',
+    role,
+    capabilities: capabilitiesOf(role),
   }
 }
 

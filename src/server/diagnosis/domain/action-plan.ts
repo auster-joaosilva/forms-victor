@@ -80,7 +80,7 @@ export const ACTION_RULES: ActionRule[] = [
     'Marque a conversa com os sócios ainda nesta semana.',
     {
       reason:
-        'A decisão é de quem tem alçada, e a janela fecha em 30 de setembro. Decisão em conjunto não cabe nos últimos três dias.',
+        'A decisão é de quem tem alçada, e a janela fecha em 30 de outubro. Decisão em conjunto não cabe nos últimos três dias.',
       executor: 'client',
       track: 1,
       requires: 'Uma hora na agenda de quem decide',
@@ -94,7 +94,7 @@ export const ACTION_RULES: ActionRule[] = [
     'Comece a levantar os números agora e feche a conta até o início de novembro.',
     {
       reason:
-        'A solicitação feita em setembro pode ser cancelada até 30 de novembro, sem efeito nenhum. Mas 30 de novembro é o limite, não a data de começar: deixe a conclusão pronta na primeira semana de novembro, para haver tempo de cancelar com calma se o número disser o contrário.',
+        'A solicitação feita em outubro pode ser cancelada entre 3 de novembro e 20 de dezembro, sem efeito nenhum. Mas 20 de dezembro é o limite, não a data de começar — e antes de 3 de novembro o cancelamento nem existe. Deixe a conclusão pronta até o fim de outubro, para chegar em 3 de novembro já sabendo se cancela.',
       legalBasis: 'Manual da Opção pelo Regime Regular do IBS e da CBS, item 4.2 (CGSN, 01/09/2026)',
       executor: 'client',
       track: 1,
@@ -108,7 +108,7 @@ export const ACTION_RULES: ActionRule[] = [
     'Saiba que pedir devolução de crédito fecha a porta de saída.',
     {
       reason:
-        'Depois de 30 de novembro a opção vale pelo semestre. E se a empresa chegar a receber ressarcimento de crédito de IBS ou CBS, fica impedida de voltar ao recolhimento unificado no ano corrente e no seguinte — a saída deixa de existir, não só atrasa.',
+        'Depois de 20 de dezembro a opção vale pelo semestre. E se a empresa chegar a receber ressarcimento de crédito de IBS ou CBS, fica impedida de voltar ao recolhimento unificado no ano corrente e no seguinte — a saída deixa de existir, não só atrasa.',
       legalBasis: 'LC 214/2025, art. 41, § 5º',
       executor: 'client',
       track: 2,
@@ -316,7 +316,7 @@ export const ACTION_RULES: ActionRule[] = [
     'Simular sua carga nas duas opções, com seus números reais',
     {
       reason:
-        'Compara o que você paga hoje com o que pagaria apurando por fora, já considerando o crédito das suas compras. É esta conta que fecha a decisão antes de 30 de novembro.',
+        'Compara o que você paga hoje com o que pagaria apurando por fora, já considerando o crédito das suas compras. É esta conta que fecha a decisão antes de 20 de dezembro.',
       executor: 'auster',
       track: 1,
       requires: 'Apuração dos últimos 12 meses e uma hora sua para ver o resultado',
@@ -367,7 +367,7 @@ export const ACTION_RULES: ActionRule[] = [
     'Levante e regularize o que estiver em aberto, sem esperar o resultado da opção.',
     {
       reason:
-        'Débito em aberto barra o ingresso de quem está entrando e é causa de exclusão de quem já está. A própria Receita orienta a confirmar o pedido mesmo com pendência, para não perder o prazo de 30 de setembro — o prazo de regularização é de 30 dias contados da confirmação, ou da ciência do termo de indeferimento.',
+        'Débito em aberto barra o ingresso de quem está entrando e é causa de exclusão de quem já está. A própria Receita orienta a confirmar o pedido mesmo com pendência, para não perder o prazo — que agora é 15 de outubro para a entrada no Simples e 30 de outubro para regularizar o que barrou o ingresso.',
       legalBasis:
         'Roteiro da Opção pelo Simples Nacional para 2027, item 2.2 (CGSN); LC 123/2006, art. 17, V',
       executor: 'client',

@@ -31,7 +31,7 @@ describe('manage users', () => {
     const audit: string[] = []
     const { accounts } = fakeAccounts([ana])
     const users = makeManageUsers({ accounts, recordAudit: async (e) => void audit.push(e.action) })
-    const created = await users.createUser(actorAna, { username: 'Bia', name: 'Bia', password: 'x'.repeat(12), role: 'team' })
+    const created = await users.createUser(actorAna, { username: 'Bia', name: 'Bia', password: 'x'.repeat(12), role: 'operator' })
     expect(created.username).toBe('bia')
     expect(audit).toEqual(['user_created'])
   })
@@ -39,7 +39,7 @@ describe('manage users', () => {
   it('refuses a duplicate username', async () => {
     const { accounts } = fakeAccounts([ana])
     const users = makeManageUsers({ accounts, recordAudit: async () => {} })
-    await expect(users.createUser(actorAna, { username: 'ana', name: 'A', password: 'x'.repeat(12), role: 'team' })).rejects.toThrow('já existe')
+    await expect(users.createUser(actorAna, { username: 'ana', name: 'A', password: 'x'.repeat(12), role: 'operator' })).rejects.toThrow('já existe')
   })
 
   it('refuses to deactivate the last admin', async () => {
@@ -52,7 +52,23 @@ describe('manage users', () => {
     const { accounts } = fakeAccounts([ana])
     const users = makeManageUsers({ accounts, recordAudit: async () => {} })
     await expect(
-      users.createUser({ id: 'bia', username: 'bia', role: 'team' }, { username: 'caio', name: 'C', password: 'x'.repeat(12), role: 'team' }),
+      users.createUser({ id: 'bia', username: 'bia', role: 'operator' }, { username: 'caio', name: 'C', password: 'x'.repeat(12), role: 'operator' }),
     ).rejects.toThrow('só administrador')
+  })
+
+  it('creates a user with any of the four roles and records it', async () => {
+    const details: unknown[] = []
+    const { accounts } = fakeAccounts([ana])
+    const users = makeManageUsers({ accounts, recordAudit: async (e) => void details.push(e.detail) })
+    for (const [username, role] of [['gil', 'manager'], ['rui', 'regularization'], ['ivo', 'operator']] as const) {
+      expect((await users.createUser(actorAna, { username, name: username, password: 'x'.repeat(12), role })).role).toBe(role)
+    }
+    expect(details).toEqual([{ role: 'manager' }, { role: 'regularization' }, { role: 'operator' }])
+  })
+
+  it('refuses to create users for anyone but the admin', async () => {
+    const { accounts } = fakeAccounts([ana])
+    const users = makeManageUsers({ accounts, recordAudit: async () => {} })
+    await expect(users.createUser({ id: 'g', username: 'gil', role: 'manager' }, { username: 'bia', name: 'Bia', password: 'x'.repeat(12), role: 'operator' })).rejects.toThrow('só administrador')
   })
 })

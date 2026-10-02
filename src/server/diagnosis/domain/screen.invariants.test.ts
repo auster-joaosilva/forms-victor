@@ -21,6 +21,13 @@ function expectCleanScreen(view: unknown) {
   expect(affirmsMerit(texts.join(' '))).toBeNull()
 }
 
+// origin/main testes.mjs (212aea5): a data revogada é pior que nenhuma, porque o cliente planeja por ela.
+// Cobra a data como prazo ("até …"); "Emitido em 30 de setembro" é data de emissão, não promessa.
+const REVOKED_DEADLINE = /at[ée]\s+30 de (setembro|novembro)|30\/09\/2026|30\/11\/2026/
+function expectNoRevokedDeadline(view: unknown) {
+  expect(collectText(view).texts.filter((text) => REVOKED_DEADLINE.test(text))).toEqual([])
+}
+
 describe('screen invariants over 40 000 fills', () => {
   it('holds every screen invariant of the legacy battery (#18–22, #25–30)', () => {
     let checked = 0
@@ -42,6 +49,9 @@ describe('screen invariants over 40 000 fills', () => {
       if (diagnosis.position.family === 'hibrido') expect(result.decision.showWithdrawalNotice).toBe(true)
       expectCleanScreen(result)
       expectCleanScreen(report)
+      expectNoRevokedDeadline(result)
+      expectNoRevokedDeadline(review)
+      expectNoRevokedDeadline(report)
       expect(report.sheetCount).toBe(plan.auster.length ? 6 : 5)
       const choiceQuestions = visible.filter((question) => question.type !== 'consent' && question.type !== 'textarea')
       expect(report.summary.blocks.reduce((total, block) => total + block.rows.length, 0)).toBe(choiceQuestions.length)

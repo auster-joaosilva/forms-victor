@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { E2E_ADMIN } from './fill'
+import { E2E_ADMIN } from './users'
 
 export default function globalSetup() {
   process.loadEnvFile('.env')
@@ -10,4 +10,5 @@ export default function globalSetup() {
     stdio: 'inherit',
     env: { ...process.env, BOOTSTRAP_ADMIN_USERNAME: E2E_ADMIN.username, BOOTSTRAP_ADMIN_PASSWORD: E2E_ADMIN.password },
   })
+  execSync('pnpm exec tsx --env-file-if-exists=.env tests/e2e/seed-users.ts', { stdio: 'inherit' })
 }

@@ -24,7 +24,7 @@ services:
       LEGACY_DB_PATH: ${LEGACY_DB_PATH:-/legacy/portal.db}
       ALLOW_TEST_DATA_RESET: ${ALLOW_TEST_DATA_RESET:-false}
     volumes:
-      - legacy-data:/legacy
+      - legacy-data:/legacy:ro
     networks:
       - dokploy-network
       - shared-postgres

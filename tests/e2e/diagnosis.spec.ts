@@ -69,3 +69,10 @@ test('a matriz vira lista no celular, sem rolagem lateral', async ({ browser }) 
   await expect(matrix.locator('.dx-matrix-band', { hasText: 'não sei' }).first()).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
 })
+
+test('o diagnóstico fala dos prazos da Resolução CGSN 194', async ({ page }) => {
+  await completeDiagnosis(page)
+  await expect(page.locator('main')).not.toContainText('30 de setembro')
+  await expect(page.locator('main')).not.toContainText('até 30 de novembro')
+  await expect(page.locator('main')).toContainText(/30 de outubro|30\/10\/2026/)
+})

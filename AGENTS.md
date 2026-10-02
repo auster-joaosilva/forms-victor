@@ -91,7 +91,9 @@ código com a configuração velha.
   premissa, não dado da carteira.
 - Componentes: `*.test.tsx`, projeto `dom` do Vitest (jsdom + Testing Library), `pnpm test:dom`.
 - Ponta a ponta: `pnpm test:e2e` (Playwright contra `pnpm dev` e o banco local). O global setup
-  só aceita banco em `localhost`, limpa o rate limit e cria ou reativa o usuário `e2e-admin`.
+  só aceita banco em `localhost`, limpa o rate limit e cria ou reativa `e2e-admin`, `e2e-regularization`
+  e `e2e-operator` (`tests/e2e/users.ts`). Até 30/10/2026 o formulário de adesão está aberto e os testes
+  de `adhesion.spec.ts` dependem disso.
   Porta 3000 ocupada? `E2E_PORT=3100 pnpm test:e2e` sobe o `pnpm dev` nessa porta.
 
 ## Rodar

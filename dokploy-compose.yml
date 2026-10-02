@@ -21,10 +21,19 @@ services:
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:?defina no painel}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      LEGACY_DB_PATH: ${LEGACY_DB_PATH:-/legacy/portal.db}
+      ALLOW_TEST_DATA_RESET: ${ALLOW_TEST_DATA_RESET:-false}
+    volumes:
+      - legacy-data:/legacy
     networks:
       - dokploy-network
       - shared-postgres
       - shared-minio
+
+volumes:
+  legacy-data:
+    external: true
+    name: ${LEGACY_VOLUME_NAME:?defina no painel}
 
 networks:
   dokploy-network:

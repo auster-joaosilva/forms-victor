@@ -1,3 +1,4 @@
+import { getEnv } from '@/server/shared/env'
 import { recordAudit } from '@/server/audit/composition'
 import { storeFile, findHousePhoto } from '@/server/storage/composition'
 import { checkRateLimit } from '@/server/rate-limit/composition'
@@ -12,6 +13,9 @@ import { makeEventBackoffice } from './application/event-backoffice'
 import { makePublicEvents } from './application/public-events'
 import { makeRegisterForSession } from './application/register-for-session'
 import type { RateLimiter } from './ports/rate-limiter'
+
+// Os links públicos e o og:url saem do endereço do ambiente, sem barra no fim.
+export const publicBaseUrl = getEnv().APP_PUBLIC_URL.replace(/\/$/, '')
 
 const rateLimiter: RateLimiter = { check: (route, origin) => checkRateLimit({ route, origin }) }
 

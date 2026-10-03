@@ -6,7 +6,10 @@ const text = (max: number) => z.string().max(max)
 // empresa a 160 e cargo a 60, como o antigo.
 export const REGISTRATION_LIMITS = { nome: 200, email: 254, telefone: 40, empresa: 300, cnpj: 32, cargo: 60 } as const
 
-export const loadEventPageInput = z.object({ slug: z.string().min(1).max(120) })
+// O limite do endereço não está no schema: um endereço longo demais é "não encontrado", não erro de validação.
+export const loadEventPageInput = z.object({ slug: z.string().max(2000) })
+
+export const isEventSlug = (slug: string) => slug.length >= 1 && slug.length <= 120
 
 export const lookupRegistrationCompanyInput = z.object({ cnpj: text(REGISTRATION_LIMITS.cnpj) })
 

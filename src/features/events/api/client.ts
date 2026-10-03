@@ -1,6 +1,7 @@
 import type { EventsApi } from '../types/events'
+import { lookupRegistrationCompany, submitRegistration } from './events'
 
 export const eventsApi: EventsApi = {
-  lookupCompany: async () => ({ companyName: null }),
-  submit: async () => ({ ok: false, error: 'não foi possível inscrever' }),
+  lookupCompany: (input) => lookupRegistrationCompany({ data: input }),
+  submit: (input) => submitRegistration({ data: input }),
 }

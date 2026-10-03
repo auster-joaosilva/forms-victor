@@ -73,12 +73,16 @@ As fronteiras estão no `eslint.config.js`. Lint quebrado não entra.
 6. **Nunca** tocar nem enviar a `main`, e nunca enviar outra branch ao remoto.
 
 **Push na `teste` é deploy.** O Dokploy publica a `teste` em
-`hml-reforma.austercontabil.com.br` a cada push (compose "hml", arquivo
+`hml-reforma.austercontabil.com.br` a cada push (compose "full", arquivo
 `dokploy-compose.yml`). A `main` só volta a receber código na virada.
 
-O compose antigo "frontend" (portal legado em `reforma-tributaria.austercontabil.com.br`)
-está **congelado** até a virada. Não disparar deploy nele: ele buildaria este
-código com a configuração velha.
+O compose antigo "frontend" (portal legado em `reforma-tributaria.austercontabil.com.br`) tem
+**deploy automático ligado na `main`**: o Victor ainda corrige o portal antigo por ela. Não envie nada à `main`
+e não dispare deploy no "frontend" fora de uma queda da produção.
+
+Painel do Dokploy: `http://10.10.30.232:3000` (rede interna). A VPS (`86.48.5.53`) é servidor remoto dele. Se
+um reinício da VPS derrubar os sites (Cloudflare 521): `compose.redeploy` do compose que sumiu e, se faltar o
+Traefik, "Setup Server" da VPS — sem SSH.
 
 ## Testes
 
@@ -137,7 +141,7 @@ de teste do hml (verificações à mão, ponta a ponta, quem testou) ocupam os i
   topo, e apague `LEGACY_VOLUME_NAME` do painel. Senão, quando o volume antigo for apagado, todo deploy falha com
   "external volume not found".
 
-1. No painel do Dokploy, no compose do app (o "hml" no ensaio, o de produção na virada), defina `LEGACY_VOLUME_NAME`
+1. No painel do Dokploy, no compose do app (o "full" no ensaio, o de produção na virada), defina `LEGACY_VOLUME_NAME`
    com o nome do volume `dados` do compose "frontend" e faça o deploy. `ALLOW_TEST_DATA_RESET=true` **só no hml**;
    em produção fica desligado. `LEGACY_DB_PATH` só muda se o arquivo não estiver em `/legacy/portal.db`.
 2. Aba Migração: confira o caminho e que o banco aparece como **disponível**.

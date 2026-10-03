@@ -92,7 +92,7 @@ Com esta etapa, o app novo cobre tudo o que a `main` serve e a virada pode acont
   - as seções `#sobre`, `#temas`, `#programa` (com os selos de vaga), `#quem`, `#onde` (com a foto `fachada-larga`) e `#participar`;
   - a seção `#inscricao` nos três estados: aberta, encerrada e lotada.
 
-  Metatags `title`, `description`, OG e `twitter:card` como na `main`.
+  Metatags `title`, `description`, OG e `twitter:card` como na `main`. Sem `robots` próprio: o `X-Robots-Tag: noindex` global continua valendo.
 - **Formulário:**
   - os campos e os cargos da `main`;
   - a consulta do CNPJ por server function no `company-lookup`, devolvendo só a razão social, como na adesão;

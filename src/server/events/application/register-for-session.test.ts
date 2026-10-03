@@ -117,4 +117,18 @@ describe('makeRegisterForSession', () => {
     expect(await register({ body: body({ sessaoId: 999 }), origin, userAgent: null })).toEqual({ ok: false, status: 422, error: 'escolha um dos encontros' })
     expect(spy).not.toHaveBeenCalled()
   })
+
+  it('gives up after 10 taken protocols, drawing a new one each time and writing no audit', async () => {
+    const drawn = 'ABCDEFGHIJ'.split('').map((letter) => `INS-20261003-${letter.repeat(5)}`)
+    const { register, registrations, audit } = setup({ protocols: drawn })
+    const attempts: string[] = []
+    const spy = vi.spyOn(registrations.repository, 'register').mockImplementation(async (input) => {
+      attempts.push(input.protocol)
+      return { kind: 'protocol_taken' }
+    })
+    expect(await register({ body: body(), origin, userAgent: null })).toEqual({ ok: false, status: 409, error: 'não foi possível gerar o protocolo' })
+    expect(spy).toHaveBeenCalledTimes(10)
+    expect(attempts).toEqual(drawn)
+    expect(audit.entries).toEqual([])
+  })
 })

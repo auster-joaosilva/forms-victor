@@ -3,6 +3,7 @@ export const AUDIT_ACTIONS = [
   'invitation_created', 'invitation_deleted', 'response_received', 'response_updated', 'response_handled',
   'adhesion_received', 'adhesion_handled', 'event_created', 'event_updated', 'event_slug_changed',
   'registration_received', 'registration_handled', 'file_stored', 'spreadsheet_exported', 'legacy_imported',
+  'test_data_reset',
 ] as const
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
@@ -28,6 +29,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   file_stored: 'arquivo guardado',
   spreadsheet_exported: 'planilha exportada',
   legacy_imported: 'migração do portal antigo',
+  test_data_reset: 'dados de teste apagados',
 }
 
 export interface AuditEntryInput {

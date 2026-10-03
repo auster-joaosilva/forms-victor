@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LegacyAdhesion, LegacyEvent, LegacyInvitation, LegacyResponse, LegacyUser } from '../domain/legacy-rows'
 import type { ImportedAdhesion, ImportedAuditEntry, ImportedInvitation, ImportedResponse, ImportedUser } from '../domain/mapping'
-import type { ImportTarget } from '../ports/import-target'
+import type { ImportActor, ImportTarget } from '../ports/import-target'
 import { makeImportLegacy } from './import-legacy'
 
 const response = (id: number, protocolo: string): LegacyResponse => ({
@@ -18,6 +18,7 @@ function memoryTarget(existingResponses: [number, string][] = [], existingAdhesi
   const imported: ImportedAdhesion[] = []
   const audit: ImportedAuditEntry[] = []
   const imports: Record<string, number>[] = []
+  const importers: (ImportActor | undefined)[] = []
   const target: ImportTarget = {
     existingUsernames: async () => new Map([['victor', 'v1'], ...users.map((u) => [u.username, u.id] as const)]),
     existingInvitationTokens: async () => new Set(invitations.map((i) => i.token)),
@@ -31,9 +32,9 @@ function memoryTarget(existingResponses: [number, string][] = [], existingAdhesi
     insertResponses: async (rows: ImportedResponse[]) => rows.forEach((row) => responses.set(row.id, row.protocol)),
     insertAdhesions: async (rows) => rows.forEach((row) => (imported.push(row), adhesions.set(row.id, row.protocol))),
     insertAuditEntries: async (rows) => void audit.push(...rows),
-    recordImport: async (detail) => void imports.push(detail),
+    recordImport: async (detail, actor) => void (imports.push(detail), importers.push(actor)),
   }
-  return { target, users, invitations, responses, imported, audit, imports }
+  return { target, users, invitations, responses, imported, audit, imports, importers }
 }
 
 const legacyUsers: LegacyUser[] = [
@@ -84,6 +85,14 @@ describe('importLegacy', () => {
     const again = await run({ dryRun: false })
     expect(again).toMatchObject({ users: { imported: 0 }, invitations: { imported: 0 }, responses: { imported: 0, skipped: 1 }, audit: { imported: 0 } })
     expect(memory.imports).toHaveLength(2)
+  })
+
+  it('records who ran the import, and no one when it came from the script', async () => {
+    const memory = memoryTarget()
+    const run = makeImportLegacy({ source: source([response(1, 'DS-1')]), target: memory.target, newUserId: () => 'u', knownTermVersions: VERSIONS })
+    await run({ dryRun: false, actor: { id: 'v1', username: 'victor' } })
+    await run({ dryRun: false })
+    expect(memory.importers).toEqual([{ id: 'v1', username: 'victor' }, undefined])
   })
 
   it('writes nothing while an id or a protocol conflicts with the new database', async () => {

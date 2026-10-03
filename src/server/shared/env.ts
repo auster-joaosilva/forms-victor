@@ -12,6 +12,9 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url(),
   APP_PUBLIC_URL: z.url(),
+  LEGACY_DB_PATH: z.string().min(1).default('/legacy/portal.db'),
+  // Apaga respostas e adesões: só a palavra exata liga, e um erro de digitação derruba a subida em vez de passar calado.
+  ALLOW_TEST_DATA_RESET: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
 })
 
 export type Env = z.infer<typeof envSchema>

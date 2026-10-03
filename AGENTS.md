@@ -120,66 +120,36 @@ docker compose exec postgres psql -U app -d forms_victor_dev -c "CREATE DATABASE
 
 ## Migração do portal antigo (SQLite → Postgres)
 
-Roda no container do app novo, contra uma cópia **consistente** do `portal.db`. O arquivo
-tem dado de cliente: nunca entra no repositório nem fica no servidor depois.
+Roda pela aba **Migração** do backoffice (só administrador), sem SSH. O app lê o `portal.db` do volume `dados` do
+compose "frontend", montado em `/legacy` com `:ro`, numa única transação: uma fotografia consistente
+mesmo com o portal antigo no ar. O arquivo nunca é copiado nem alterado. Sem o `portal.db-wal` e o `portal.db-shm`
+ao lado (portal antigo parado, ou só o `portal.db` restaurado), o SQLite precisaria criar o `-shm` num diretório
+que o app não grava: a aba mostra "o portal antigo precisa estar no ar" e não importa.
 
 Os ids das respostas e das adesões antigas são preservados, e um id que já existe no banco novo com outro
-protocolo é **conflito**: qualquer conflito aborta a importação inteira, sem gravar nada. Por isso:
+protocolo é **conflito**: qualquer conflito aborta a importação inteira, sem gravar nada. As adesões e as respostas
+de teste do hml (verificações à mão, ponta a ponta, quem testou) ocupam os ids 1, 2, 3… — os mesmos das antigas.
 
-- **Ensaio em hml:** antes do passo 4, apague as adesões e as respostas de teste do banco de hml (verificações
-  à mão, ponta a ponta, quem testou), que ocupam os ids 1, 2, 3… — os mesmos das antigas. No
-  `psql` do banco do compose "hml" (o do `DATABASE_URL` dele):
+- **Na virada:** importe **antes** de abrir o tráfego do app novo. Uma única resposta ou adesão recebida antes
+  ocupa um id e faz a importação recusar. Corte o tráfego público do portal antigo, mas deixe o container dele
+  **no ar** durante a importação (ou confira que `portal.db-wal` e `portal.db-shm` existem no volume).
+- **Depois da virada:** tire do `dokploy-compose.yml` a montagem `legacy-data:/legacy:ro` e o bloco `volumes:` do
+  topo, e apague `LEGACY_VOLUME_NAME` do painel. Senão, quando o volume antigo for apagado, todo deploy falha com
+  "external volume not found".
 
-  ```sql
-  DELETE FROM adhesions;
-  DELETE FROM diagnosis_drafts;
-  DELETE FROM responses;
-  ```
+1. No painel do Dokploy, no compose do app (o "hml" no ensaio, o de produção na virada), defina `LEGACY_VOLUME_NAME`
+   com o nome do volume `dados` do compose "frontend" e faça o deploy. `ALLOW_TEST_DATA_RESET=true` **só no hml**;
+   em produção fica desligado. `LEGACY_DB_PATH` só muda se o arquivo não estiver em `/legacy/portal.db`.
+2. Aba Migração: confira o caminho e que o banco aparece como **disponível**.
+3. Só no hml: **Apagar dados de teste do hml** — digite `APAGAR`. Apaga rascunhos, adesões e respostas (nessa ordem);
+   inscrições que apontem para uma resposta ficam sem ela (`SET NULL`). A Auditoria fica, com a linha
+   "dados de teste apagados" e as contagens.
+4. **Simular.** Confira as contagens, os avisos (protocolos com `-2`, convites órfãos, autores inexistentes,
+   ações sem equivalente, papéis sem equivalente, adesões com diagnóstico órfão, campo em branco ou versão do termo
+   fora do sistema) e se há **conflitos**. Com conflito, o Importar fica fechado.
+5. **Importar** (pede confirmação). Importe de novo: tudo deve vir como pulado.
+6. Aba Usuários: defina a senha de cada usuário migrado (eles chegam sem senha; o resumo antigo é incompatível).
+   Confira a aba Respostas e a linha "migração do portal antigo" na Auditoria, com quem importou.
 
-  Os rascunhos saem junto para nenhum navegador de teste retomar um preenchimento que perdeu a
-  resposta; inscrições que apontem para uma resposta ficam sem ela (`SET NULL`). A Auditoria
-  fica como está.
-- **Na virada:** rode a importação (passos 4 e 5) **antes** de abrir o tráfego do app novo. Uma
-  única resposta ou adesão recebida antes ocupa um id e faz a importação recusar.
-
-1. Pelo SSH da VPS, ache os containers: `docker ps --format '{{.Names}}'`. O antigo é o do
-   compose "frontend" (`/app/dados/portal.db`); o novo, o do compose "hml" (ou o de produção, na virada).
-2. Cópia consistente com o portal antigo no ar (ensaio em hml): o `VACUUM INTO` do SQLite
-   faz o mesmo que o `sqlite3 .backup` — um arquivo só, com o que estava no `-wal`:
-
-   ```bash
-   docker exec <antigo> node -e "const { DatabaseSync } = require('node:sqlite'); const db = new DatabaseSync('/app/dados/portal.db'); db.exec(\"VACUUM INTO '/tmp/portal-copia.db'\"); db.close()"
-   docker cp <antigo>:/tmp/portal-copia.db /root/portal-copia.db
-   docker exec <antigo> rm /tmp/portal-copia.db
-   ```
-
-   Na virada, com o portal antigo **parado** (`docker stop <antigo>`), copie os três arquivos
-   juntos — `portal.db`, `portal.db-wal` e `portal.db-shm` — do volume `dados` do compose antigo
-   (`docker volume ls | grep dados`):
-
-   ```bash
-   mkdir -p /root/migracao
-   docker run --rm -v <volume>:/dados -v /root/migracao:/out alpine sh -c 'cp /dados/portal.db* /out/'
-   ```
-
-   e use `/root/migracao/portal.db` no lugar de `/root/portal-copia.db` (com os `-wal`/`-shm` ao lado).
-3. Leve a cópia ao container novo e dê ao usuário `node` a posse:
-
-   ```bash
-   docker cp /root/portal-copia.db <novo>:/tmp/portal.db
-   docker exec -u root <novo> chown node:node /tmp/portal.db
-   ```
-
-4. Simulação: `docker exec <novo> node_modules/.bin/tsx scripts/migrate-legacy.ts /tmp/portal.db --dry-run`.
-   Confira as contagens, os avisos (protocolos com `-2`, convites órfãos, autores inexistentes,
-   ações sem equivalente, papéis sem equivalente, adesões com diagnóstico órfão, campo em branco ou
-   versão do termo fora do sistema) e se há **conflitos**. Com conflito, nada é gravado.
-5. De verdade: o mesmo comando sem `--dry-run`. Rode uma segunda vez: tudo deve vir como pulado
-   ("imported 0").
-6. No backoffice, aba Usuários, defina a senha de cada usuário migrado (eles chegam sem senha;
-   o resumo antigo é incompatível). Confira a aba Respostas e a linha "migração do portal antigo"
-   na Auditoria.
-7. Apague as cópias: `docker exec -u root <novo> rm /tmp/portal.db` e `rm -rf /root/portal-copia.db /root/migracao`.
-
-Localmente: `pnpm migrate:legacy <caminho> [--dry-run]` (o `node:sqlite` não pede flag a partir
+Localmente, contra um arquivo: `pnpm migrate:legacy <caminho> [--dry-run]` (o `node:sqlite` não pede flag a partir
 do Node 22.13).

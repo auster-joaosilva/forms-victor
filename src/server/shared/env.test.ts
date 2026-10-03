@@ -17,6 +17,14 @@ describe('parseEnv', () => {
     const env = parseEnv(valid)
     expect(env.PORT).toBe(3000)
     expect(env.S3_USE_SSL).toBe(false)
+    expect(env.LEGACY_DB_PATH).toBe('/legacy/portal.db')
+    expect(env.ALLOW_TEST_DATA_RESET).toBe(false)
+  })
+
+  it('turns the test data reset on only with the word true', () => {
+    expect(parseEnv({ ...valid, ALLOW_TEST_DATA_RESET: 'true' }).ALLOW_TEST_DATA_RESET).toBe(true)
+    expect(parseEnv({ ...valid, ALLOW_TEST_DATA_RESET: 'false' }).ALLOW_TEST_DATA_RESET).toBe(false)
+    expect(() => parseEnv({ ...valid, ALLOW_TEST_DATA_RESET: 'yes' })).toThrow(/ALLOW_TEST_DATA_RESET/)
   })
 
   it('rejects an S3 endpoint written as URL', () => {

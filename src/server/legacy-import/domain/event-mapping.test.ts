@@ -34,6 +34,10 @@ describe('imageRefOf', () => {
     expect(imageRefOf('data:image/gif;base64,R0lG', 'k', 'event_cover')).toMatchObject({ kind: 'invalid' })
     expect(imageRefOf('https://exemplo.com/x.jpg', 'k', 'event_cover')).toMatchObject({ kind: 'invalid' })
   })
+
+  it('takes malformed base64 as an unknown format instead of throwing', () => {
+    expect(imageRefOf('data:image/jpeg;base64,A', 'k', 'event_cover')).toEqual({ kind: 'invalid', reason: 'imagem em formato desconhecido' })
+  })
 })
 
 describe('legacyContent', () => {

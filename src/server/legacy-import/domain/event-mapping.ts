@@ -20,6 +20,15 @@ const HOUSE_PATH = /^\/imagens\/([a-z0-9_-]+\.(?:jpg|png|svg|webp))$/
 
 const isImageType = (value: string): value is LegacyImage['contentType'] => value === 'image/jpeg' || value === 'image/png' || value === 'image/webp'
 
+// O atob lança com base64 de tamanho inválido; uma imagem estragada no portal antigo não pode derrubar a simulação.
+function decodeBase64(text: string): string | null {
+  try {
+    return atob(text)
+  } catch {
+    return null
+  }
+}
+
 export function imageRefOf(value: unknown, key: string, kind: ImageKind): ImageRef {
   if (value === undefined || value === null || value === '') return { kind: 'none' }
   if (typeof value !== 'string') return { kind: 'invalid', reason: 'imagem em formato desconhecido' }
@@ -27,7 +36,8 @@ export function imageRefOf(value: unknown, key: string, kind: ImageKind): ImageR
   if (house?.[1]) return { kind: 'house', name: house[1] }
   const data = DATA_URL.exec(value)
   if (!data?.[1] || !data[2] || !isImageType(data[1])) return { kind: 'invalid', reason: 'imagem em formato desconhecido' }
-  const binary = atob(data[2])
+  const binary = decodeBase64(data[2])
+  if (binary === null) return { kind: 'invalid', reason: 'imagem em formato desconhecido' }
   if (binary.length > MAX_IMAGE_BYTES) return { kind: 'invalid', reason: 'imagem acima de 5 MiB' }
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
   return { kind: 'upload', image: { key, kind, contentType: data[1], bytes } }

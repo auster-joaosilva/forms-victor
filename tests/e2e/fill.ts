@@ -98,6 +98,42 @@ export async function changePhoneAndResubmit(page: Page, phone: string) {
   await expect(page.getByText('Respostas enviadas automaticamente.')).toBeVisible()
 }
 
+// Uma data sempre no futuro: o teste não pode vencer como o da adesão, que só vale até 30/10/2026.
+export const futureDay = (days = 45) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
+
+export async function createEvent(page: Page, title: string, seats = 1, publish = true): Promise<{ id: number; slug: string }> {
+  await page.goto('/backoffice?tab=events')
+  await page.getByLabel('Título do evento (dá para mudar depois)').fill(title)
+  await page.getByRole('button', { name: 'Novo evento' }).click()
+  await page.waitForURL(/[?&]event=\d+/)
+  const id = Number(new URL(page.url()).searchParams.get('event'))
+  await page.getByRole('button', { name: 'Acrescentar encontro' }).click()
+  await page.getByLabel('Data do encontro 1').fill(futureDay())
+  await page.getByLabel('Hora do encontro 1').fill('19:30')
+  await page.getByLabel('Vagas do encontro 1').fill(String(seats))
+  // O editor remonta depois de salvar (fiel ao antigo, que redesenhava a tela), então a prova é a resposta da server function.
+  const saved = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/_serverFn/'))
+  await page.getByRole('button', { name: 'Salvar alterações' }).click()
+  expect((await saved).ok()).toBe(true)
+  await expect(page.getByRole('button', { name: 'Tirar' })).toBeVisible()
+  if (publish) {
+    await page.getByRole('button', { name: 'Publicar' }).click()
+    await expect(page.getByRole('button', { name: 'Voltar a rascunho' })).toBeVisible()
+  }
+  const slug = (await page.getByRole('textbox', { name: 'Endereço da página' }).inputValue()).trim()
+  return { id, slug }
+}
+
+export async function registerInSession(page: Page, person: { name: string; email: string }) {
+  await page.getByLabel('Qual encontro').selectOption({ index: 1 })
+  await page.getByLabel('Seu nome').fill(person.name)
+  await page.getByLabel('E-mail', { exact: true }).fill(person.email)
+  await page.getByLabel('Telefone (WhatsApp)').fill('(34) 99999-9999')
+  await page.getByLabel('Seu cargo').selectOption('Sócio')
+  await page.getByRole('checkbox', { name: /Concordo que a Auster use meus dados/ }).check()
+  await page.getByRole('button', { name: 'Confirmar inscrição' }).click()
+}
+
 export async function login(page: Page, user: { username: string; password: string } = E2E_ADMIN) {
   await useOwnAddress(page)
   await page.goto('/login')

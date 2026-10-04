@@ -108,7 +108,7 @@ export function MigrationView({ status, report, error, notice, pending, onSimula
         <section style={{ marginTop: 32 }}>
           <h3 style={{ margin: '0 0 4px', fontSize: 'var(--text-body)', fontWeight: 600 }}>Apagar dados de teste do hml</h3>
           <p className="bo-note" style={{ margin: '0 0 12px' }}>
-            Apaga todas as respostas, adesões, inscrições e rascunhos deste banco: os de teste ocupam os ids das antigas e fazem a importação recusar. A Auditoria fica. Digite{' '}
+            Apaga todas as respostas, adesões, inscrições, encontros, eventos e rascunhos deste banco: os de teste ocupam os ids das antigas e fazem a importação recusar. A Auditoria fica. Digite{' '}
             <b>{RESET_CONFIRMATION}</b> para liberar o botão.
           </p>
           <div className="bo-filters">

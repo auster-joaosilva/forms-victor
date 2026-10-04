@@ -1,6 +1,8 @@
 export type ErasedTestData = {
   drafts: number
   registrations: number
+  sessions: number
+  events: number
   adhesions: number
   responses: number
 }

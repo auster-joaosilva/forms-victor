@@ -33,7 +33,7 @@ function setup({ available = true, reason = undefined as string | undefined, con
       runs.push(options)
       return report(options.dryRun, conflicts)
     },
-    eraser: { eraseTestData: async (actor) => (erasedBy.push(actor), { drafts: 2, registrations: 1, adhesions: 3, responses: 4 }) },
+    eraser: { eraseTestData: async (actor) => (erasedBy.push(actor), { drafts: 2, registrations: 1, sessions: 5, events: 6, adhesions: 3, responses: 4 }) },
     allowReset,
   })
   return { migration, runs, snapshots, erasedBy }
@@ -113,7 +113,7 @@ describe('manage migration', () => {
 
   it('erases the test data on behalf of the actor, who goes into the audit of the same transaction', async () => {
     const { migration, erasedBy } = setup({ allowReset: true })
-    expect(await migration.resetTestData(admin, 'APAGAR')).toEqual({ drafts: 2, registrations: 1, adhesions: 3, responses: 4 })
+    expect(await migration.resetTestData(admin, 'APAGAR')).toEqual({ drafts: 2, registrations: 1, sessions: 5, events: 6, adhesions: 3, responses: 4 })
     expect(erasedBy).toEqual([{ id: 'v1', username: 'victor' }])
   })
 })

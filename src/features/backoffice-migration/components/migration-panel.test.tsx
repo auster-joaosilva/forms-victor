@@ -131,7 +131,7 @@ describe('MigrationPanel', () => {
   it('erases the test data only after APAGAR is typed, and asks for a new simulation', async () => {
     migrationStatusFn.mockResolvedValue({ ...status, resetAllowed: true })
     simulateMigrationFn.mockResolvedValue({ ok: true, report: report(true) })
-    resetTestDataFn.mockResolvedValue({ ok: true, erased: { drafts: 2, registrations: 1, adhesions: 3, responses: 4 } })
+    resetTestDataFn.mockResolvedValue({ ok: true, erased: { drafts: 2, registrations: 1, sessions: 5, events: 6, adhesions: 3, responses: 4 } })
     renderPanel()
     expect(await screen.findByText('Apagar dados de teste do hml')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Simular' }))
@@ -145,7 +145,7 @@ describe('MigrationPanel', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Confirmação' }), 'APAGAR')
     await userEvent.click(erase)
     expect(resetTestDataFn).toHaveBeenCalledWith({ data: { confirmation: 'APAGAR' } })
-    expect(await screen.findByText('Apagados: 2 rascunhos, 1 inscrições, 3 adesões e 4 respostas. Simule de novo antes de importar.')).toBeInTheDocument()
+    expect(await screen.findByText('Apagados: 2 rascunhos, 1 inscrições, 5 encontros, 6 eventos, 3 adesões e 4 respostas. Simule de novo antes de importar.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Importar' })).toBeDisabled()
     expect(screen.getByRole('textbox', { name: 'Confirmação' })).toHaveValue('')
   })

@@ -51,15 +51,25 @@ describe('migration from the backoffice', () => {
     await prisma.diagnosisDraft.create({ data: { payload: {}, expiresAt: new Date(Date.now() + 60_000), responseId: response.id } })
     await prisma.diagnosisDraft.create({ data: { payload: {}, expiresAt: new Date(Date.now() + 60_000) } })
     await prisma.adhesion.create({ data: { ...testAdhesion('ADS-TESTE'), responseId: response.id } })
+    const event = await prisma.event.create({ data: { slug: 'evento-teste', title: 'Evento de teste', content: {} } })
+    const session = await prisma.eventSession.create({ data: { eventId: event.id, date: new Date('2026-12-01'), time: '09:00', title: 'Encontro de teste' } })
+    await prisma.registration.create({
+      data: { protocol: 'EV-TESTE', eventId: event.id, sessionId: session.id, responseId: response.id, name: 'x', email: 'x@x.invalid', payload: {} },
+    })
 
     const refused = await migration.importNow(admin)
     expect(refused).toMatchObject({ dryRun: true, conflicts: ['resposta 1: o id já existe no banco novo com o protocolo DS-TESTE', 'adesão 1: o id já existe no banco novo com o protocolo ADS-TESTE'] })
     expect(await prisma.user.count()).toBe(1)
 
-    expect(await migration.resetTestData(admin, 'APAGAR')).toEqual({ drafts: 2, registrations: 0, adhesions: 1, responses: 1 })
-    expect([await prisma.diagnosisDraft.count(), await prisma.adhesion.count(), await prisma.response.count()]).toEqual([0, 0, 0])
+    const erased = { drafts: 2, registrations: 1, sessions: 1, events: 1, adhesions: 1, responses: 1 }
+    expect(await migration.resetTestData(admin, 'APAGAR')).toEqual(erased)
+    expect([
+      await prisma.diagnosisDraft.count(), await prisma.registration.count(), await prisma.eventSession.count(),
+      await prisma.event.count(), await prisma.adhesion.count(), await prisma.response.count(),
+    ]).toEqual([0, 0, 0, 0, 0, 0])
+    expect(await prisma.user.count()).toBe(1)
     expect(await prisma.auditLog.findFirst({ where: { action: 'test_data_reset' } })).toMatchObject({
-      actorId: 'victor-novo', actorUsername: 'victor', detail: { drafts: 2, registrations: 0, adhesions: 1, responses: 1 },
+      actorId: 'victor-novo', actorUsername: 'victor', detail: erased,
     })
 
     expect(await migration.importNow(admin)).toMatchObject({ dryRun: false, conflicts: [], responses: { imported: 4 }, adhesions: { imported: 3 } })

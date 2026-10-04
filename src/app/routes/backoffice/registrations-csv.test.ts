@@ -27,11 +27,11 @@ describe('GET /backoffice/events/:id/registrations.csv', () => {
 
   it('exports with the filters of the old portal and the attachment headers', async () => {
     ensureCapability.mockResolvedValue(admin)
-    exportCsv.mockResolvedValue({ fileName: 'inscritos-2026-10-03.csv', body: '﻿protocolo\r\n' })
+    exportCsv.mockResolvedValue({ fileName: 'inscritos-2026-10-03.csv', body: '\uFEFFprotocolo\r\n' })
     const response = await get('/backoffice/events/9/registrations.csv?sessao=3&situacao=present&busca=ana')
     expect(exportCsv).toHaveBeenCalledWith({ id: 'u1', username: 'victor' }, 9, { sessionId: 3, status: 'present', search: 'ana' })
     expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="inscritos-2026-10-03.csv"')
-    expect(new Uint8Array(await response.arrayBuffer())).toEqual(new TextEncoder().encode('﻿protocolo\r\n'))
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(new TextEncoder().encode('\uFEFFprotocolo\r\n'))
   })
 
   it('ignores unknown filters and answers 404 for an unknown or malformed event', async () => {

@@ -46,3 +46,29 @@ export function buildLegacyDatabase(path: string) {
   event.run('2026-09-13T12:00:00.000Z', 'victor', 'coisa_estranha', null, null)
   db.close()
 }
+
+const AGENDA_SCHEMA = `
+CREATE TABLE agenda (id INTEGER PRIMARY KEY AUTOINCREMENT, apelido TEXT NOT NULL UNIQUE, titulo TEXT NOT NULL, situacao TEXT NOT NULL DEFAULT 'rascunho', inscricoes TEXT NOT NULL DEFAULT 'abertas', conteudo TEXT NOT NULL, criado_em TEXT NOT NULL, criado_por TEXT, alterado_em TEXT, alterado_por TEXT);
+CREATE TABLE agenda_sessoes (id INTEGER PRIMARY KEY AUTOINCREMENT, evento_id INTEGER NOT NULL REFERENCES agenda(id) ON DELETE CASCADE, ordem INTEGER NOT NULL DEFAULT 0, data TEXT NOT NULL, hora TEXT NOT NULL, formato TEXT NOT NULL DEFAULT 'presencial', titulo TEXT NOT NULL, descricao TEXT, local TEXT, vagas INTEGER);
+CREATE TABLE inscricoes (id INTEGER PRIMARY KEY AUTOINCREMENT, protocolo TEXT NOT NULL, evento_id INTEGER NOT NULL REFERENCES agenda(id), sessao_id INTEGER NOT NULL REFERENCES agenda_sessoes(id), resposta_id INTEGER, criado_em TEXT NOT NULL, nome TEXT NOT NULL, email TEXT NOT NULL, telefone TEXT, empresa TEXT, cnpj TEXT, cargo TEXT, aceite_lgpd INTEGER NOT NULL DEFAULT 0, origem TEXT, agente TEXT, pacote TEXT NOT NULL, situacao TEXT NOT NULL DEFAULT 'inscrita', nota_interna TEXT, tratado_por TEXT, tratado_em TEXT);
+`
+// 1x1 JPEG: o importador só confere o tipo declarado e o tamanho; o conteúdo precisa ser bytes de JPEG para o teste ler de volta.
+export const TINY_JPEG_BASE64 = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAA//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AN//Z'
+
+export function addLegacyAgenda(path: string) {
+  const db = new DatabaseSync(path)
+  db.exec(AGENDA_SCHEMA)
+  const event = db.prepare('INSERT INTO agenda (id, apelido, titulo, situacao, inscricoes, conteudo, criado_em, criado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+  event.run(4, 'conexao-tributaria', 'Conexão Tributária', 'publicado', 'abertas',
+    JSON.stringify({ chamada: 'O que muda', capa: `data:image/jpeg;base64,${TINY_JPEG_BASE64}`, palestrante: { nome: 'Victor', foto: '/imagens/palestrante.jpg' } }),
+    '2026-09-20T12:00:00.000Z', 'victor')
+  event.run(5, 'rascunho-velho', 'Rascunho', 'rascunho', 'encerradas', '{}', '2026-09-21T12:00:00.000Z', null)
+  const session = db.prepare('INSERT INTO agenda_sessoes (id, evento_id, ordem, data, hora, formato, titulo, descricao, local, vagas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+  session.run(10, 4, 0, '2026-11-12', '19:30', 'presencial', 'Encontro 1', 'Abertura', 'Auditório', 30)
+  session.run(11, 4, 1, '2026-11-19', '19:30', 'online', 'Encontro 2', null, 'YouTube', null)
+  const registration = db.prepare(`INSERT INTO inscricoes (id, protocolo, evento_id, sessao_id, resposta_id, criado_em, nome, email, telefone, cnpj, aceite_lgpd, origem, agente, pacote, situacao, tratado_por, tratado_em)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+  registration.run(20, 'INS-20261001-AAAAA', 4, 10, 1, '2026-10-01T12:00:00.000Z', 'Ana', 'ana@padaria.com', null, '11.222.333/0001-81', 1, '203.0.113.7', 'Mozilla/5.0', '{}', 'presente', 'maria', '2026-11-12T23:00:00.000Z')
+  registration.run(21, 'INS-20261001-AAAAA', 4, 11, 99, '2026-10-01T13:00:00.000Z', 'Beto', 'beto@x.com', null, null, 1, null, null, '{}', 'cancelada', null, null)
+  db.close()
+}

@@ -28,8 +28,8 @@ export function MigrationPanel() {
       if (!result.ok) return
       // O que a simulação contou não vale mais: o banco mudou.
       setReport(null)
-      const { drafts, adhesions, responses } = result.erased
-      setNotice(`Apagados: ${drafts} rascunhos, ${adhesions} adesões e ${responses} respostas. Simule de novo antes de importar.`)
+      const { drafts, registrations, adhesions, responses } = result.erased
+      setNotice(`Apagados: ${drafts} rascunhos, ${registrations} inscrições, ${adhesions} adesões e ${responses} respostas. Simule de novo antes de importar.`)
     },
     onError: failed,
   })

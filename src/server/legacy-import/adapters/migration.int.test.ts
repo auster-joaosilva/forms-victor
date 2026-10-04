@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { prisma } from '@/server/shared/prisma/client'
+import { findStoredFile, storeFile } from '@/server/storage/composition'
 import { resetDatabase } from '../../../../tests/integration/db'
 import { buildLegacyDatabase } from '../../../../tests/integration/legacy-portal'
 import { makeImportLegacy } from '../application/import-legacy'
@@ -11,13 +12,16 @@ import { makeManageMigration } from '../application/manage-migration'
 import { legacyDatabase } from './node-sqlite-legacy-source'
 import { prismaImportTarget } from './prisma-import-target'
 import { prismaTestDataEraser } from './prisma-test-data-eraser'
+import { makeStorageLegacyImageStore } from './storage-legacy-image-store'
 
 const path = join(tmpdir(), `portal-${randomUUID()}.db`)
 const admin = { id: 'victor-novo', username: 'victor', role: 'admin' as const }
 
+const images = makeStorageLegacyImageStore({ storeFile, findStoredFile })
 const migration = makeManageMigration({
   legacy: legacyDatabase(path),
-  runImport: (source, options) => makeImportLegacy({ source, target: prismaImportTarget, newUserId: () => randomUUID(), knownTermVersions: new Set(['V4', 'V5']) })(options),
+  runImport: (source, options) =>
+    makeImportLegacy({ source, target: prismaImportTarget, newUserId: () => randomUUID(), knownTermVersions: new Set(['V4', 'V5']), images })(options),
   eraser: prismaTestDataEraser,
   allowReset: true,
 })
@@ -52,10 +56,10 @@ describe('migration from the backoffice', () => {
     expect(refused).toMatchObject({ dryRun: true, conflicts: ['resposta 1: o id já existe no banco novo com o protocolo DS-TESTE', 'adesão 1: o id já existe no banco novo com o protocolo ADS-TESTE'] })
     expect(await prisma.user.count()).toBe(1)
 
-    expect(await migration.resetTestData(admin, 'APAGAR')).toEqual({ drafts: 2, adhesions: 1, responses: 1 })
+    expect(await migration.resetTestData(admin, 'APAGAR')).toEqual({ drafts: 2, registrations: 0, adhesions: 1, responses: 1 })
     expect([await prisma.diagnosisDraft.count(), await prisma.adhesion.count(), await prisma.response.count()]).toEqual([0, 0, 0])
     expect(await prisma.auditLog.findFirst({ where: { action: 'test_data_reset' } })).toMatchObject({
-      actorId: 'victor-novo', actorUsername: 'victor', detail: { drafts: 2, adhesions: 1, responses: 1 },
+      actorId: 'victor-novo', actorUsername: 'victor', detail: { drafts: 2, registrations: 0, adhesions: 1, responses: 1 },
     })
 
     expect(await migration.importNow(admin)).toMatchObject({ dryRun: false, conflicts: [], responses: { imported: 4 }, adhesions: { imported: 3 } })

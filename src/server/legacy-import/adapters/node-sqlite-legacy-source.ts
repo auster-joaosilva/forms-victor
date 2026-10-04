@@ -1,7 +1,9 @@
 import { existsSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { NEEDS_LIVE_PORTAL, type LegacyAvailability } from '../domain/migration'
-import type { LegacyAdhesion, LegacyEvent, LegacyInvitation, LegacyResponse, LegacyUser } from '../domain/legacy-rows'
+import type {
+  LegacyAdhesion, LegacyAgendaEvent, LegacyAgendaSession, LegacyEvent, LegacyInvitation, LegacyRegistration, LegacyResponse, LegacyUser,
+} from '../domain/legacy-rows'
 import type { LegacyDatabase, LegacySource } from '../ports/legacy-source'
 
 type Row = Record<string, unknown>
@@ -43,6 +45,7 @@ export function readLegacySnapshot(path: string): LegacySource {
       return {
         users: async () => rows.users, invitations: async () => rows.invitations, responses: async () => rows.responses,
         adhesions: async () => rows.adhesions, events: async () => rows.events,
+        agenda: async () => rows.agenda, agendaSessions: async () => rows.agendaSessions, registrations: async () => rows.registrations,
       }
     } catch (error) {
       if (db.isTransaction) db.exec('ROLLBACK')
@@ -93,6 +96,25 @@ function readAll(db: DatabaseSync) {
     events: all('eventos', 'SELECT * FROM eventos ORDER BY id').map((row): LegacyEvent => ({
       id: integer(row, 'id'), quando: required(row, 'quando'), quem: text(row, 'quem'), o_que: required(row, 'o_que'),
       referencia: text(row, 'referencia'), detalhe: text(row, 'detalhe'),
+    })),
+    // A tabela eventos é a auditoria; a agenda é a tabela agenda.
+    agenda: all('agenda', 'SELECT * FROM agenda ORDER BY id').map((row): LegacyAgendaEvent => ({
+      id: integer(row, 'id'), apelido: required(row, 'apelido'), titulo: required(row, 'titulo'), situacao: required(row, 'situacao'),
+      inscricoes: required(row, 'inscricoes'), conteudo: required(row, 'conteudo'), criado_em: required(row, 'criado_em'),
+      criado_por: text(row, 'criado_por'), alterado_em: text(row, 'alterado_em'), alterado_por: text(row, 'alterado_por'),
+    })),
+    agendaSessions: all('agenda_sessoes', 'SELECT * FROM agenda_sessoes ORDER BY evento_id, ordem, id').map((row): LegacyAgendaSession => ({
+      id: integer(row, 'id'), evento_id: integer(row, 'evento_id'), ordem: integer(row, 'ordem'), data: required(row, 'data'), hora: required(row, 'hora'),
+      formato: required(row, 'formato'), titulo: required(row, 'titulo'), descricao: text(row, 'descricao'), local: text(row, 'local'),
+      vagas: row.vagas === null || row.vagas === undefined ? null : integer(row, 'vagas'),
+    })),
+    registrations: all('inscricoes', 'SELECT * FROM inscricoes ORDER BY id').map((row): LegacyRegistration => ({
+      id: integer(row, 'id'), protocolo: required(row, 'protocolo'), evento_id: integer(row, 'evento_id'), sessao_id: integer(row, 'sessao_id'),
+      resposta_id: row.resposta_id === null || row.resposta_id === undefined ? null : integer(row, 'resposta_id'), criado_em: required(row, 'criado_em'),
+      nome: required(row, 'nome'), email: required(row, 'email'), telefone: text(row, 'telefone'), empresa: text(row, 'empresa'), cnpj: text(row, 'cnpj'),
+      cargo: text(row, 'cargo'), aceite_lgpd: integer(row, 'aceite_lgpd'), origem: text(row, 'origem'), agente: text(row, 'agente'),
+      pacote: required(row, 'pacote'), situacao: required(row, 'situacao'), nota_interna: text(row, 'nota_interna'),
+      tratado_por: text(row, 'tratado_por'), tratado_em: text(row, 'tratado_em'),
     })),
   }
 }

@@ -121,3 +121,5 @@
 .bo-thumb.is-none{height:96px;display:grid;place-items:center;color:var(--color-auster-gray);font-size:var(--text-meta)}
 .bo-thumb-name{display:block;padding:3px 6px;font-size:11px;color:var(--color-auster-gray)}
 .bo-sessions input,.bo-sessions select{min-width:0}
+.bo-link-button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.bo-link-button:focus-visible{outline:2px solid var(--color-auster-accent);outline-offset:2px}

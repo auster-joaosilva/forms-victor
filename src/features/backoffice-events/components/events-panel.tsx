@@ -23,7 +23,12 @@ export function EventsPanel({ eventId, onOpen, canManage, canExport }: Props) {
     },
     onError: (failure) => setError(`Não foi possível criar: ${failure.message}`),
   })
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['events'] })
+  // The form only re-syncs with the server after the user's own Save; a status change refreshes the buttons and leaves the typed fields alone.
+  const [synced, setSynced] = useState(0)
+  const refresh = async (saved: boolean) => {
+    await queryClient.invalidateQueries({ queryKey: ['events'] })
+    if (saved) setSynced((count) => count + 1)
+  }
 
   if (eventId === undefined) {
     if (list.isPending) return <>carregando…</>
@@ -35,13 +40,13 @@ export function EventsPanel({ eventId, onOpen, canManage, canExport }: Props) {
   if (!detail.data) return <div className="bo-empty">Evento não encontrado.</div>
   return (
     <EventEditor
-      key={`${detail.data.event.id}:${detail.dataUpdatedAt}`}
+      key={`${detail.data.event.id}:${synced}`}
       detail={detail.data}
       gallery={gallery.data ?? []}
       canManage={canManage}
       canExport={canExport}
       onBack={() => onOpen(undefined)}
-      onChanged={refresh}
+      onChanged={(saved) => void refresh(saved)}
     />
   )
 }

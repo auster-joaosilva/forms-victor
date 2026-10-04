@@ -7,9 +7,9 @@ vi.mock('@/server/events/composition', () => ({ eventBackoffice: { uploadImage }
 const { Route } = await import('./event-images')
 
 type Handler = (context: { request: Request }) => Promise<Response>
-const post = (query: string, body: BodyInit | null = new Uint8Array([1, 2, 3]), type = 'image/jpeg') =>
+const post = (query: string, body: BodyInit | null = new Uint8Array([1, 2, 3]), type = 'image/jpeg', headers: Record<string, string> = {}) =>
   (Route.options.server?.handlers as { POST: Handler }).POST({
-    request: new Request(`http://localhost/backoffice/event-images${query}`, { method: 'POST', body, headers: { 'content-type': type } }),
+    request: new Request(`http://localhost/backoffice/event-images${query}`, { method: 'POST', body, headers: { 'content-type': type, 'sec-fetch-site': 'same-origin', ...headers } }),
   })
 
 describe('/backoffice/event-images', () => {
@@ -17,6 +17,19 @@ describe('/backoffice/event-images', () => {
     ensureCapability.mockReset()
     uploadImage.mockReset()
     ensureCapability.mockResolvedValue({ id: 'u1', username: 'maria' })
+  })
+
+  it('refuses a foreign or missing origin with 403, before the guard and the use case', async () => {
+    expect((await post('?kind=event_cover', undefined, 'image/jpeg', { 'sec-fetch-site': 'cross-site' })).status).toBe(403)
+    expect((await post('?kind=event_cover', undefined, 'image/jpeg', { 'sec-fetch-site': '', origin: 'https://evil.example' })).status).toBe(403)
+    expect((await post('?kind=event_cover', undefined, 'image/jpeg', { 'sec-fetch-site': '' })).status).toBe(403)
+    expect(ensureCapability).not.toHaveBeenCalled()
+    expect(uploadImage).not.toHaveBeenCalled()
+  })
+
+  it('accepts our own origin when the browser sends no Sec-Fetch-Site', async () => {
+    uploadImage.mockResolvedValue({ ok: true, fileId: 'f1' })
+    expect((await post('?kind=event_cover', undefined, 'image/jpeg', { 'sec-fetch-site': '', origin: 'http://localhost' })).status).toBe(200)
   })
 
   it('returns the refusal of the guard and stores nothing', async () => {

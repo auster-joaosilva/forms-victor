@@ -35,7 +35,7 @@ type Props = {
   canManage: boolean
   canExport: boolean
   onBack(): void
-  onChanged(): void
+  onChanged(saved: boolean): void
 }
 
 export function EventEditor({ detail, gallery, canManage, canExport, onBack, onChanged }: Props) {
@@ -63,15 +63,15 @@ export function EventEditor({ detail, gallery, canManage, canExport, onBack, onC
   const [error, setError] = useState<string | null>(null)
 
   const save = useMutation({
-    mutationFn: (changes: Parameters<typeof updateEventFn>[0]['data']) => updateEventFn({ data: changes }),
-    onSuccess: (result) => {
+    mutationFn: (input: { changes: Parameters<typeof updateEventFn>[0]['data']; saved: boolean }) => updateEventFn({ data: input.changes }),
+    onSuccess: (result, input) => {
       if (!result.ok) {
         setState('')
         return setError(`Não foi possível salvar: ${result.error}`)
       }
       setError(null)
       setState('salvo')
-      onChanged()
+      onChanged(input.saved)
     },
     onError: (failure) => {
       setState('')
@@ -108,10 +108,13 @@ export function EventEditor({ detail, gallery, canManage, canExport, onBack, onC
       capa,
       palestrante: { nome: nome.trim(), cargo: cargo.trim(), bio: bio.trim(), foto },
     }
-    save.mutate({ id: event.id, title: title.trim() || event.title, slug: slug.trim() || event.slug, content: nextContent, sessions: sessionsToSave(sessions) })
+    save.mutate({
+      changes: { id: event.id, title: title.trim() || event.title, slug: slug.trim() || event.slug, content: nextContent, sessions: sessionsToSave(sessions) },
+      saved: true,
+    })
   }
   const change = (changes: { status?: EventDetail['event']['status']; registrations?: EventDetail['event']['registrations'] }) =>
-    save.mutate({ id: event.id, ...changes })
+    save.mutate({ changes: { id: event.id, ...changes }, saved: false })
   const copyLink = () => void navigator.clipboard?.writeText(`${window.location.origin}/events/${event.slug}`)
   const busy = save.isPending || !canManage
 

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { isTrustedRequest } from '@/app/trusted-origin'
 import { eventBackoffice } from '@/server/events/composition'
 import { ensureCapability } from '@/server/shared/http/route-capability'
 
@@ -10,6 +11,8 @@ export const Route = createFileRoute('/backoffice/event-images')({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // csrfProtection only covers server functions, so the same origin rule is applied here, before reading the body.
+        if (!isTrustedRequest(request)) return new Response('Origem não permitida.', { status: 403 })
         const user = await ensureCapability(request, 'manage_events')
         if (user instanceof Response) return user
         const url = new URL(request.url)

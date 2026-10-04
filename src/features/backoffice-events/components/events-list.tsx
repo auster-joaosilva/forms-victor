@@ -56,7 +56,9 @@ export function EventsList({ events, canManage, creating, error, onOpen, onCreat
             {events.map((row) => (
               <tr key={row.id} className="bo-row-link" onClick={() => onOpen(row.id)}>
                 <td>
-                  <b>{row.title}</b>
+                  <button type="button" className="bo-link-button" onClick={(event) => (event.stopPropagation(), onOpen(row.id))}>
+                    <b>{row.title}</b>
+                  </button>
                   <br />
                   <span className="bo-muted">{`/events/${row.slug}`}</span>
                 </td>

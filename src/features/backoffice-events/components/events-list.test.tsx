@@ -21,8 +21,11 @@ describe('EventsList', () => {
     expect(screen.getByText('Rascunho', { selector: '.bo-badge' })).toBeInTheDocument()
     expect(screen.getByText('inscrições encerradas')).toBeInTheDocument()
     expect(screen.getByText('—')).toBeInTheDocument()
-    await userEvent.click(screen.getByText('Conexão Tributária'))
+    await userEvent.click(screen.getByRole('button', { name: 'Conexão Tributária' }))
+    expect(onOpen).toHaveBeenCalledOnce()
     expect(onOpen).toHaveBeenCalledWith(1)
+    await userEvent.click(screen.getByText('12/11/2026'))
+    expect(onOpen).toHaveBeenCalledTimes(2)
   })
 
   it('creates an event from the inline title, without prompt()', async () => {

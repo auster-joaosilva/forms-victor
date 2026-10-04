@@ -36,7 +36,7 @@ describe('planilha de inscritos (planilhaDeInscricoes da main)', () => {
   it('neutraliza fórmula digitada pelo visitante', () => {
     const csv = toCsv(registrationCsvRows([row({ name: '=HYPERLINK("http://x","clique")' })]))
     expect(csv).toContain(`"'=HYPERLINK(""http://x"",""clique"")"`)
-    expect(csv.startsWith('﻿')).toBe(true)
+    expect(csv.startsWith('\uFEFF')).toBe(true)
   })
 
   it('nome do arquivo com a data de Brasília', () => {

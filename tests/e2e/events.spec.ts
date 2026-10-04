@@ -51,7 +51,7 @@ test('o admin publica um evento de uma vaga; a inscrição entra e o segundo vis
   const csv = await page.request.get(`/backoffice/events/${id}/registrations.csv`)
   expect(csv.status()).toBe(200)
   const body = await csv.text()
-  expect(body.replace(/^﻿/, '').startsWith('protocolo;inscrito em (Brasilia);situacao;evento;encontro')).toBe(true)
+  expect(body.replace(/^\uFEFF/, '').startsWith('protocolo;inscrito em (Brasilia);situacao;evento;encontro')).toBe(true)
   expect(body).toContain(protocol ?? 'sem protocolo')
 })
 

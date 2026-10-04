@@ -38,6 +38,10 @@ describe('imageRefOf', () => {
   it('takes malformed base64 as an unknown format instead of throwing', () => {
     expect(imageRefOf('data:image/jpeg;base64,A', 'k', 'event_cover')).toEqual({ kind: 'invalid', reason: 'imagem em formato desconhecido' })
   })
+
+  it('takes bytes that are not the declared image as an unknown format, as the storage would refuse them', () => {
+    expect(imageRefOf('data:image/png;base64,/9j/4AAQ', 'k', 'event_cover')).toEqual({ kind: 'invalid', reason: 'imagem em formato desconhecido' })
+  })
 })
 
 describe('legacyContent', () => {

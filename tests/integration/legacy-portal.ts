@@ -52,7 +52,7 @@ CREATE TABLE agenda (id INTEGER PRIMARY KEY AUTOINCREMENT, apelido TEXT NOT NULL
 CREATE TABLE agenda_sessoes (id INTEGER PRIMARY KEY AUTOINCREMENT, evento_id INTEGER NOT NULL REFERENCES agenda(id) ON DELETE CASCADE, ordem INTEGER NOT NULL DEFAULT 0, data TEXT NOT NULL, hora TEXT NOT NULL, formato TEXT NOT NULL DEFAULT 'presencial', titulo TEXT NOT NULL, descricao TEXT, local TEXT, vagas INTEGER);
 CREATE TABLE inscricoes (id INTEGER PRIMARY KEY AUTOINCREMENT, protocolo TEXT NOT NULL, evento_id INTEGER NOT NULL REFERENCES agenda(id), sessao_id INTEGER NOT NULL REFERENCES agenda_sessoes(id), resposta_id INTEGER, criado_em TEXT NOT NULL, nome TEXT NOT NULL, email TEXT NOT NULL, telefone TEXT, empresa TEXT, cnpj TEXT, cargo TEXT, aceite_lgpd INTEGER NOT NULL DEFAULT 0, origem TEXT, agente TEXT, pacote TEXT NOT NULL, situacao TEXT NOT NULL DEFAULT 'inscrita', nota_interna TEXT, tratado_por TEXT, tratado_em TEXT);
 `
-// 1x1 JPEG: o importador só confere o tipo declarado e o tamanho; o conteúdo precisa ser bytes de JPEG para o teste ler de volta.
+// 1x1 JPEG de verdade: o importador e o storeFile conferem os primeiros bytes contra o tipo declarado.
 export const TINY_JPEG_BASE64 = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAA//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AN//Z'
 
 export function addLegacyAgenda(path: string) {

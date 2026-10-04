@@ -20,7 +20,7 @@ export interface StoreFileInput {
 export const makeStoreFile =
   ({ storage, repository, bucket, newId }: Dependencies) =>
   async (input: StoreFileInput): Promise<StoredFileRecord> => {
-    const violation = checkFile(input.contentType, input.bytes.byteLength)
+    const violation = checkFile(input.contentType, input.bytes)
     if (violation) throw new Error(violation)
     const id = newId()
     const key = objectKeyFor(input.kind, id, input.contentType as AllowedContentType)

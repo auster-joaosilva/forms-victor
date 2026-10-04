@@ -1,3 +1,4 @@
+import { hasImageSignature } from '@/server/shared/domain/image-signature'
 import { cnpjDigitsOf, isDate, lookup, parseJson } from './mapping'
 import type { LegacyAgendaEvent, LegacyAgendaSession, LegacyRegistration } from './legacy-rows'
 
@@ -40,6 +41,7 @@ export function imageRefOf(value: unknown, key: string, kind: ImageKind): ImageR
   if (binary === null) return { kind: 'invalid', reason: 'imagem em formato desconhecido' }
   if (binary.length > MAX_IMAGE_BYTES) return { kind: 'invalid', reason: 'imagem acima de 5 MiB' }
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+  if (!hasImageSignature(data[1], bytes)) return { kind: 'invalid', reason: 'imagem em formato desconhecido' }
   return { kind: 'upload', image: { key, kind, contentType: data[1], bytes } }
 }
 

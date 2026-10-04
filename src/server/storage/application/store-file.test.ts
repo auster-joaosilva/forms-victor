@@ -20,16 +20,18 @@ function fakes() {
   return { objects, storage, repository }
 }
 
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3])
+
 describe('storeFile', () => {
   it('stores bytes under a kind-scoped key with a sha256', async () => {
     const { objects, storage, repository } = fakes()
     const storeFile = makeStoreFile({ storage, repository, bucket: 'b', newId: () => 'id-1' })
-    const record = await storeFile({ kind: 'event_cover', contentType: 'image/png', bytes: new Uint8Array([1, 2, 3]) })
+    const record = await storeFile({ kind: 'event_cover', contentType: 'image/png', bytes: PNG })
     expect(record.key).toBe('event_cover/id-1.png')
-    expect(record.sha256).toBe('039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81')
-    expect(objects.get('event_cover/id-1.png')).toEqual(new Uint8Array([1, 2, 3]))
+    expect(record.sha256).toBe('cdf3cefe7ec6253d1cb4828ab654da6beb8a4727daac0c49dbf26bedf5887f79')
+    expect(objects.get('event_cover/id-1.png')).toEqual(PNG)
     const read = await makeReadFile({ storage, repository })('id-1')
-    expect(read?.body).toEqual(new Uint8Array([1, 2, 3]))
+    expect(read?.body).toEqual(PNG)
   })
 
   it('refuses a disallowed type before touching storage', async () => {
@@ -38,6 +40,13 @@ describe('storeFile', () => {
     await expect(
       storeFile({ kind: 'event_cover', contentType: 'image/svg+xml', bytes: new Uint8Array([1]) }),
     ).rejects.toThrow('content_type_not_allowed')
+    expect(objects.size).toBe(0)
+  })
+
+  it('refuses bytes that are not the declared image, before touching storage', async () => {
+    const { objects, storage, repository } = fakes()
+    const storeFile = makeStoreFile({ storage, repository, bucket: 'b', newId: () => 'x' })
+    await expect(storeFile({ kind: 'event_cover', contentType: 'image/jpeg', bytes: new TextEncoder().encode('<html>') })).rejects.toThrow('content_type_not_allowed')
     expect(objects.size).toBe(0)
   })
 })

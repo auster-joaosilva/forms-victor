@@ -1,10 +1,9 @@
 import { createMiddleware, createStart } from '@tanstack/react-start'
 import { redirect } from '@tanstack/react-router'
 import { resolveLegacyRedirect } from './app/legacy-redirects'
+import { maxBodyBytesFor } from './app/body-limit'
 import { csrfProtection } from './app/csrf'
 import { withSecurityHeaders } from './app/security-headers'
-
-const MAX_BODY_BYTES = 256 * 1024
 
 const bodyLimit = createMiddleware({ type: 'request' }).server(async ({ request, next }) => {
   const length = request.headers.get('content-length')
@@ -12,7 +11,7 @@ const bodyLimit = createMiddleware({ type: 'request' }).server(async ({ request,
     if (request.headers.has('transfer-encoding')) return new Response('Envie o corpo com Content-Length.', { status: 411 })
   } else if (!/^\d+$/.test(length)) {
     return new Response('Content-Length inválido.', { status: 400 })
-  } else if (Number(length) > MAX_BODY_BYTES) {
+  } else if (Number(length) > maxBodyBytesFor(request.url)) {
     return new Response('Corpo da requisição grande demais.', { status: 413 })
   }
   return next()

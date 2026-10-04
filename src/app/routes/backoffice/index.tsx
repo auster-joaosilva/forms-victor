@@ -4,6 +4,7 @@ import { BackofficeShell } from '@/components/backoffice/backoffice-shell'
 import { LogoutButton } from '@/features/auth/components/logout-button'
 import { AuditPanel } from '@/features/backoffice-audit/components/audit-panel'
 import { AdhesionsPanel } from '@/features/backoffice-adhesions/components/adhesions-panel'
+import { EventsPanel } from '@/features/backoffice-events/components/events-panel'
 import { InvitationsPanel } from '@/features/backoffice-invitations/components/invitations-panel'
 import { MigrationPanel } from '@/features/backoffice-migration/components/migration-panel'
 import { ResponsesPanel } from '@/features/backoffice-responses/components/responses-panel'
@@ -13,12 +14,13 @@ import { ADHESION_STATUSES } from '@/server/adhesion/domain/adhesion'
 import { RESPONSE_STATUSES } from '@/server/diagnosis/domain/response-status'
 import type { Capability } from '@/server/shared/domain/permissions'
 
-const TAB_KEYS = ['responses', 'adhesions', 'invitations', 'audit', 'users', 'migration'] as const
+const TAB_KEYS = ['responses', 'adhesions', 'events', 'invitations', 'audit', 'users', 'migration'] as const
 type TabKey = (typeof TAB_KEYS)[number]
 // A tela só esconde; quem fecha é o requireCapability de cada server function.
 const TABS: { key: TabKey; label: string; capability: Capability }[] = [
   { key: 'responses', label: 'Respostas', capability: 'view_responses' },
   { key: 'adhesions', label: 'Adesões', capability: 'view_adhesions' },
+  { key: 'events', label: 'Eventos', capability: 'view_events' },
   { key: 'invitations', label: 'Convites', capability: 'view_invitations' },
   { key: 'audit', label: 'Auditoria', capability: 'view_audit' },
   { key: 'users', label: 'Usuários', capability: 'manage_users' },
@@ -34,6 +36,7 @@ export const Route = createFileRoute('/backoffice/')({
     modality: z.enum(['padrao', 'hibrido']).optional().catch(undefined),
     q: z.coerce.string().max(200).optional().catch(undefined),
     page: z.coerce.number().int().min(1).optional().catch(undefined),
+    event: z.coerce.number().int().positive().optional().catch(undefined),
   }),
   head: () => ({ meta: [{ title: 'Conferência — Diagnóstico Simples | auster' }] }),
   component: BackofficeHome,
@@ -72,6 +75,15 @@ function BackofficeHome() {
           onFilterChange={(next) =>
             void navigate({ search: { tab: 'adhesions', adhesionStatus: next.status, modality: next.modality, q: next.q, page: next.page } })
           }
+        />
+      ) : null}
+      {tab === 'events' && user.capabilities.includes('view_events') ? (
+        <EventsPanel
+          eventId={search.event}
+          onOpen={(id) => void navigate({ search: { tab: 'events', event: id } })}
+          canManage={user.capabilities.includes('manage_events')}
+          canExport={user.capabilities.includes('export_registrations')}
+          canHandle={user.capabilities.includes('handle_registrations')}
         />
       ) : null}
       {tab === 'invitations' ? <InvitationsPanel /> : null}

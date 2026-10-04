@@ -25,7 +25,7 @@ describe('/backoffice/adhesions.csv', () => {
 
   it('exports with the screen filter, ignoring values it does not know', async () => {
     ensureCapability.mockResolvedValue({ id: 'u1', username: 'gestora', name: 'Gestora', role: 'manager', capabilities: ['export_adhesions'] })
-    exportCsv.mockResolvedValue({ fileName: 'adesoes-simples-2026-10-01.csv', body: '﻿protocolo\r\n' })
+    exportCsv.mockResolvedValue({ fileName: 'adesoes-simples-2026-10-01.csv', body: '\uFEFFprotocolo\r\n' })
     const response = await get('http://localhost/backoffice/adhesions.csv?status=filed&modality=hibrido&q=padaria')
     expect(exportCsv).toHaveBeenCalledWith({ id: 'u1', username: 'gestora' }, { status: 'filed', modality: 'hibrido', search: 'padaria' })
     expect(response.headers.get('Content-Type')).toBe('text/csv; charset=utf-8')

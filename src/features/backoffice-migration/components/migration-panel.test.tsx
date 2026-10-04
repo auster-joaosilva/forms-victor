@@ -18,6 +18,10 @@ const report = (dryRun: boolean, conflicts: string[] = []) => ({
   invitations: { found: 1, imported: 1, skipped: 0 },
   responses: { found: 4, imported: 4, skipped: 0 },
   adhesions: { found: 3, imported: 3, skipped: 0 },
+  events: { found: 0, imported: 0, skipped: 0 },
+  sessions: { found: 0, imported: 0, skipped: 0 },
+  registrations: { found: 0, imported: 0, skipped: 0 },
+  images: { found: 2, imported: 1, skipped: 1 },
   audit: { found: 4, imported: 4, skipped: 0 },
   conflicts,
   notes: ['usuário chico: papel chefe sem equivalente; entra como operador'],
@@ -48,6 +52,11 @@ describe('MigrationPanel', () => {
     expect(await screen.findByText('Simulação: nada foi gravado. Confira as contagens e os avisos antes de importar.')).toBeInTheDocument()
     const users = within(screen.getByRole('row', { name: /Usuários/ }))
     expect(users.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Usuários', '6', '5', '1'])
+    const images = within(screen.getByRole('row', { name: /Imagens/ }))
+    expect(images.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Imagens', '2', '1', '1'])
+    expect(screen.getAllByRole('row').map((row) => row.firstElementChild?.textContent).slice(1)).toEqual([
+      'Usuários', 'Convites', 'Respostas', 'Adesões', 'Eventos', 'Encontros', 'Inscrições', 'Imagens', 'Auditoria',
+    ])
     expect(screen.getByText('usuário chico: papel chefe sem equivalente; entra como operador')).toBeInTheDocument()
     expect(importButton).toBeEnabled()
 
@@ -122,7 +131,7 @@ describe('MigrationPanel', () => {
   it('erases the test data only after APAGAR is typed, and asks for a new simulation', async () => {
     migrationStatusFn.mockResolvedValue({ ...status, resetAllowed: true })
     simulateMigrationFn.mockResolvedValue({ ok: true, report: report(true) })
-    resetTestDataFn.mockResolvedValue({ ok: true, erased: { drafts: 2, adhesions: 3, responses: 4 } })
+    resetTestDataFn.mockResolvedValue({ ok: true, erased: { drafts: 2, registrations: 1, sessions: 5, events: 6, adhesions: 3, responses: 4 } })
     renderPanel()
     expect(await screen.findByText('Apagar dados de teste do hml')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Simular' }))
@@ -136,7 +145,7 @@ describe('MigrationPanel', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Confirmação' }), 'APAGAR')
     await userEvent.click(erase)
     expect(resetTestDataFn).toHaveBeenCalledWith({ data: { confirmation: 'APAGAR' } })
-    expect(await screen.findByText('Apagados: 2 rascunhos, 3 adesões e 4 respostas. Simule de novo antes de importar.')).toBeInTheDocument()
+    expect(await screen.findByText('Apagados: 2 rascunhos, 1 inscrições, 5 encontros, 6 eventos, 3 adesões e 4 respostas. Simule de novo antes de importar.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Importar' })).toBeDisabled()
     expect(screen.getByRole('textbox', { name: 'Confirmação' })).toHaveValue('')
   })

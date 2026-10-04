@@ -31,7 +31,7 @@ describe('legacy redirects', () => {
     ['/eventos/%2F%2Fevil.com?next=//evil.com', '/events/%2F%2Fevil.com?next=//evil.com'],
   ])('%s -> %s', (from, to) => expect(resolve(from)).toBe(to))
 
-  it.each(['/', '/diagnosis', '/events/x', '/backoffice', '/health', '/%zz'])('leaves %s alone', (path) =>
+  it.each(['/', '/diagnosis', '/events/x', '/backoffice', '/health', '/%zz', '/imagens/fachada.jpg', '/imagens/recepcao-lateral.jpg', '/events'])('leaves %s alone', (path) =>
     expect(resolve(path)).toBeNull(),
   )
 

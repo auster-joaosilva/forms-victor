@@ -78,3 +78,52 @@ export interface LegacyAdhesion {
   tratado_por: string | null
   tratado_em: string | null
 }
+
+export interface LegacyAgendaEvent {
+  id: number
+  apelido: string
+  titulo: string
+  situacao: string
+  inscricoes: string
+  conteudo: string
+  criado_em: string
+  criado_por: string | null
+  alterado_em: string | null
+  alterado_por: string | null
+}
+
+export interface LegacyAgendaSession {
+  id: number
+  evento_id: number
+  ordem: number
+  data: string
+  hora: string
+  formato: string
+  titulo: string
+  descricao: string | null
+  local: string | null
+  vagas: number | null
+}
+
+export interface LegacyRegistration {
+  id: number
+  protocolo: string
+  evento_id: number
+  sessao_id: number
+  resposta_id: number | null
+  criado_em: string
+  nome: string
+  email: string
+  telefone: string | null
+  empresa: string | null
+  cnpj: string | null
+  cargo: string | null
+  aceite_lgpd: number
+  origem: string | null
+  agente: string | null
+  pacote: string
+  situacao: string
+  nota_interna: string | null
+  tratado_por: string | null
+  tratado_em: string | null
+}

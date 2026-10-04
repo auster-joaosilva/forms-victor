@@ -1,14 +1,17 @@
 import { termVersions } from '@/server/adhesion/composition'
 import { getEnv } from '@/server/shared/env'
+import { findStoredFile, storeFile } from '@/server/storage/composition'
 import { legacyDatabase, readLegacySnapshot } from './adapters/node-sqlite-legacy-source'
 import { prismaImportTarget } from './adapters/prisma-import-target'
 import { prismaTestDataEraser } from './adapters/prisma-test-data-eraser'
+import { makeStorageLegacyImageStore } from './adapters/storage-legacy-image-store'
 import { makeImportLegacy } from './application/import-legacy'
 import { makeManageMigration } from './application/manage-migration'
 import type { LegacySource } from './ports/legacy-source'
 
+const images = makeStorageLegacyImageStore({ storeFile, findStoredFile })
 const importerFor = (source: LegacySource) =>
-  makeImportLegacy({ source, target: prismaImportTarget, newUserId: () => crypto.randomUUID(), knownTermVersions: new Set(termVersions) })
+  makeImportLegacy({ source, target: prismaImportTarget, newUserId: () => crypto.randomUUID(), knownTermVersions: new Set(termVersions), images })
 
 export const importLegacyFile = (path: string, options: { dryRun: boolean }) => importerFor(readLegacySnapshot(path))(options)
 

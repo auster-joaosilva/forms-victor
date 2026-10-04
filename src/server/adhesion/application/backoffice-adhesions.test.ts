@@ -97,7 +97,7 @@ describe('adhesion back office', () => {
     const file = await backoffice.exportCsv(actor, { modality: 'hibrido', search: ' padaria ' })
     expect(EXPORT_LIMIT).toBe(5000)
     expect(file.fileName).toBe('adesoes-simples-2026-09-30.csv')
-    expect(file.body.startsWith('﻿protocolo;')).toBe(true)
+    expect(file.body.startsWith('\uFEFFprotocolo;')).toBe(true)
     expect(file.body).not.toContain('HYPERLINK')
     expect(file.body).not.toContain('ADS-20260925-AAAA3')
     expect(audits.at(-1)).toEqual({

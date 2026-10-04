@@ -138,9 +138,9 @@ export interface ImportedAdhesion {
 const date = (value: string | null): Date | null => (value ? new Date(value) : null)
 
 // Herdados como constructor ou toString não são valores do banco antigo.
-const lookup = <T>(map: Record<string, T>, key: string): T | undefined => (Object.hasOwn(map, key) ? map[key] : undefined)
+export const lookup = <T>(map: Record<string, T>, key: string): T | undefined => (Object.hasOwn(map, key) ? map[key] : undefined)
 
-const isDate = (value: string) => !Number.isNaN(new Date(value).getTime())
+export const isDate = (value: string) => !Number.isNaN(new Date(value).getTime())
 
 export function translateAuditAction(legacy: string): { action: ImportedAuditAction; extra: Record<string, unknown>; known: boolean } {
   const found = lookup(AUDIT_ACTION_MAP, legacy)
@@ -164,7 +164,7 @@ export const requesterInQsaFrom = (value: string | null): boolean | null => (val
 
 export const cnpjDigitsOf = (cnpj: string | null): string | null => normalizeCnpj(cnpj ?? '') || null
 
-function parseJson(text: string | null): unknown {
+export function parseJson(text: string | null): unknown {
   if (!text) return null
   try {
     return JSON.parse(text)

@@ -60,6 +60,8 @@ As fronteiras estão no `eslint.config.js`. Lint quebrado não entra.
 - O QSA da consulta de CNPJ nunca é exibido nem gravado.
 - O hash do termo e o diagnóstico gravado são calculados pelo servidor, nunca aceitos do navegador.
 - Os endpoints `/api/auth/admin/*` são fechados ao navegador. Gestão de usuário passa por `server/identity`.
+- O envio de imagem dos eventos no backoffice é `POST /backoffice/event-images` (corpo bruto, `manage_events`, Origin
+  conferido): a única rota com limite de corpo de 6 MiB; todas as outras ficam em 256 KiB.
 
 ## Git — em toda implementação (durante a reescrita)
 
@@ -97,7 +99,8 @@ Traefik, "Setup Server" da VPS — sem SSH.
 - Ponta a ponta: `pnpm test:e2e` (Playwright contra `pnpm dev` e o banco local). O global setup
   só aceita banco em `localhost`, limpa o rate limit e cria ou reativa `e2e-admin`, `e2e-regularization`
   e `e2e-operator` (`tests/e2e/users.ts`). Até 30/10/2026 o formulário de adesão está aberto e os testes
-  de `adhesion.spec.ts` dependem disso.
+  de `adhesion.spec.ts` dependem disso. Os de `events.spec.ts` criam o próprio evento, com data 45 dias à frente,
+  e não vencem.
   Porta 3000 ocupada? `E2E_PORT=3100 pnpm test:e2e` sobe o `pnpm dev` nessa porta.
 
 ## Rodar
@@ -134,26 +137,42 @@ Os ids das respostas e das adesões antigas são preservados, e um id que já ex
 protocolo é **conflito**: qualquer conflito aborta a importação inteira, sem gravar nada. As adesões e as respostas
 de teste do hml (verificações à mão, ponta a ponta, quem testou) ocupam os ids 1, 2, 3… — os mesmos das antigas.
 
-- **Na virada:** importe **antes** de abrir o tráfego do app novo. Uma única resposta ou adesão recebida antes
-  ocupa um id e faz a importação recusar. Corte o tráfego público do portal antigo, mas deixe o container dele
-  **no ar** durante a importação (ou confira que `portal.db-wal` e `portal.db-shm` existem no volume).
+A aba Migração traz usuários, convites, respostas, adesões, **eventos, encontros, inscrições e as imagens dos eventos**
+(as que estavam em base64 no `conteudo` vão para o MinIO como `event_cover`/`speaker_photo`; `/imagens/<nome>` vira a
+foto da casa de mesmo nome) e a auditoria. As fotos da casa entram pelo `pnpm db:seed`: rode-o no container do app antes
+de importar, ou os eventos que usavam `/imagens/…` ficam sem imagem (a simulação avisa).
+
+- **Na virada o banco é zerado e importado do zero.** O apagar dados de teste leva tudo o que foi criado no app novo
+  antes da virada: rascunhos, inscrições, encontros, eventos, adesões e respostas. Ficam só os usuários (com as senhas
+  já definidas) e a Auditoria. É por isso que testar no hml depois do ensaio não faz mal: o que o teste criou sai na
+  virada, e a importação de um banco limpo traz o estado do portal antigo daquele momento (inclusive status, presença
+  e edições feitas depois do ensaio, que uma reimportação por cima pularia).
 - **Depois da virada:** tire do `dokploy-compose.yml` a montagem `legacy-data:/legacy:ro` e o bloco `volumes:` do
   topo, e apague `LEGACY_VOLUME_NAME` do painel. Senão, quando o volume antigo for apagado, todo deploy falha com
   "external volume not found".
 
-1. No painel do Dokploy, no compose do app (o "full" no ensaio, o de produção na virada), defina `LEGACY_VOLUME_NAME`
-   com o nome do volume `dados` do compose "frontend" e faça o deploy. `ALLOW_TEST_DATA_RESET=true` **só no hml**;
-   em produção fica desligado. `LEGACY_DB_PATH` só muda se o arquivo não estiver em `/legacy/portal.db`.
-2. Aba Migração: confira o caminho e que o banco aparece como **disponível**.
-3. Só no hml: **Apagar dados de teste do hml** — digite `APAGAR`. Apaga rascunhos, adesões e respostas (nessa ordem);
-   inscrições que apontem para uma resposta ficam sem ela (`SET NULL`). A Auditoria fica, com a linha
-   "dados de teste apagados" e as contagens.
-4. **Simular.** Confira as contagens, os avisos (protocolos com `-2`, convites órfãos, autores inexistentes,
+No ensaio (hml) e na virada (produção), na ordem:
+
+1. Na virada: faça o backup do `portal.db` e do Postgres de produção.
+2. Na virada: corte o tráfego público do portal antigo, mas deixe o container dele **no ar** (ou confira que
+   `portal.db-wal` e `portal.db-shm` existem no volume). Nenhuma resposta, adesão ou inscrição nova pode chegar a
+   nenhum dos dois portais daqui até o fim.
+3. No painel do Dokploy, no compose do app (o "full" no ensaio, o de produção na virada), defina `LEGACY_VOLUME_NAME`
+   com o nome do volume `dados` do compose "frontend" e `ALLOW_TEST_DATA_RESET=true`, e faça o deploy.
+   `LEGACY_DB_PATH` só muda se o arquivo não estiver em `/legacy/portal.db`.
+4. Aba Migração: confira o caminho e que o banco aparece como **disponível**.
+5. **Apagar dados de teste do hml** — digite `APAGAR`. Apaga rascunhos, inscrições, encontros, eventos, adesões e
+   respostas (nessa ordem) — **nunca depois de importar**: apaga também o que a migração trouxe. Os arquivos no MinIO
+   ficam: a importação acha as imagens pela chave. A Auditoria fica, com a linha "dados de teste apagados" e as
+   contagens.
+6. **Simular.** Confira as contagens, os avisos (protocolos com `-2`, convites órfãos, autores inexistentes,
    ações sem equivalente, papéis sem equivalente, adesões com diagnóstico órfão, campo em branco ou versão do termo
    fora do sistema) e se há **conflitos**. Com conflito, o Importar fica fechado.
-5. **Importar** (pede confirmação). Importe de novo: tudo deve vir como pulado.
-6. Aba Usuários: defina a senha de cada usuário migrado (eles chegam sem senha; o resumo antigo é incompatível).
-   Confira a aba Respostas e a linha "migração do portal antigo" na Auditoria, com quem importou.
+7. **Importar** (pede confirmação). Importe de novo: tudo deve vir como pulado.
+8. No painel, `ALLOW_TEST_DATA_RESET=false` e deploy: a partir daqui o banco tem dado de verdade.
+9. Na virada: aponte o domínio para o app novo.
+10. Aba Usuários: defina a senha de cada usuário migrado que ainda não tem (eles chegam sem senha; o resumo antigo é
+    incompatível). Confira a aba Respostas e a linha "migração do portal antigo" na Auditoria, com quem importou.
 
 Localmente, contra um arquivo: `pnpm migrate:legacy <caminho> [--dry-run]` (o `node:sqlite` não pede flag a partir
 do Node 22.13).

@@ -7,9 +7,12 @@ const admin = { id: 'v1', username: 'victor', role: 'admin' as const }
 const operator = { id: 'o1', username: 'otavio', role: 'operator' as const }
 const table = { found: 1, imported: 1, skipped: 0 }
 const report = (dryRun: boolean, conflicts: string[] = []): ImportReport => ({
-  dryRun, users: table, invitations: table, responses: table, adhesions: table, audit: table, conflicts, notes: [],
+  dryRun, users: table, invitations: table, responses: table, adhesions: table, events: table, sessions: table, registrations: table, images: table, audit: table, conflicts, notes: [],
 })
-const emptySource: LegacySource = { users: async () => [], invitations: async () => [], responses: async () => [], adhesions: async () => [], events: async () => [] }
+const emptySource: LegacySource = {
+  users: async () => [], invitations: async () => [], responses: async () => [], adhesions: async () => [], events: async () => [],
+  agenda: async () => [], agendaSessions: async () => [], registrations: async () => [],
+}
 
 function setup({ available = true, reason = undefined as string | undefined, conflicts = [] as string[], allowReset = false } = {}) {
   const runs: { dryRun: boolean; actor?: { id: string; username: string } }[] = []
@@ -30,7 +33,7 @@ function setup({ available = true, reason = undefined as string | undefined, con
       runs.push(options)
       return report(options.dryRun, conflicts)
     },
-    eraser: { eraseTestData: async (actor) => (erasedBy.push(actor), { drafts: 2, adhesions: 3, responses: 4 }) },
+    eraser: { eraseTestData: async (actor) => (erasedBy.push(actor), { drafts: 2, registrations: 1, sessions: 5, events: 6, adhesions: 3, responses: 4 }) },
     allowReset,
   })
   return { migration, runs, snapshots, erasedBy }
@@ -110,7 +113,7 @@ describe('manage migration', () => {
 
   it('erases the test data on behalf of the actor, who goes into the audit of the same transaction', async () => {
     const { migration, erasedBy } = setup({ allowReset: true })
-    expect(await migration.resetTestData(admin, 'APAGAR')).toEqual({ drafts: 2, adhesions: 3, responses: 4 })
+    expect(await migration.resetTestData(admin, 'APAGAR')).toEqual({ drafts: 2, registrations: 1, sessions: 5, events: 6, adhesions: 3, responses: 4 })
     expect(erasedBy).toEqual([{ id: 'v1', username: 'victor' }])
   })
 })

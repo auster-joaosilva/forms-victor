@@ -1,6 +1,6 @@
 export type UploadImageResult = { ok: true; fileId: string } | { ok: false; error: string }
 
-// Not a server function: the body goes raw to a dedicated route, because server functions stop at 256 KiB.
+// Não é server function: o corpo vai bruto para uma rota própria, porque as server functions param em 256 KiB.
 export async function uploadEventImage(input: { kind: 'event_cover' | 'speaker_photo'; blob: Blob; originalName: string | null }): Promise<UploadImageResult> {
   const query = new URLSearchParams({ kind: input.kind })
   if (input.originalName) query.set('name', input.originalName)

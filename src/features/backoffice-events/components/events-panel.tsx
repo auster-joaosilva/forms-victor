@@ -24,7 +24,7 @@ export function EventsPanel({ eventId, onOpen, canManage, canExport, canHandle }
     },
     onError: (failure) => setError(`Não foi possível criar: ${failure.message}`),
   })
-  // The form only re-syncs with the server after the user's own Save; a status change refreshes the buttons and leaves the typed fields alone.
+  // O formulário só volta a refletir o servidor depois do Salvar da própria pessoa; mudar a situação atualiza os botões e deixa os campos digitados como estão.
   const [synced, setSynced] = useState(0)
   const refresh = async (saved: boolean) => {
     await queryClient.invalidateQueries({ queryKey: ['events'] })

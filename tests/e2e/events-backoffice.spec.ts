@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { E2E_OPERATOR, E2E_REGULARIZATION, login } from './fill'
 
-// 1x1 PNG: the browser shrinks it to JPEG on a canvas and sends the bytes raw to /backoffice/event-images.
+// PNG 1x1: o navegador o reduz a JPEG num canvas e manda os bytes brutos para /backoffice/event-images.
 const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
 
 test('o administrador cria um evento, envia a capa, escolhe o fundo Foto e publica', async ({ page }) => {

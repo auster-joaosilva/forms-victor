@@ -5,13 +5,13 @@ import { ensureCapability } from '@/server/shared/http/route-capability'
 
 const KINDS: readonly string[] = ['event_cover', 'speaker_photo']
 
-// Not a server function: the cover exceeds the 256 KiB body limit; only this route gets 6 MiB (src/app/body-limit.ts).
-// The /backoffice beforeLoad does not run for server handlers, so the capability is checked here.
+// Não é server function: a capa passa do limite de corpo de 256 KiB; só esta rota tem 6 MiB (src/app/body-limit.ts).
+// O beforeLoad de /backoffice não roda para server handlers, então a permissão é conferida aqui.
 export const Route = createFileRoute('/backoffice/event-images')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // csrfProtection only covers server functions, so the same origin rule is applied here, before reading the body.
+        // O csrfProtection só cobre server functions: a mesma regra de origem vale aqui, antes de ler o corpo.
         if (!isTrustedRequest(request)) return new Response('Origem não permitida.', { status: 403 })
         const user = await ensureCapability(request, 'manage_events')
         if (user instanceof Response) return user

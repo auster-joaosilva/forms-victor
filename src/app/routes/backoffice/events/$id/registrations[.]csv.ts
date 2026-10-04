@@ -7,7 +7,7 @@ import { ensureCapability } from '@/server/shared/http/route-capability'
 const positive = (value: string | null | undefined) => (value && /^\d{1,9}$/.test(value) && Number(value) > 0 ? Number(value) : undefined)
 const notFound = () => new Response('Evento não encontrado.', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
 
-// The /backoffice beforeLoad does not run for server handlers, so the capability is checked here.
+// O beforeLoad de /backoffice não roda para server handlers, então a permissão é conferida aqui.
 export const Route = createFileRoute('/backoffice/events/$id/registrations.csv')({
   server: {
     handlers: {

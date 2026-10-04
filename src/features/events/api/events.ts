@@ -3,6 +3,7 @@ import { getRequest } from '@tanstack/react-start/server'
 import { lookupCompany } from '@/server/company-lookup/composition'
 import { publicBaseUrl, publicEvents, registerForSession } from '@/server/events/composition'
 import { brasiliaDateParts } from '@/server/shared/domain/dates'
+import { requestClientIp } from '@/server/shared/http/draft-cookie'
 import { requestOrigin } from '@/server/shared/http/request-origin'
 import { getSessionUser } from '@/server/shared/http/session'
 import type { EventPageBootstrap, EventsListBootstrap, SubmitRegistrationWire } from '../types/events'
@@ -33,7 +34,7 @@ export const loadEventPage = createServerFn({ method: 'GET' })
 export const lookupRegistrationCompany = createServerFn({ method: 'POST' })
   .inputValidator(lookupRegistrationCompanyInput)
   .handler(async ({ data }): Promise<{ companyName: string | null }> => {
-    const result = await lookupCompany({ cnpj: data.cnpj })
+    const result = await lookupCompany({ cnpj: data.cnpj, origin: requestClientIp() })
     return { companyName: result.ok ? result.company.legalName : null }
   })
 

@@ -59,8 +59,8 @@ export function makeDraftUseCases({ drafts, responses, clock, rateLimiter, invit
       if (draftId && DRAFT_ID_PATTERN.test(draftId)) await drafts.delete(draftId)
     },
 
-    async lookupCompanyForDraft(input: { draftId: string | null; cnpj: string; requesterName?: string }) {
-      const result = await companies.lookup({ cnpj: input.cnpj, requesterName: input.requesterName })
+    async lookupCompanyForDraft(input: { draftId: string | null; cnpj: string; requesterName?: string; origin: string | null }) {
+      const result = await companies.lookup({ cnpj: input.cnpj, requesterName: input.requesterName, origin: input.origin })
       const draft = await currentDraft(drafts, clock, input.draftId)
       if (draft) await drafts.setRequesterInQsa(draft.id, result.ok ? result.requesterInQsa : null)
       return result

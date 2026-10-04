@@ -8,15 +8,21 @@ function setup(decisions: Parameters<typeof fakeRateLimiter>[0] = []) {
   const clock = fakeClock('2026-09-20T12:00:00Z')
   const rate = fakeRateLimiter(decisions)
   const opened: [string, string][] = []
+  const lookups: { cnpj: string; requesterName?: string; origin: string | null }[] = []
   const useCases = makeDraftUseCases({
     drafts: drafts.repository,
     responses: responses.repository,
     clock,
     rateLimiter: rate.limiter,
     invitations: { open: async (token, draftId) => (opened.push([token, draftId]), token === 'ABCDEFGHJK') },
-    companies: { lookup: async ({ requesterName }) => ({ ok: true, company: { legalName: 'X', city: '', state: '', simplesOptant: true, meiOptant: false, active: true, registrationStatus: 'ATIVA' }, requesterInQsa: requesterName ? true : null }) },
+    companies: {
+      lookup: async (input) => {
+        lookups.push(input)
+        return { ok: true, company: { legalName: 'X', city: '', state: '', simplesOptant: true, meiOptant: false, active: true, registrationStatus: 'ATIVA' }, requesterInQsa: input.requesterName ? true : null }
+      },
+    },
   })
-  return { drafts, responses, clock, rate, opened, useCases }
+  return { drafts, responses, clock, rate, opened, lookups, useCases }
 }
 
 describe('draft use cases', () => {
@@ -75,11 +81,12 @@ describe('draft use cases', () => {
     expect(drafts.rows.size).toBe(0)
   })
 
-  it('stores only the QSA check on the draft', async () => {
-    const { useCases, drafts } = setup()
+  it('stores only the QSA check on the draft and passes the origin to the lookup', async () => {
+    const { useCases, drafts, lookups } = setup()
     const record = drafts.seed({ a: 'b' })
-    const result = await useCases.lookupCompanyForDraft({ draftId: record.id, cnpj: '11222333000181', requesterName: 'Maria' })
+    const result = await useCases.lookupCompanyForDraft({ draftId: record.id, cnpj: '11222333000181', requesterName: 'Maria', origin: '1.1.1.1' })
     expect(result.ok).toBe(true)
     expect(drafts.rows.get(record.id)?.requesterInQsa).toBe(true)
+    expect(lookups).toEqual([{ cnpj: '11222333000181', requesterName: 'Maria', origin: '1.1.1.1' }])
   })
 })

@@ -12,6 +12,7 @@ COPY . .
 RUN pnpm build && pnpm prune --prod --ignore-scripts
 
 FROM base AS runtime
+RUN apk add --no-cache postgresql17-client
 ENV NODE_ENV=production PORT=3000
 COPY --from=build --chown=node:node /app/package.json /app/prisma.config.ts /app/server.ts ./
 COPY --from=build --chown=node:node /app/node_modules ./node_modules

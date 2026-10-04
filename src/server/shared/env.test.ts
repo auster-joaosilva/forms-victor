@@ -19,6 +19,7 @@ describe('parseEnv', () => {
     expect(env.S3_USE_SSL).toBe(false)
     expect(env.LEGACY_DB_PATH).toBe('/legacy/portal.db')
     expect(env.ALLOW_TEST_DATA_RESET).toBe(false)
+    expect(env.BACKUP_BUCKET).toBe('forms-victor-backups')
   })
 
   it('turns the test data reset on only with the word true', () => {
@@ -33,6 +34,11 @@ describe('parseEnv', () => {
 
   it('rejects a short auth secret', () => {
     expect(() => parseEnv({ ...valid, BETTER_AUTH_SECRET: 'short' })).toThrow(/BETTER_AUTH_SECRET/)
+  })
+
+  it('accepts another backup bucket and rejects a name too short', () => {
+    expect(parseEnv({ ...valid, BACKUP_BUCKET: 'outro-bucket' }).BACKUP_BUCKET).toBe('outro-bucket')
+    expect(() => parseEnv({ ...valid, BACKUP_BUCKET: 'ab' })).toThrow(/BACKUP_BUCKET/)
   })
 
   it('rejects a missing database url', () => {

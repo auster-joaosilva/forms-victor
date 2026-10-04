@@ -19,15 +19,20 @@ export function dumpsToDelete(dumps: DumpEntry[], now: Date): string[] {
   const newestFirst = dumps
     .filter((dump) => !Number.isNaN(dump.takenAt.getTime()))
     .sort((a, b) => b.takenAt.getTime() - a.takenAt.getTime())
-  const kept = new Set(newestFirst.slice(0, NEWEST_KEPT).map((dump) => dump.key))
-  const today = brasiliaDayNumber(now)
-  const sundays = new Set<number>()
+  // O mais novo de cada dia de Brasília: é o único que um dia pode manter.
+  const newestOfDay = new Map<number, DumpEntry>()
   for (const dump of newestFirst) {
     const day = brasiliaDayNumber(dump.takenAt)
+    if (!newestOfDay.has(day)) newestOfDay.set(day, dump)
+  }
+  const today = brasiliaDayNumber(now)
+  const kept = new Set<string>()
+  let daysKept = 0
+  for (const [day, dump] of newestOfDay) {
     const isSunday = new Date(day * DAY_MS).getUTCDay() === 0
-    if (!isSunday || today - day >= SUNDAY_WEEKS_KEPT * 7 || sundays.has(day)) continue
-    sundays.add(day)
-    kept.add(dump.key)
+    const recentDay = daysKept < NEWEST_KEPT
+    if (recentDay) daysKept += 1
+    if (recentDay || (isSunday && today - day < SUNDAY_WEEKS_KEPT * 7)) kept.add(dump.key)
   }
   return newestFirst.filter((dump) => !kept.has(dump.key)).map((dump) => dump.key)
 }

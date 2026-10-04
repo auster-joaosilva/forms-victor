@@ -23,8 +23,13 @@ interface Dependencies {
   database: string
 }
 
-async function writeDump({ dumper, store, database }: Dependencies, takenAt: Date): Promise<{ key: string; bytes: number }> {
+async function writeDump(
+  { dumper, store, database }: Dependencies,
+  takenAt: Date,
+): Promise<{ key: string; bytes: number }> {
   const key = dumpKey(database, takenAt)
+  // Uma falha no mesmo minuto apagaria, no catch abaixo, o dump bom que já está com esta chave.
+  if ((await store.list(key)).includes(key)) throw new Error(`já existe um dump com a chave ${key}`)
   const dump = dumper.dump()
   // Sem o destroy, um upload que falha deixa o pg_dump preso escrevendo num pipe cheio, e o done nunca chega.
   const upload = store.put(key, dump.stream).catch((error: unknown) => {
@@ -34,8 +39,14 @@ async function writeDump({ dumper, store, database }: Dependencies, takenAt: Dat
   const [uploaded, finished] = await Promise.allSettled([upload, dump.done])
   if (uploaded.status === 'fulfilled' && finished.status === 'fulfilled') return { key, bytes: uploaded.value.bytes }
   // Um pg_dump que morre no meio fecha o stream, e o upload termina com um dump pela metade: ele não fica no bucket.
-  await store.delete([key]).catch(() => undefined)
-  throw finished.status === 'rejected' ? finished.reason : (uploaded as PromiseRejectedResult).reason
+  const reason: unknown = finished.status === 'rejected' ? finished.reason : (uploaded as PromiseRejectedResult).reason
+  const deleted = await store.delete([key]).then(
+    () => true,
+    () => false,
+  )
+  if (deleted) throw reason
+  const message = reason instanceof Error ? reason.message : String(reason)
+  throw new Error(`${message} (dump parcial não apagado: ${key})`, { cause: reason })
 }
 
 async function copyNewFiles({ store, sourceFiles }: Dependencies): Promise<number> {

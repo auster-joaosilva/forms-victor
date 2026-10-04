@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { BackupStore } from '../ports/backup-store'
 import { dumpKey, type LegacyFileName } from '../domain/keys'
 import { makeRunBackup } from './run-backup'
 import { fakeDumper, fixedClock, memoryBackupStore, memoryLegacyFiles, memorySourceFiles } from './testing/fakes'
@@ -9,7 +10,10 @@ const NEW_DUMP = 'postgres/forms_victor-2026-10-04T0300.dump'
 // Os dumps dos `days` dias anteriores a NOW, no mesmo horário.
 const previousDumps = (days: number): Record<string, string> =>
   Object.fromEntries(
-    Array.from({ length: days }, (_, index) => [dumpKey('forms_victor', new Date(Date.parse(NOW) - (index + 1) * 86_400_000)), 'antigo']),
+    Array.from({ length: days }, (_, index) => [
+      dumpKey('forms_victor', new Date(Date.parse(NOW) - (index + 1) * 86_400_000)),
+      'antigo',
+    ]),
   )
 
 function setup(
@@ -18,6 +22,7 @@ function setup(
     objects?: Record<string, string>
     sources?: string[]
     legacy?: Partial<Record<LegacyFileName, string>>
+    store?: (store: BackupStore) => BackupStore
   } = {},
 ) {
   const backup = memoryBackupStore(options.objects)
@@ -26,7 +31,7 @@ function setup(
   const legacy = memoryLegacyFiles(options.legacy ?? {})
   const runBackup = makeRunBackup({
     dumper: dumper.dumper,
-    store: backup.store,
+    store: options.store?.(backup.store) ?? backup.store,
     sourceFiles: sources.sourceFiles,
     legacyFiles: legacy.legacyFiles,
     clock: fixedClock(NOW),
@@ -38,16 +43,32 @@ function setup(
 describe('runBackup', () => {
   it('writes the dump, copies the files and returns the summary', async () => {
     const { runBackup, backup } = setup({ sources: ['event_cover/a.png', 'house_photo/b.jpg'] })
-    expect(await runBackup({ legacy: false })).toEqual({ dumpKey: NEW_DUMP, bytes: 10, filesCopied: 2, legacyFiles: [], dumpsDeleted: [] })
+    expect(await runBackup({ legacy: false })).toEqual({
+      dumpKey: NEW_DUMP,
+      bytes: 10,
+      filesCopied: 2,
+      legacyFiles: [],
+      dumpsDeleted: [],
+    })
     expect(backup.objects.get(NEW_DUMP)?.toString()).toBe('PGDMP-novo')
     expect([...backup.objects.keys()].sort()).toEqual(['files/event_cover/a.png', 'files/house_photo/b.jpg', NEW_DUMP])
   })
 
   it('copies only the files that are not in the backup yet', async () => {
-    const { runBackup, sources } = setup({ objects: { 'files/event_cover/a.png': 'a' }, sources: ['event_cover/a.png', 'event_cover/b.png'] })
+    const { runBackup, sources, backup } = setup({
+      objects: { 'files/event_cover/a.png': 'a' },
+      sources: ['event_cover/a.png', 'event_cover/b.png'],
+    })
     expect((await runBackup({ legacy: false })).filesCopied).toBe(1)
     expect(sources.copies).toEqual([['event_cover/b.png', 'files/event_cover/b.png']])
-    expect((await runBackup({ legacy: false })).filesCopied).toBe(0)
+    // Segunda execução, em outro minuto: os arquivos já estão no backup.
+    const second = setup({
+      objects: Object.fromEntries(
+        [...backup.objects].map(([key, body]) => [key, body.toString()]).filter(([key]) => key !== NEW_DUMP),
+      ),
+      sources: ['event_cover/a.png', 'event_cover/b.png'],
+    })
+    expect((await second.runBackup({ legacy: false })).filesCopied).toBe(0)
   })
 
   it('aborts on a failed dump: no file copied, no old dump deleted, no partial dump left', async () => {
@@ -55,12 +76,58 @@ describe('runBackup', () => {
     const { runBackup, backup, sources } = setup({
       objects: old,
       sources: ['event_cover/a.png'],
-      dumper: fakeDumper({ content: 'PGDMP-pela', error: new Error('pg_dump saiu com código 1: conexão recusada') }),
+      dumper: fakeDumper({
+        content: 'PGDMP-pela',
+        error: new Error('pg_dump saiu com código 1: conexão recusada'),
+      }),
     })
     await expect(runBackup({ legacy: true })).rejects.toThrow('conexão recusada')
     expect([...backup.objects.keys()].sort()).toEqual(Object.keys(old).sort())
     expect(backup.deleted).toEqual([[NEW_DUMP]])
     expect(sources.copies).toEqual([])
+  })
+
+  it('aborts on a failed upload: dump stream destroyed, partial key deleted, nothing copied, no retention', async () => {
+    const old = previousDumps(10)
+    const dumper = fakeDumper({ content: 'PGDMP-novo' })
+    const { runBackup, backup, sources } = setup({
+      objects: old,
+      sources: ['event_cover/a.png'],
+      dumper,
+      store: (store) => ({ ...store, put: async () => Promise.reject(new Error('MinIO fora do ar')) }),
+    })
+    await expect(runBackup({ legacy: true })).rejects.toThrow('MinIO fora do ar')
+    expect(dumper.streams[0]?.destroyed).toBe(true)
+    expect(backup.deleted).toEqual([[NEW_DUMP]])
+    expect(sources.copies).toEqual([])
+    expect([...backup.objects.keys()].sort()).toEqual(Object.keys(old).sort())
+  })
+
+  it('refuses to run when a dump with the key of this minute already exists, leaving it untouched', async () => {
+    const dumper = fakeDumper({ content: 'PGDMP-novo', error: new Error('não devia nem rodar') })
+    const { runBackup, backup, sources } = setup({
+      objects: { [NEW_DUMP]: 'bom' },
+      sources: ['event_cover/a.png'],
+      dumper,
+    })
+    await expect(runBackup({ legacy: false })).rejects.toThrow(`já existe um dump com a chave ${NEW_DUMP}`)
+    expect(backup.objects.get(NEW_DUMP)?.toString()).toBe('bom')
+    expect(backup.deleted).toEqual([])
+    expect(dumper.streams).toEqual([])
+    expect(sources.copies).toEqual([])
+  })
+
+  it('names the partial dump in the error when it could not be deleted, keeping the original cause', async () => {
+    const cause = new Error('pg_dump saiu com código 1')
+    const { runBackup } = setup({
+      dumper: fakeDumper({ error: cause }),
+      store: (store) => ({ ...store, delete: async () => Promise.reject(new Error('MinIO recusou')) }),
+    })
+    const error = await runBackup({ legacy: false }).catch((thrown: unknown) => thrown)
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toContain(`dump parcial não apagado: ${NEW_DUMP}`)
+    expect((error as Error).message).toContain('pg_dump saiu com código 1')
+    expect((error as Error).cause).toBe(cause)
   })
 
   it('applies the retention only to the dumps of this database and never to files or malformed keys', async () => {
@@ -71,7 +138,10 @@ describe('runBackup', () => {
     }
     const { runBackup, backup } = setup({ objects: { ...previousDumps(9), ...others } })
     const summary = await runBackup({ legacy: false })
-    expect(summary.dumpsDeleted).toEqual(['postgres/forms_victor-2026-09-26T0300.dump', 'postgres/forms_victor-2026-09-25T0300.dump'])
+    expect(summary.dumpsDeleted).toEqual([
+      'postgres/forms_victor-2026-09-26T0300.dump',
+      'postgres/forms_victor-2026-09-25T0300.dump',
+    ])
     for (const key of Object.keys(others)) expect(backup.objects.has(key)).toBe(true)
     expect(backup.objects.has('postgres/forms_victor-2026-09-27T0300.dump')).toBe(true)
   })

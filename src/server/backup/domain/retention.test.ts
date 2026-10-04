@@ -3,12 +3,16 @@ import { dumpKey } from './keys'
 import { dumpsToDelete, type DumpEntry } from './retention'
 
 const DAY = 86_400_000
-const at = (iso: string): DumpEntry => ({ key: dumpKey('forms_victor', new Date(iso)), takenAt: new Date(iso) })
+const at = (iso: string): DumpEntry => ({
+  key: dumpKey('forms_victor', new Date(iso)),
+  takenAt: new Date(iso),
+})
 
 // Um dump por dia às 03:00 de Brasília, do mais velho ao mais novo.
 function daily(fromIso: string, toIso: string): DumpEntry[] {
   const dumps: DumpEntry[] = []
-  for (let time = Date.parse(fromIso); time <= Date.parse(toIso); time += DAY) dumps.push(at(new Date(time).toISOString()))
+  for (let time = Date.parse(fromIso); time <= Date.parse(toIso); time += DAY)
+    dumps.push(at(new Date(time).toISOString()))
   return dumps
 }
 
@@ -29,7 +33,18 @@ describe('dumpsToDelete', () => {
     const deleted = dumpsToDelete(dumps, sundayMorning)
     const kept = dumps.map((dump) => dump.key).filter((key) => !deleted.includes(key))
     expect(kept.sort()).toEqual(
-      ['2026-09-13', '2026-09-20', '2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04']
+      [
+        '2026-09-13',
+        '2026-09-20',
+        '2026-09-27',
+        '2026-09-28',
+        '2026-09-29',
+        '2026-09-30',
+        '2026-10-01',
+        '2026-10-02',
+        '2026-10-03',
+        '2026-10-04',
+      ]
         .map(keyOf)
         .sort(),
     )
@@ -52,8 +67,29 @@ describe('dumpsToDelete', () => {
     const sundayLate = at('2026-09-28T02:30:00Z')
     const saturdayLateUtcSunday = at('2026-09-20T02:00:00Z')
     const olderSunday = at('2026-09-13T06:00:00Z')
-    const dumps = [...daily('2026-09-28T06:00:00Z', '2026-10-04T06:00:00Z'), sundayEarly, sundayLate, saturdayLateUtcSunday, olderSunday]
+    const dumps = [
+      ...daily('2026-09-28T06:00:00Z', '2026-10-04T06:00:00Z'),
+      sundayEarly,
+      sundayLate,
+      saturdayLateUtcSunday,
+      olderSunday,
+    ]
     expect(dumpsToDelete(dumps, sundayMorning)).toEqual([sundayEarly.key, saturdayLateUtcSunday.key])
+  })
+
+  it('keeps only the newest dump of each day', () => {
+    const older = at('2026-10-03T05:00:00Z')
+    const newer = at('2026-10-03T06:00:00Z')
+    const dumps = [...daily('2026-09-28T06:00:00Z', '2026-10-02T06:00:00Z'), older, newer, at('2026-10-04T06:00:00Z')]
+    expect(dumpsToDelete(dumps, sundayMorning)).toEqual([older.key])
+  })
+
+  it('counts the seven days with dumps, not the seven newest runs', () => {
+    const extra = [at('2026-10-04T05:00:00Z'), at('2026-10-03T05:00:00Z'), at('2026-10-02T05:00:00Z')]
+    const dumps = [...daily('2026-09-28T06:00:00Z', '2026-10-04T06:00:00Z'), ...extra]
+    expect(dumpsToDelete(dumps, sundayMorning).sort()).toEqual(extra.map((dump) => dump.key).sort())
+    const eighthDay = [...daily('2026-09-27T06:00:00Z', '2026-10-04T06:00:00Z'), at('2026-09-26T06:00:00Z')]
+    expect(dumpsToDelete(eighthDay, sundayMorning)).toEqual([keyOf('2026-09-26')])
   })
 
   it('never deletes an entry whose date could not be read', () => {

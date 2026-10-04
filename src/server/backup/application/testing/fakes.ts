@@ -38,10 +38,13 @@ export function memoryBackupStore(initial: Record<string, string> = {}) {
 
 export function fakeDumper(outcome: { content?: string; error?: Error } = {}) {
   const restores: { targetUrl: string; body: string }[] = []
+  const streams: Readable[] = []
   const dumper: DatabaseDumper = {
     dump() {
+      const stream = Readable.from([Buffer.from(outcome.content ?? 'PGDMP')])
+      streams.push(stream)
       return {
-        stream: Readable.from([Buffer.from(outcome.content ?? 'PGDMP')]),
+        stream,
         done: outcome.error ? Promise.reject(outcome.error) : Promise.resolve(),
       }
     },
@@ -49,7 +52,7 @@ export function fakeDumper(outcome: { content?: string; error?: Error } = {}) {
       restores.push({ targetUrl, body: (await readAll(stream)).toString() })
     },
   }
-  return { dumper, restores }
+  return { dumper, restores, streams }
 }
 
 export function memorySourceFiles(keys: string[], backup: ReturnType<typeof memoryBackupStore>) {

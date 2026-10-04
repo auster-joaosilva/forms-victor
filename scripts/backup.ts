@@ -1,6 +1,17 @@
+import { parseArgs } from 'node:util'
 import { runBackup } from '../src/server/backup/composition'
 
-const legacy = process.argv.slice(2).includes('--legacy')
+function parseLegacyFlag(): boolean {
+  try {
+    return parseArgs({ args: process.argv.slice(2), options: { legacy: { type: 'boolean' } }, strict: true, allowPositionals: false }).values
+      .legacy === true
+  } catch {
+    console.error('uso: pnpm backup [--legacy]')
+    process.exit(1)
+  }
+}
+
+const legacy = parseLegacyFlag()
 
 try {
   const summary = await runBackup({ legacy })

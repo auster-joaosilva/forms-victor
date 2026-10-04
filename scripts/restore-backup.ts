@@ -1,3 +1,4 @@
+import { parseArgs } from 'node:util'
 import { restoreBackup, type RestoreResult } from '../src/server/backup/composition'
 
 const REFUSALS: Record<Exclude<RestoreResult, { ok: true }>['reason'], string> = {
@@ -6,14 +7,26 @@ const REFUSALS: Record<Exclude<RestoreResult, { ok: true }>['reason'], string> =
   'missing-dump': 'dump não encontrado no bucket de backup',
 }
 
-const args = process.argv.slice(2)
-const overwrite = args.includes('--overwrite')
-const [key, targetUrl] = args.filter((arg) => !arg.startsWith('--'))
+const USAGE = 'uso: pnpm backup:restore <chave> <url-de-destino> [--overwrite]'
 
-if (!key || !targetUrl) {
-  console.error('uso: pnpm backup:restore <chave> <url-de-destino> [--overwrite]')
-  process.exit(2)
+function parseArguments(): { key: string; targetUrl: string; overwrite: boolean } {
+  try {
+    const { values, positionals } = parseArgs({
+      args: process.argv.slice(2),
+      options: { overwrite: { type: 'boolean' } },
+      strict: true,
+      allowPositionals: true,
+    })
+    const [key, targetUrl, ...extra] = positionals
+    if (!key || !targetUrl || extra.length > 0) throw new Error(USAGE)
+    return { key, targetUrl, overwrite: values.overwrite === true }
+  } catch {
+    console.error(USAGE)
+    process.exit(1)
+  }
 }
+
+const { key, targetUrl, overwrite } = parseArguments()
 
 try {
   const result = await restoreBackup({ key, targetUrl, overwrite })

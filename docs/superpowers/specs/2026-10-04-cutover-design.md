@@ -84,7 +84,7 @@ A chave do MinIO precisa de permissão nele (ajuste no console do MinIO, descrit
 
 ## 2. Limite nas consultas de CNPJ — módulo `company-lookup`
 
-- `makeLookupCompany(registry, rateLimiter)`. A entrada ganha `origin: string`. O limite é conferido antes do registry, na rota `cnpj-lookup`.
+- `makeLookupCompany(registry, rateLimiter)`. A entrada ganha `origin: string | null` (sem IP, conta na chave `sem-origem`, como já faz o `checkRateLimit`). O limite é conferido antes do registry, na rota `cnpj-lookup`.
   Bloqueado, devolve `{ ok: false, reason: 'indisponível' }`, e a BrasilAPI não é chamada.
 - `ports/rate-limiter.ts`, igual ao dos outros módulos. A `composition.ts` liga o `checkRateLimit`.
 - As três server functions, `lookupCnpj`, `lookupAdhesionCompany` e `lookupRegistrationCompany`, passam `origin: requestClientIp()` até o

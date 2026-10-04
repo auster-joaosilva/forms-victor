@@ -236,14 +236,17 @@ bucket `forms-victor`) passa a ser a produção, e não há hml depois disso. No
 4. Na `teste`: `git merge -s ours origin/main -m "merge: main do portal antigo, sem o código"`, e push. Registra os
    commits do portal antigo sem trazer o código, para a `main` avançar sem force push.
 
-**No dia:**
+**No dia:** os passos 6 a 8 são a janela fora do ar: o site cai quando o domínio sai do "frontend" e só volta
+quando o "full" responde nele. Avise antes, mantenha a janela curta e não pare entre esses passos.
 
-5. `pnpm backup --legacy` no container do "full", pelo terminal do Dokploy. Confere-se `legacy/<data>/` no bucket.
+5. `pnpm backup --legacy` no container do "full", pelo terminal do Dokploy. Salva o dump do Postgres, os arquivos novos
+   do bucket do app e o `portal.db` com o `-wal` e o `-shm`. Confere-se `legacy/<data>/` no bucket.
 6. Tira-se o domínio `reforma-tributaria` do compose "frontend". O container continua no ar.
 7. No "full" (detalhes em "Migração do portal antigo", itens 1 a 6):
    - `ALLOW_TEST_DATA_RESET=true` e deploy;
    - Apagar, Simular, Importar, e Importar de novo, que tem que vir toda como pulada;
-   - `ALLOW_TEST_DATA_RESET=false` e deploy.
+   - `ALLOW_TEST_DATA_RESET=false` e deploy. Mesmo que a importação falhe, volte para `false` e faça o deploy antes de
+     parar.
 8. Domínio no "full":
    - adicionar `reforma-tributaria.austercontabil.com.br` e tirar o `hml-reforma`;
    - `APP_PUBLIC_URL` e `BETTER_AUTH_URL` no domínio novo;
@@ -269,5 +272,6 @@ bucket `forms-victor`) passa a ser a produção, e não há hml depois disso. No
 
 **Volta atrás:**
 
-- **Até o passo 8:** devolve o domínio ao "frontend". O portal antigo está intacto.
-- **Depois do passo 8:** o que entrou no app novo se perde ao voltar. A decisão de voltar sai nas primeiras horas.
+- **Até o fim do passo 7, antes de pôr o domínio no "full" (passo 8):** devolve o domínio ao "frontend". O portal antigo
+  está intacto.
+- **A partir do passo 8:** o que entrou no app novo se perde ao voltar. A decisão de voltar sai nas primeiras horas.

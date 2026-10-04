@@ -222,8 +222,13 @@ export function makeImportLegacy({ source, target, newUserId, knownTermVersions,
         conflicts.push(`inscrição ${row.id}: o protocolo ${protocol} já é da inscrição ${owner}`)
         continue
       }
-      if (sessionEvents.get(row.sessao_id) !== row.evento_id) {
-        conflicts.push(`inscrição ${row.id}: o encontro ${row.sessao_id} não é do evento ${row.evento_id}`)
+      const sessionEvent = sessionEvents.get(row.sessao_id)
+      if (sessionEvent !== row.evento_id) {
+        conflicts.push(
+          sessionEvent === undefined
+            ? `inscrição ${row.id}: o encontro ${row.sessao_id} não existe`
+            : `inscrição ${row.id}: o encontro ${row.sessao_id} não é do evento ${row.evento_id}`,
+        )
         continue
       }
       const unmappable = registrationConflicts(row)
@@ -240,7 +245,7 @@ export function makeImportLegacy({ source, target, newUserId, knownTermVersions,
 
     const newAuditRows = auditRows.filter((row) => !importedEvents.has(row.id))
     for (const row of newAuditRows) {
-      if (!translateAuditAction(row.o_que).known) notes.push(`evento ${row.id}: ação ${row.o_que} sem equivalente; gravada como legacy_imported`)
+      if (!translateAuditAction(row.o_que).known) notes.push(`auditoria ${row.id}: ação ${row.o_que} sem equivalente; gravada como legacy_imported`)
     }
 
     const report: ImportReport = {
@@ -259,12 +264,7 @@ export function makeImportLegacy({ source, target, newUserId, knownTermVersions,
     }
     if (dryRun || conflicts.length) return report
 
-    await target.insertUsers(newUsers)
-    await target.insertInvitations(newInvitations)
-    await target.insertResponses(newResponses)
-    await target.insertAdhesions(newAdhesions)
-
-    // As imagens sobem antes de gravar o evento: se o MinIO falhar, nenhum evento fica apontando para arquivo que não existe.
+    // As imagens sobem antes de gravar qualquer tabela: se o MinIO falhar, o Postgres fica como estava.
     // Um arquivo que subiu sem o evento chegar a ser gravado é achado pela chave na próxima tentativa, sem subir de novo.
     const resolve = async (ref: ImageRef): Promise<string | null> => {
       if (ref.kind === 'house') return images.houseFileId(ref.name)
@@ -278,6 +278,11 @@ export function makeImportLegacy({ source, target, newUserId, knownTermVersions,
       const mapped = mapEvent(row, { content, userIds })
       if (mapped) newEvents.push(mapped)
     }
+
+    await target.insertUsers(newUsers)
+    await target.insertInvitations(newInvitations)
+    await target.insertResponses(newResponses)
+    await target.insertAdhesions(newAdhesions)
     const newSessions = newSessionRows.map(mapSession).filter((row): row is ImportedSession => row !== null)
     await target.insertEventsAndSessions(newEvents, newSessions)
     await target.insertRegistrations(newRegistrations)

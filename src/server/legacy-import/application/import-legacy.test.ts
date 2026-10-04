@@ -125,6 +125,14 @@ describe('importLegacy', () => {
     expect(memory.imports).toHaveLength(2)
   })
 
+  it('notes an old audit row whose action has no equivalent by its audit id', async () => {
+    const memory = memoryTarget()
+    const row: LegacyEvent = { id: 7, quando: '2026-09-15T12:00:00.000Z', quem: 'maria', o_que: 'algo_novo', referencia: null, detalhe: null }
+    const unknown = { ...source([]), events: async () => [row] }
+    const report = await makeImportLegacy({ source: unknown, target: memory.target, newUserId: () => 'u', knownTermVersions: VERSIONS, images: memoryImages().images })({ dryRun: true })
+    expect(report.notes).toContain('auditoria 7: ação algo_novo sem equivalente; gravada como legacy_imported')
+  })
+
   it('records who ran the import, and no one when it came from the script', async () => {
     const memory = memoryTarget()
     const run = makeImportLegacy({ source: source([response(1, 'DS-1')]), target: memory.target, newUserId: () => 'u', knownTermVersions: VERSIONS, images: memoryImages().images })
@@ -282,7 +290,7 @@ describe('importLegacy — eventos, encontros, inscrições e imagens', () => {
   })
 
   it('aborts on conflicts: unknown status, orphan session, duplicate active person, slug taken by another id', async () => {
-    const { memory, importer } = setup()
+    const { memory, store, importer } = setup()
     memory.target.existingEventSlugs = async () => new Map([['evento-2', 99]])
     const report = await importer(
       [agendaEvent(1, { situacao: 'constructor' }), agendaEvent(2)],
@@ -298,5 +306,26 @@ describe('importLegacy — eventos, encontros, inscrições e imagens', () => {
     ]))
     expect(memory.insertedEvents).toHaveLength(0)
     expect(memory.insertedRegistrations).toHaveLength(0)
+    expect(store.writes).toHaveLength(0)
+  })
+
+  it('says the session does not exist, or that it belongs to another event', async () => {
+    const { importer } = setup()
+    const report = await importer(
+      [agendaEvent(1), agendaEvent(2)],
+      [agendaSession(1, 1), agendaSession(2, 2)],
+      [legacyRegistration(1, 9), legacyRegistration(2, 2)],
+    )({ dryRun: true })
+    expect(report.conflicts).toEqual(['inscrição 1: o encontro 9 não existe', 'inscrição 2: o encontro 2 não é do evento 1'])
+  })
+
+  it('uploads the images before writing any table, so a storage failure leaves the database untouched', async () => {
+    const { memory, store, importer } = setup()
+    store.images.store = async () => {
+      throw new Error('MinIO fora do ar')
+    }
+    await expect(importer([agendaEvent(1)], [agendaSession(1, 1)], [legacyRegistration(1, 1)])({ dryRun: false })).rejects.toThrow('MinIO fora do ar')
+    expect([memory.users, memory.invitations, memory.imported, memory.audit, memory.imports, memory.insertedEvents].map((rows) => rows.length)).toEqual([0, 0, 0, 0, 0, 0])
+    expect(memory.responses.size).toBe(0)
   })
 })

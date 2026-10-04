@@ -68,3 +68,8 @@ export const updateEventFn = createServerFn({ method: 'POST' })
 export const eventGalleryFn = createServerFn({ method: 'GET' })
   .middleware([requireCapability('manage_events')])
   .handler(() => eventBackoffice.gallery())
+
+export const handleRegistrationFn = createServerFn({ method: 'POST' })
+  .middleware([requireCapability('handle_registrations')])
+  .inputValidator(idInput.extend({ status: z.string().max(20) }))
+  .handler(({ data, context }) => eventBackoffice.handleRegistration(actorOf(context.session.user), data))

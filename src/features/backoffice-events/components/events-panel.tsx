@@ -4,10 +4,11 @@ import { createEventFn } from '../api/events'
 import { eventQuery, eventsQuery, galleryQuery } from '../api/queries'
 import { EventEditor } from './event-editor'
 import { EventsList } from './events-list'
+import { RegistrationsPanel } from './registrations-panel'
 
 type Props = { eventId: number | undefined; onOpen(id: number | undefined): void; canManage: boolean; canExport: boolean; canHandle: boolean }
 
-export function EventsPanel({ eventId, onOpen, canManage, canExport }: Props) {
+export function EventsPanel({ eventId, onOpen, canManage, canExport, canHandle }: Props) {
   const queryClient = useQueryClient()
   const list = useQuery({ ...eventsQuery(), enabled: eventId === undefined })
   const detail = useQuery({ ...eventQuery(eventId ?? 0), enabled: eventId !== undefined })
@@ -39,14 +40,17 @@ export function EventsPanel({ eventId, onOpen, canManage, canExport }: Props) {
   if (detail.isError) return <div className="bo-empty">{`Falha ao carregar: ${detail.error.message}`}</div>
   if (!detail.data) return <div className="bo-empty">Evento não encontrado.</div>
   return (
-    <EventEditor
-      key={`${detail.data.event.id}:${synced}`}
-      detail={detail.data}
-      gallery={gallery.data ?? []}
-      canManage={canManage}
-      canExport={canExport}
-      onBack={() => onOpen(undefined)}
-      onChanged={(saved) => void refresh(saved)}
-    />
+    <>
+      <EventEditor
+        key={`${detail.data.event.id}:${synced}`}
+        detail={detail.data}
+        gallery={gallery.data ?? []}
+        canManage={canManage}
+        canExport={canExport}
+        onBack={() => onOpen(undefined)}
+        onChanged={(saved) => void refresh(saved)}
+      />
+      <RegistrationsPanel eventId={detail.data.event.id} registrations={detail.data.registrations} canHandle={canHandle} />
+    </>
   )
 }

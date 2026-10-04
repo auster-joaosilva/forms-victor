@@ -150,7 +150,9 @@ export function makeEventBackoffice({ events, registrations, images, clock, reco
       if (!isRegistrationStatus(status)) return { ok: false, error: 'situação inválida' }
       const current = await registrations.findById(id)
       if (!current) return { ok: false, error: 'inscrição não encontrada' }
-      await registrations.setStatus(id, status, actor.id, clock.now())
+      if ((await registrations.setStatus(id, status, actor.id, clock.now())) === 'duplicate_active') {
+        return { ok: false, error: 'já existe uma inscrição ativa deste e-mail neste encontro' }
+      }
       await recordAudit({ action: 'registration_handled', ...audited(actor), reference: String(id), detail: { from: current.status, to: status } })
       return { ok: true }
     },

@@ -132,7 +132,13 @@ export function memoryRegistrations(events: Map<number, EventView>) {
     },
     setStatus: async (id, status, actorId, at) => {
       const row = rows.get(id)
-      if (row) rows.set(id, { ...row, status, handledById: actorId, handledAt: at })
+      if (!row) return 'updated'
+      const duplicate = status !== 'cancelled' && [...rows.values()].some(
+        (other) => other.id !== id && active(other) && other.sessionId === row.sessionId && other.email.toLowerCase() === row.email.toLowerCase(),
+      )
+      if (duplicate) return 'duplicate_active'
+      rows.set(id, { ...row, status, handledById: actorId, handledAt: at })
+      return 'updated'
     },
   }
   return { repository, rows }

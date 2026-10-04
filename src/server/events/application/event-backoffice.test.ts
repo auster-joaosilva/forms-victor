@@ -16,12 +16,13 @@ function setup(seed: EventView[] = [eventView()]) {
   return { backoffice, events, registrations, images, audit }
 }
 
-const register = (registrations: ReturnType<typeof memoryRegistrations>, email: string) =>
-  registrations.repository.register({
-    protocol: `INS-20261003-${email.slice(0, 5).toUpperCase().padEnd(5, 'X')}`, eventId: 1, sessionId: 10, responseId: null,
-    name: 'Ana', email, phone: null, company: null, cnpj: null, cnpjDigits: null, jobTitle: null,
-    originIp: null, userAgent: null, payload: {},
-  })
+const registrationOf = (email: string) => ({
+  protocol: `INS-20261003-${email.slice(0, 5).toUpperCase().padEnd(5, 'X')}`, eventId: 1, sessionId: 10, responseId: null,
+  name: 'Ana', email, phone: null, company: null, cnpj: null, cnpjDigits: null, jobTitle: null,
+  originIp: null, userAgent: null, payload: {},
+})
+
+const register = (registrations: ReturnType<typeof memoryRegistrations>, email: string) => registrations.repository.register(registrationOf(email))
 
 describe('makeEventBackoffice', () => {
   it('creates a draft with a slug from the title and audits it', async () => {
@@ -129,6 +130,18 @@ describe('makeEventBackoffice', () => {
     expect(await backoffice.handleRegistration(actor, { id: 1, status: 'present' })).toEqual({ ok: true })
     expect(registrations.rows.get(1)).toMatchObject({ status: 'present', handledById: 'u1' })
     expect(audit.entries).toEqual([{ action: 'registration_handled', actorId: 'u1', actorUsername: 'operadora', reference: '1', detail: { from: 'registered', to: 'present' } }])
+  })
+
+  it('refuses to reactivate a cancelled registration when the same e-mail already has an active one in the session', async () => {
+    const { backoffice, registrations, audit } = setup()
+    await register(registrations, 'ana@x.com')
+    await backoffice.handleRegistration(actor, { id: 1, status: 'cancelled' })
+    expect(await registrations.repository.register({ ...registrationOf('ANA@x.com'), protocol: 'INS-20261003-OUTRA' })).toMatchObject({ kind: 'created' })
+    expect(await backoffice.handleRegistration(actor, { id: 1, status: 'confirmed' })).toEqual({
+      ok: false, error: 'já existe uma inscrição ativa deste e-mail neste encontro',
+    })
+    expect(registrations.rows.get(1)).toMatchObject({ status: 'cancelled' })
+    expect(audit.entries.map((entry) => entry.detail)).toEqual([{ from: 'registered', to: 'cancelled' }])
   })
 
   it('exports the registrations of the event and audits the spreadsheet', async () => {

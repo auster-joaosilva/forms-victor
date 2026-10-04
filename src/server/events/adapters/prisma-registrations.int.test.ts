@@ -182,6 +182,17 @@ describe('prisma registration repository', () => {
     expect(await prismaRegistrationRepository.findById(999)).toBeNull()
   })
 
+  it('reativar uma inscrição cancelada com outra ativa do mesmo e-mail no encontro devolve duplicate_active sem mudar nada', async () => {
+    await seed(null)
+    const user = await prisma.user.create({ data: { id: 'victor', name: 'Victor', email: 'v@x.invalid', username: 'victor', role: 'admin' } })
+    const cancelled = await prisma.registration.create({ data: { protocol: 'INS-20261021-CANCE', eventId, sessionId, name: 'Maria',
+      email: 'maria@exemplo.com.br', payload: {}, status: 'cancelled' } })
+    await prismaRegistrationRepository.register(registration({ email: 'MARIA@exemplo.com.br' }))
+    await expect(prismaRegistrationRepository.setStatus(cancelled.id, 'confirmed', user.id, new Date())).resolves.toBe('duplicate_active')
+    expect(await prismaRegistrationRepository.findById(cancelled.id)).toMatchObject({ status: 'cancelled' })
+    await expect(prismaRegistrationRepository.setStatus(cancelled.id, 'absent', user.id, new Date())).resolves.toBe('duplicate_active')
+  })
+
   it('liga ao diagnóstico mais recente do mesmo CNPJ', async () => {
     const make = (id: number, receivedAt: string) => prisma.response.create({ data: { id, protocol: `DS-260901-AAA${id}`,
       receivedAt: new Date(receivedAt), cnpjDigits: '11222333000181', payload: {} } })

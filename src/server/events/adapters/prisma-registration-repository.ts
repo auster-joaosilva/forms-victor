@@ -144,6 +144,12 @@ export const prismaRegistrationRepository: RegistrationRepository = {
   },
 
   async setStatus(id, status, actorId, at) {
-    await prisma.registration.update({ where: { id }, data: { status, handledById: actorId, handledAt: at } })
+    try {
+      await prisma.registration.update({ where: { id }, data: { status, handledById: actorId, handledAt: at } })
+      return 'updated'
+    } catch (error) {
+      if (isUniqueViolation(error)) return 'duplicate_active'
+      throw error
+    }
   },
 }

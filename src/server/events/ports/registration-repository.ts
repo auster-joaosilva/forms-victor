@@ -60,5 +60,6 @@ export interface RegistrationRepository {
   counts(eventId: number): Promise<RegistrationCounts>
   listForExport(eventId: number, filter: RegistrationFilter, limit: number): Promise<CsvRegistration[]>
   findById(id: number): Promise<{ id: number; eventId: number; status: RegistrationStatus } | null>
-  setStatus(id: number, status: RegistrationStatus, actorId: string, at: Date): Promise<void>
+  // duplicate_active: a mesma pessoa já tem outra inscrição ativa no encontro, e o índice parcial recusa a segunda.
+  setStatus(id: number, status: RegistrationStatus, actorId: string, at: Date): Promise<'updated' | 'duplicate_active'>
 }

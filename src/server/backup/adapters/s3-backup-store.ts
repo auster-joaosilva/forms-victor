@@ -37,7 +37,8 @@ export function createS3BackupStore({ client, bucket, partSize = 8 * 1024 * 1024
     async get(key) {
       try {
         const result = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }))
-        return result.Body instanceof Readable ? result.Body : null
+        if (!(result.Body instanceof Readable)) throw new Error(`o objeto ${key} existe, mas a resposta do S3 não veio como stream`)
+        return result.Body
       } catch (error) {
         if (error instanceof NoSuchKey) return null
         throw error

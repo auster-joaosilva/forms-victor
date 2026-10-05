@@ -127,70 +127,14 @@ existia antes disso, crie uma vez depois do `pnpm db:up`:
 docker compose exec postgres psql -U app -d forms_victor_dev -c "CREATE DATABASE forms_victor_test"
 ```
 
-## Backup
-
-Um backup por dia no bucket `forms-victor-backups` (variável `BACKUP_BUCKET`), no MinIO da própria VPS. Protege contra
-erro humano e dado corrompido, não contra perder a VPS. As datas das chaves são de Brasília.
-
-- `postgres/<banco>-AAAA-MM-DDTHHmm.dump`: `pg_dump -Fc`, do processo ao MinIO em stream, sem disco. Fica o dump mais
-  novo de cada um dos 7 dias de Brasília mais recentes que têm dump, e o mais recente de cada domingo das 4 últimas
-  semanas; o resto é apagado no fim de cada backup. Um backup cujo dump falha para antes de apagar qualquer coisa, e um
-  segundo backup no mesmo minuto recusa rodar: nunca sobrescreve (nem apaga) o dump que já existe com a chave.
-- `files/<chave>`: cópia incremental do bucket do app, do lado do servidor. Nunca é apagada.
-- `legacy/AAAA-MM-DDTHHmm/<nome>`: `portal.db`, `portal.db-wal` e `portal.db-shm`, os que existirem, só com `--legacy`.
-
-```bash
-pnpm backup                                                  # local, com o .env
-pnpm backup --legacy                                         # também o portal antigo
-pnpm backup:restore <chave> <url-de-destino> [--overwrite]
-```
-
-No container do "full" (terminal do Dokploy) não há pnpm: rode `node_modules/.bin/tsx scripts/backup.ts [--legacy]` e
-`node_modules/.bin/tsx scripts/restore-backup.ts <chave> <url-de-destino> [--overwrite]`.
-
-**Restaurar.** O banco de destino precisa existir. O `pg_restore --clean --if-exists --no-owner` apaga e recria os
-objetos dele. O banco do app (mesmo host, porta e nome do `DATABASE_URL`) é recusado sem `--overwrite`. Ensaio:
-
-1. No Postgres da VPS, com um usuário administrador: `CREATE DATABASE forms_victor_restore OWNER <usuário do DATABASE_URL>`.
-   O dono precisa ser o usuário do app: no PG15+ o schema `public` pertence ao dono do banco, e um usuário sem
-   superpoderes não restaura num banco que não é dele.
-2. No container do app: `node_modules/.bin/tsx scripts/restore-backup.ts postgres/forms_victor-<data>.dump <DATABASE_URL com o banco trocado por forms_victor_restore>`.
-3. Nos dois bancos, compare as contagens:
-   ```sql
-   SELECT table_name,
-          (xpath('/row/c/text()', query_to_xml(format('SELECT count(*) AS c FROM %I', table_name), false, true, '')))[1]::text::int AS rows
-   FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
-   ```
-4. `DROP DATABASE forms_victor_restore`.
-
-**Restauração em incidente (produção).** Restaure num banco **novo** (`CREATE DATABASE … OWNER <usuário do app>`, por um
-administrador), aponte o `DATABASE_URL` no painel para ele e faça o deploy. O banco antigo fica para análise.
-`--overwrite` no banco ao vivo é o último recurso: disputa com as conexões do app e, se falhar, deixa o banco pela
-metade, porque o `pg_restore` roda sem `--single-transaction`.
-
-**Schedule.** No Dokploy, compose "full" → Schedules: todo dia às 03:00 de Brasília (`0 3 * * *`; se o painel não tiver
-fuso, o cron é UTC e fica `0 6 * * *`), serviço `app`, comando `node_modules/.bin/tsx scripts/backup.ts`. Uma falha
-aparece como erro na Schedule; não há alerta.
-
-**MinIO.** A chave do `S3_ACCESS_KEY` precisa de permissão no bucket novo. No console do MinIO, na política da chave do
-app, acrescente `arn:aws:s3:::forms-victor-backups` e `arn:aws:s3:::forms-victor-backups/*` com as ações
-`s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket` e `s3:AbortMultipartUpload`, mais
-`s3:CreateBucket`; ou crie o bucket no console. A cópia dos
-arquivos lê do bucket do app e grava no de backup com a mesma chave.
-
-**Versão do cliente.** O `Dockerfile` instala o `postgresql17-client`. O `pg_dump --version` do container precisa ter a
-mesma versão maior do `SHOW server_version` do Postgres da VPS; se o servidor mudar de versão maior, troque o pacote.
-
 ## Depois da virada
 
 A virada foi em 04/10/2026: o compose "full" (banco `forms_victor`, bucket `forms-victor`) é a produção em
 `reforma-tributaria.austercontabil.com.br`, observando a `main`. Não há hml. Falta:
 
 1. Parar o compose "frontend", sem apagar.
-2. Ligar o backup (seção "Backup": MinIO, primeiro backup manual, ensaio de restauração e a Schedule).
-3. Depois de 30 dias, nesta ordem:
+2. Depois de 30 dias, nesta ordem:
    - tirar a montagem `legacy-data:/legacy:ro` e o bloco `volumes:` do topo do `dokploy-compose.yml`, e fazer o deploy;
    - só então apagar o volume do portal antigo e tirar o `LEGACY_VOLUME_NAME` do painel.
 
    Com o volume apagado e a montagem ainda no arquivo, todo deploy do "full" falha com "external volume not found".
-   Sem a montagem, o `--legacy` do backup não acha arquivo nenhum e só avisa.

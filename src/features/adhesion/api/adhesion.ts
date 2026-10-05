@@ -7,6 +7,7 @@ import {
   readAdhesionReceiptCookie,
   writeAdhesionReceiptCookie,
 } from '@/server/shared/http/adhesion-receipt-cookie'
+import { requestClientIp } from '@/server/shared/http/draft-cookie'
 import { requestOrigin } from '@/server/shared/http/request-origin'
 import type { AdhesionBootstrap, SubmitAdhesionWire } from '../types/adhesion'
 import { guardSubmit } from './guard-submit'
@@ -25,7 +26,7 @@ export const loadAdhesionPage = createServerFn({ method: 'GET' })
 export const lookupAdhesionCompany = createServerFn({ method: 'POST' })
   .inputValidator(lookupAdhesionCompanyInput)
   .handler(async ({ data }): Promise<{ companyName: string | null }> => {
-    const result = await lookupCompany({ cnpj: data.cnpj })
+    const result = await lookupCompany({ cnpj: data.cnpj, origin: requestClientIp() })
     return { companyName: result.ok ? result.company.legalName : null }
   })
 

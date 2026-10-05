@@ -37,7 +37,7 @@ export const discardDraft = createServerFn({ method: 'POST' }).handler(async () 
 
 export const lookupCnpj = createServerFn({ method: 'POST' })
   .inputValidator(lookupCnpjInput)
-  .handler(({ data }) => diagnosisDrafts.lookupCompanyForDraft({ draftId: readDraftCookie(), ...data }))
+  .handler(({ data }) => diagnosisDrafts.lookupCompanyForDraft({ draftId: readDraftCookie(), ...data, origin: requestClientIp() }))
 
 export const submitDiagnosis = createServerFn({ method: 'POST' }).handler(async (): Promise<SubmitWireResult> => {
   const result = await submitDraft({ draftId: readDraftCookie(), origin: requestClientIp() })

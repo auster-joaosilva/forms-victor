@@ -62,6 +62,8 @@ As fronteiras estão no `eslint.config.js`. Lint quebrado não entra.
 - Os endpoints `/api/auth/admin/*` são fechados ao navegador. Gestão de usuário passa por `server/identity`.
 - O envio de imagem dos eventos no backoffice é `POST /backoffice/event-images` (corpo bruto, `manage_events`, Origin
   conferido): a única rota com limite de corpo de 6 MiB; todas as outras ficam em 256 KiB.
+- **Débitos conhecidos**, deixados de fora pelo usuário na Etapa 5: trocar os segredos que foram colados no chat; ler o
+  IP real atrás da Cloudflare; conferir o `Sec-Fetch-Site` no GET das planilhas.
 
 ## Git — em toda implementação (durante a reescrita)
 
@@ -93,6 +95,7 @@ Traefik, "Setup Server" da VPS — sem SSH.
 - `application`: casos de uso com fakes das portas.
 - `adapters`: `*.int.test.ts`, contra o Postgres e o MinIO do `docker-compose.yml`
   (`pnpm db:up`).
+  O `pg-dump.int.test.ts` precisa do `pg_dump` e do `pg_restore` no PATH (cliente 17 ou mais novo); sem eles, pula com aviso.
 - `pnpm sweep` e `pnpm sweep:weighted` medem a distribuição das saídas. Os pesos são
   premissa, não dado da carteira.
 - Componentes: `*.test.tsx`, projeto `dom` do Vitest (jsdom + Testing Library), `pnpm test:dom`.
@@ -139,40 +142,153 @@ de teste do hml (verificações à mão, ponta a ponta, quem testou) ocupam os i
 
 A aba Migração traz usuários, convites, respostas, adesões, **eventos, encontros, inscrições e as imagens dos eventos**
 (as que estavam em base64 no `conteudo` vão para o MinIO como `event_cover`/`speaker_photo`; `/imagens/<nome>` vira a
-foto da casa de mesmo nome) e a auditoria. As fotos da casa entram pelo `pnpm db:seed`: rode-o no container do app antes
+foto da casa de mesmo nome) e a auditoria. As fotos da casa entram pelo seed (`node_modules/.bin/tsx prisma/seed.ts`, sem pnpm no container): rode-o no container do app antes
 de importar, ou os eventos que usavam `/imagens/…` ficam sem imagem (a simulação avisa).
 
-- **Na virada o banco é zerado e importado do zero.** O apagar dados de teste leva tudo o que foi criado no app novo
+- **A virada zera o banco e importa do zero.** O apagar dados de teste leva tudo o que foi criado no app novo
   antes da virada: rascunhos, inscrições, encontros, eventos, adesões e respostas. Ficam só os usuários (com as senhas
   já definidas) e a Auditoria. É por isso que testar no hml depois do ensaio não faz mal: o que o teste criou sai na
   virada, e a importação de um banco limpo traz o estado do portal antigo daquele momento (inclusive status, presença
   e edições feitas depois do ensaio, que uma reimportação por cima pularia).
-- **Depois da virada:** tire do `dokploy-compose.yml` a montagem `legacy-data:/legacy:ro` e o bloco `volumes:` do
-  topo, e apague `LEGACY_VOLUME_NAME` do painel. Senão, quando o volume antigo for apagado, todo deploy falha com
-  "external volume not found".
 
-No ensaio (hml) e na virada (produção), na ordem:
+A importação, no compose "full", na ordem. Os itens 1 a 6 são o passo 8 da seção "Virada", e o 7 é o passo 12 de lá;
+o backup do portal antigo, o corte do tráfego, o domínio e a limpeza do volume ficam na "Virada".
 
-1. Na virada: faça o backup do `portal.db` e do Postgres de produção.
-2. Na virada: corte o tráfego público do portal antigo, mas deixe o container dele **no ar** (ou confira que
-   `portal.db-wal` e `portal.db-shm` existem no volume). Nenhuma resposta, adesão ou inscrição nova pode chegar a
-   nenhum dos dois portais daqui até o fim.
-3. No painel do Dokploy, no compose do app (o "full" no ensaio, o de produção na virada), defina `LEGACY_VOLUME_NAME`
-   com o nome do volume `dados` do compose "frontend" e `ALLOW_TEST_DATA_RESET=true`, e faça o deploy.
-   `LEGACY_DB_PATH` só muda se o arquivo não estiver em `/legacy/portal.db`.
-4. Aba Migração: confira o caminho e que o banco aparece como **disponível**.
-5. **Apagar dados de teste do hml** — digite `APAGAR`. Apaga rascunhos, inscrições, encontros, eventos, adesões e
+1. No painel do Dokploy, defina `LEGACY_VOLUME_NAME` com o nome do volume `dados` do compose "frontend" e
+   `ALLOW_TEST_DATA_RESET=true`, e faça o deploy. `LEGACY_DB_PATH` só muda se o arquivo não estiver em `/legacy/portal.db`.
+   O container do portal antigo fica **no ar** (ou confira que `portal.db-wal` e `portal.db-shm` existem no volume).
+2. Aba Migração: confira o caminho e que o banco aparece como **disponível**.
+3. **Apagar dados de teste do hml** — digite `APAGAR`. Apaga rascunhos, inscrições, encontros, eventos, adesões e
    respostas (nessa ordem) — **nunca depois de importar**: apaga também o que a migração trouxe. Os arquivos no MinIO
    ficam: a importação acha as imagens pela chave. A Auditoria fica, com a linha "dados de teste apagados" e as
    contagens.
-6. **Simular.** Confira as contagens, os avisos (protocolos com `-2`, convites órfãos, autores inexistentes,
+4. **Simular.** Confira as contagens, os avisos (protocolos com `-2`, convites órfãos, autores inexistentes,
    ações sem equivalente, papéis sem equivalente, adesões com diagnóstico órfão, campo em branco ou versão do termo
    fora do sistema) e se há **conflitos**. Com conflito, o Importar fica fechado.
-7. **Importar** (pede confirmação). Importe de novo: tudo deve vir como pulado.
-8. No painel, `ALLOW_TEST_DATA_RESET=false` e deploy: a partir daqui o banco tem dado de verdade.
-9. Na virada: aponte o domínio para o app novo.
-10. Aba Usuários: defina a senha de cada usuário migrado que ainda não tem (eles chegam sem senha; o resumo antigo é
-    incompatível). Confira a aba Respostas e a linha "migração do portal antigo" na Auditoria, com quem importou.
+5. **Importar** (pede confirmação). Importe de novo: tudo deve vir como pulado.
+6. No painel, `ALLOW_TEST_DATA_RESET=false` e deploy: a partir daqui o banco tem dado de verdade.
+7. Aba Usuários: defina a senha de cada usuário migrado que ainda não tem (eles chegam sem senha; o resumo antigo é
+   incompatível). Confira a aba Respostas e a linha "migração do portal antigo" na Auditoria, com quem importou.
 
 Localmente, contra um arquivo: `pnpm migrate:legacy <caminho> [--dry-run]` (o `node:sqlite` não pede flag a partir
 do Node 22.13).
+
+## Backup
+
+Um backup por dia no bucket `forms-victor-backups` (variável `BACKUP_BUCKET`), no MinIO da própria VPS. Protege contra
+erro humano e dado corrompido, não contra perder a VPS. As datas das chaves são de Brasília.
+
+- `postgres/<banco>-AAAA-MM-DDTHHmm.dump`: `pg_dump -Fc`, do processo ao MinIO em stream, sem disco. Fica o dump mais
+  novo de cada um dos 7 dias de Brasília mais recentes que têm dump, e o mais recente de cada domingo das 4 últimas
+  semanas; o resto é apagado no fim de cada backup. Um backup cujo dump falha para antes de apagar qualquer coisa, e um
+  segundo backup no mesmo minuto recusa rodar: nunca sobrescreve (nem apaga) o dump que já existe com a chave.
+- `files/<chave>`: cópia incremental do bucket do app, do lado do servidor. Nunca é apagada.
+- `legacy/AAAA-MM-DDTHHmm/<nome>`: `portal.db`, `portal.db-wal` e `portal.db-shm`, os que existirem, só com `--legacy`.
+
+```bash
+pnpm backup                                                  # local, com o .env
+pnpm backup --legacy                                         # também o portal antigo
+pnpm backup:restore <chave> <url-de-destino> [--overwrite]
+```
+
+No container do "full" (terminal do Dokploy) não há pnpm: rode `node_modules/.bin/tsx scripts/backup.ts [--legacy]` e
+`node_modules/.bin/tsx scripts/restore-backup.ts <chave> <url-de-destino> [--overwrite]`.
+
+**Restaurar.** O banco de destino precisa existir. O `pg_restore --clean --if-exists --no-owner` apaga e recria os
+objetos dele. O banco do app (mesmo host, porta e nome do `DATABASE_URL`) é recusado sem `--overwrite`. Ensaio:
+
+1. No Postgres da VPS, com um usuário administrador: `CREATE DATABASE forms_victor_restore OWNER <usuário do DATABASE_URL>`.
+   O dono precisa ser o usuário do app: no PG15+ o schema `public` pertence ao dono do banco, e um usuário sem
+   superpoderes não restaura num banco que não é dele.
+2. No container do app: `node_modules/.bin/tsx scripts/restore-backup.ts postgres/forms_victor-<data>.dump <DATABASE_URL com o banco trocado por forms_victor_restore>`.
+3. Nos dois bancos, compare as contagens:
+   ```sql
+   SELECT table_name,
+          (xpath('/row/c/text()', query_to_xml(format('SELECT count(*) AS c FROM %I', table_name), false, true, '')))[1]::text::int AS rows
+   FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
+   ```
+4. `DROP DATABASE forms_victor_restore`.
+
+**Restauração em incidente (produção).** Restaure num banco **novo** (`CREATE DATABASE … OWNER <usuário do app>`, por um
+administrador), aponte o `DATABASE_URL` no painel para ele e faça o deploy. O banco antigo fica para análise.
+`--overwrite` no banco ao vivo é o último recurso: disputa com as conexões do app e, se falhar, deixa o banco pela
+metade, porque o `pg_restore` roda sem `--single-transaction`.
+
+**Schedule.** No Dokploy, compose "full" → Schedules: todo dia às 03:00 de Brasília (`0 3 * * *`; se o painel não tiver
+fuso, o cron é UTC e fica `0 6 * * *`), serviço `app`, comando `node_modules/.bin/tsx scripts/backup.ts`. Uma falha
+aparece como erro na Schedule; não há alerta.
+
+**MinIO.** A chave do `S3_ACCESS_KEY` precisa de permissão no bucket novo. No console do MinIO, na política da chave do
+app, acrescente `arn:aws:s3:::forms-victor-backups` e `arn:aws:s3:::forms-victor-backups/*` com as ações
+`s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket` e `s3:AbortMultipartUpload`, mais
+`s3:CreateBucket`; ou crie o bucket no console. A cópia dos
+arquivos lê do bucket do app e grava no de backup com a mesma chave.
+
+**Versão do cliente.** O `Dockerfile` instala o `postgresql17-client`. O `pg_dump --version` do container precisa ter a
+mesma versão maior do `SHOW server_version` do Postgres da VPS; se o servidor mudar de versão maior, troque o pacote.
+
+## Virada
+
+O app novo vira a produção em `reforma-tributaria.austercontabil.com.br`. O compose "full" (banco `forms_victor`,
+bucket `forms-victor`) passa a ser a produção, e não há hml depois disso. No container do "full", `pnpm backup` é
+`node_modules/.bin/tsx scripts/backup.ts` (seção "Backup").
+
+**Antes, em qualquer dia:**
+
+1. O usuário aprova as checagens do hml.
+2. Backup no ar:
+   - a Schedule diária está criada;
+   - um `pnpm backup` manual passou;
+   - uma restauração em `forms_victor_restore` foi feita, com as contagens conferidas;
+   - o banco temporário foi apagado.
+3. Deploy automático do compose "frontend" desligado. O Victor sabe que a `main` congela a partir dali.
+4. Na `teste`: `git fetch origin`, depois
+   `git merge -s ours origin/main -m "merge: main do portal antigo, sem o código"`, e push. Registra os commits do
+   portal antigo sem trazer o código, para a `main` avançar sem force push.
+
+**No dia:** os passos 6 a 9 são a janela fora do ar: o site cai quando o domínio sai do "frontend" e só volta
+quando o "full" responde nele. Avise antes, mantenha a janela curta e não pare entre esses passos.
+
+5. Opcional, ainda com o site no ar: um `node_modules/.bin/tsx scripts/backup.ts` no container do "full", pelo
+   terminal do Dokploy, só do Postgres e dos arquivos.
+6. Tira-se o domínio `reforma-tributaria` do compose "frontend". O container continua no ar.
+7. Sem tráfego, `node_modules/.bin/tsx scripts/backup.ts --legacy` no container do "full". Tem que ser depois do
+   passo 6: sem tráfego não há escrita nem checkpoint no SQLite entre a leitura do `portal.db`, do `-wal` e do `-shm`.
+   Salva o dump do Postgres, os arquivos novos do bucket do app e o `portal.db` com o `-wal` e o `-shm`; leva
+   segundos. Confere-se `legacy/<data>/` no bucket.
+8. No "full" (detalhes em "Migração do portal antigo", itens 1 a 6):
+   - `ALLOW_TEST_DATA_RESET=true` e deploy;
+   - Apagar, Simular, Importar, e Importar de novo, que tem que vir toda como pulada;
+   - `ALLOW_TEST_DATA_RESET=false` e deploy. Mesmo que a importação falhe, volte para `false` e faça o deploy antes de
+     parar.
+9. Domínio no "full":
+   - adicionar `reforma-tributaria.austercontabil.com.br` e tirar o `hml-reforma`;
+   - `APP_PUBLIC_URL` e `BETTER_AUTH_URL` no domínio novo;
+   - deploy.
+10. Conferências:
+   - `/`, `/events`, `/health`, `/imagens/recepcao.jpg` respondem 200 e `/backoffice` responde 307;
+   - o login entra;
+   - as contagens da aba Respostas batem com a importação;
+   - o IP do login na Auditoria é o de quem acessou, não o de um servidor da Cloudflare (se for, avisar: o limite por
+     IP vira global).
+11. Backup manual (`node_modules/.bin/tsx scripts/backup.ts`): o primeiro dump de produção, sem esperar as 03:00.
+12. Senha de cada usuário migrado, na aba Usuários.
+13. Git:
+    - `git fetch origin` e confira que a `origin/main` não andou desde o passo 4; se andou, refaça o merge do passo 4
+      (o push falha sem estragar nada de qualquer jeito);
+    - `git push origin teste:main`;
+    - a branch do "full" passa para `main`;
+    - o fluxo git do `AGENTS.md` volta para `main` (sai a `teste`), e as notas sobre o compose "frontend" saem.
+14. Para o compose "frontend", sem apagar. Depois de 30 dias:
+    - apaga o volume do portal antigo;
+    - tira a montagem `legacy-data:/legacy:ro` e o bloco `volumes:` do topo do `dokploy-compose.yml`;
+    - tira o `LEGACY_VOLUME_NAME` do painel.
+
+    Primeiro saem a montagem e o bloco, com um deploy; só depois o volume e a variável. Com o volume apagado e a
+    montagem ainda no arquivo, todo deploy do "full" falha com "external volume not found".
+
+**Volta atrás:**
+
+- **Até o fim do passo 8, antes de pôr o domínio no "full" (passo 9):** devolve o domínio ao "frontend". O portal antigo
+  está intacto.
+- **A partir do passo 9:** o que entrou no app novo se perde ao voltar. A decisão de voltar sai nas primeiras horas.

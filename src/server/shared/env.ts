@@ -9,6 +9,7 @@ const envSchema = z.object({
   S3_BUCKET: z.string().min(3),
   S3_ACCESS_KEY: z.string().min(3),
   S3_SECRET_KEY: z.string().min(8),
+  BACKUP_BUCKET: z.string().min(3).default('forms-victor-backups'),
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url(),
   APP_PUBLIC_URL: z.url(),

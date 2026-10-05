@@ -36,4 +36,16 @@ describe('checkRateLimit', () => {
     const result = await check({ route: '/r', origin: 'o', now: new Date(Date.UTC(2026, 9, 1, 12, 10, 0)) })
     expect(result).toEqual({ allowed: false, retryAfterSeconds: 3000 })
   })
+  it('counts a request without origin under sem-origem', async () => {
+    const keys: string[] = []
+    const store: RateLimitStore = {
+      async increment(key) {
+        keys.push(key)
+        return 1
+      },
+      async purgeBefore() {},
+    }
+    await makeCheckRateLimit(store)({ route: 'cnpj-lookup', origin: null, now })
+    expect(keys).toEqual(['cnpj-lookup|sem-origem|60', 'cnpj-lookup|sem-origem|3600'])
+  })
 })

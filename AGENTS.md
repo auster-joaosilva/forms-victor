@@ -65,24 +65,23 @@ As fronteiras estão no `eslint.config.js`. Lint quebrado não entra.
 - **Débitos conhecidos**, deixados de fora pelo usuário na Etapa 5: trocar os segredos que foram colados no chat; ler o
   IP real atrás da Cloudflare; conferir o `Sec-Fetch-Site` no GET das planilhas.
 
-## Git — em toda implementação (durante a reescrita)
+## Git — em toda implementação
 
-1. `git switch teste && git pull --ff-only && git switch -c <tipo>/<assunto>`
+1. `git switch main && git pull --ff-only && git switch -c <tipo>/<assunto>`
 2. Commits pequenos, Conventional Commits, descrição em português:
    `feat(diagnostico): …`, `fix(backoffice): …`. **Sem `Co-Authored-By`.**
 3. `pnpm db:up && pnpm lint && pnpm typecheck && pnpm test` — tudo limpo.
    Mudou fluxo de tela? Rode também `pnpm test:e2e`.
-4. `git switch teste && git merge --no-ff <branch> -m "merge: <assunto>" && git branch -d <branch>`
-5. `git push origin teste`.
-6. **Nunca** tocar nem enviar a `main`, e nunca enviar outra branch ao remoto.
+4. `git switch main && git merge --no-ff <branch> -m "merge: <assunto>" && git branch -d <branch>`
+5. `git push origin main`.
+6. Nunca envie outra branch ao remoto.
 
-**Push na `teste` é deploy.** O Dokploy publica a `teste` em
-`hml-reforma.austercontabil.com.br` a cada push (compose "full", arquivo
-`dokploy-compose.yml`). A `main` só volta a receber código na virada.
+**Push na `main` é deploy em produção.** O Dokploy publica a `main` em `reforma-tributaria.austercontabil.com.br`
+a cada push (compose "full", arquivo `dokploy-compose.yml`). Não há hml: o banco `forms_victor` e o bucket
+`forms-victor` são os de produção. A virada foi em 04/10/2026.
 
-O compose antigo "frontend" (portal legado em `reforma-tributaria.austercontabil.com.br`) tem
-**deploy automático ligado na `main`**: o Victor ainda corrige o portal antigo por ela. Não envie nada à `main`
-e não dispare deploy no "frontend" fora de uma queda da produção.
+O compose antigo "frontend" (portal legado) ficou sem domínio e com o deploy automático desligado; ele é parado no
+passo 14 da "Virada" e não volta a ser ligado.
 
 Painel do Dokploy: `http://10.10.30.232:3000` (rede interna). A VPS (`86.48.5.53`) é servidor remoto dele. Se
 um reinício da VPS derrubar os sites (Cloudflare 521): `compose.redeploy` do compose que sumiu e, se faltar o

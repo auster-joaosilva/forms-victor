@@ -65,6 +65,22 @@ As fronteiras estão no `eslint.config.js`. Lint quebrado não entra.
 - **Débitos conhecidos**, deixados de fora pelo usuário na Etapa 5: trocar os segredos que foram colados no chat; ler o
   IP real atrás da Cloudflare; conferir o `Sec-Fetch-Site` no GET das planilhas.
 
+## E-mail
+
+Envio no-reply pela caixa `no-reply@austercontabil.com.br` na UOL Host (`smtps.uhserver.com:465`, SSL/TLS, senha
+normal), com Nodemailer. Só envio: ninguém lê a caixa, então não peça resposta no texto. Nenhum fluxo usa ainda.
+
+- `server/mail/composition.ts` exporta `mailSender` (`send({ to, subject, text, html? })`). O remetente é sempre
+  `SMTP_USER`: a UOL recusa outro `From`.
+- Quem envia declara a própria porta em `server/<módulo>/ports` e recebe `mailSender` no seu `composition.ts`, como
+  `recordAudit` chega à adesão. O caso de uso é testado com um fake dessa porta. Nada de Nodemailer fora de
+  `server/mail/adapters`.
+- Envie depois de gravar, fora da transação. Falha de envio não desfaz o que foi gravado: registre e siga.
+- `text` sempre; `html` é opcional. Escape todo dado do usuário que entrar no `html`.
+- `SMTP_USER` e `SMTP_PASSWORD` vão juntos e ficam só no painel do Dokploy. Sem eles o app sobe, mas `send` lança
+  "SMTP não configurado". Em desenvolvimento, deixe-os vazios ou use uma caixa sua; não aponte o `.env` local para a
+  caixa de produção.
+
 ## Git — em toda implementação
 
 1. `git switch main && git pull --ff-only && git switch -c <tipo>/<assunto>`

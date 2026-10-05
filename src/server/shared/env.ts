@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+// O compose passa `${VAR:-}`: variável ausente chega como texto vazio.
+const optionalText = z.preprocess((value) => (value === '' ? undefined : value), z.string().min(1).optional())
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -14,7 +17,14 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.url(),
   APP_PUBLIC_URL: z.url(),
   LEGACY_DB_PATH: z.string().min(1).default('/legacy/portal.db'),
+  SMTP_HOST: z.string().min(1).default('smtps.uhserver.com'),
+  SMTP_PORT: z.coerce.number().int().positive().default(465),
+  SMTP_USER: optionalText,
+  SMTP_PASSWORD: optionalText,
   // Apaga respostas e adesões: só a palavra exata liga, e um erro de digitação derruba a subida em vez de passar calado.
+}).refine((env) => (env.SMTP_USER === undefined) === (env.SMTP_PASSWORD === undefined), {
+  path: ['SMTP_PASSWORD'],
+  message: 'SMTP_USER e SMTP_PASSWORD vão juntos',
 })
 
 export type Env = z.infer<typeof envSchema>

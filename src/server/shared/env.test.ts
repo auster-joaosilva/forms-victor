@@ -39,4 +39,22 @@ describe('parseEnv', () => {
     const { DATABASE_URL: _omit, ...rest } = valid
     expect(() => parseEnv(rest)).toThrow(/DATABASE_URL/)
   })
+
+  it('defaults SMTP to UOL Host and leaves the mailbox unset', () => {
+    const env = parseEnv(valid)
+    expect(env.SMTP_HOST).toBe('smtps.uhserver.com')
+    expect(env.SMTP_PORT).toBe(465)
+    expect(env.SMTP_USER).toBeUndefined()
+  })
+
+  it('requires SMTP user and password together', () => {
+    expect(() => parseEnv({ ...valid, SMTP_USER: 'no-reply@austercontabil.com.br' })).toThrow(/SMTP_PASSWORD/)
+    expect(() => parseEnv({ ...valid, SMTP_PASSWORD: 'segredo' })).toThrow(/SMTP_PASSWORD/)
+    const env = parseEnv({ ...valid, SMTP_USER: 'no-reply@austercontabil.com.br', SMTP_PASSWORD: 'segredo' })
+    expect(env.SMTP_USER).toBe('no-reply@austercontabil.com.br')
+  })
+
+  it('treats empty SMTP values from the compose as unset', () => {
+    expect(parseEnv({ ...valid, SMTP_USER: '', SMTP_PASSWORD: '' }).SMTP_USER).toBeUndefined()
+  })
 })

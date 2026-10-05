@@ -11,6 +11,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: 'Auster Inteligência Contábil' },
     ],
     links: [
+      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Kanit:wght@200;300;400;500;600&display=swap' },

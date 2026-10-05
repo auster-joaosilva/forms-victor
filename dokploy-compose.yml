@@ -23,6 +23,10 @@ services:
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       LEGACY_DB_PATH: ${LEGACY_DB_PATH:-/legacy/portal.db}
+      SMTP_HOST: ${SMTP_HOST:-smtps.uhserver.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
     volumes:
       - legacy-data:/legacy:ro
     networks:

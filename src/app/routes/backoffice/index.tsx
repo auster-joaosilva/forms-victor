@@ -6,7 +6,6 @@ import { AuditPanel } from '@/features/backoffice-audit/components/audit-panel'
 import { AdhesionsPanel } from '@/features/backoffice-adhesions/components/adhesions-panel'
 import { EventsPanel } from '@/features/backoffice-events/components/events-panel'
 import { InvitationsPanel } from '@/features/backoffice-invitations/components/invitations-panel'
-import { MigrationPanel } from '@/features/backoffice-migration/components/migration-panel'
 import { ResponsesPanel } from '@/features/backoffice-responses/components/responses-panel'
 import { OwnPasswordButton } from '@/features/backoffice-users/components/own-password-button'
 import { UsersPanel } from '@/features/backoffice-users/components/users-panel'
@@ -14,7 +13,7 @@ import { ADHESION_STATUSES } from '@/server/adhesion/domain/adhesion'
 import { RESPONSE_STATUSES } from '@/server/diagnosis/domain/response-status'
 import type { Capability } from '@/server/shared/domain/permissions'
 
-const TAB_KEYS = ['responses', 'adhesions', 'events', 'invitations', 'audit', 'users', 'migration'] as const
+const TAB_KEYS = ['responses', 'adhesions', 'events', 'invitations', 'audit', 'users'] as const
 type TabKey = (typeof TAB_KEYS)[number]
 // A tela só esconde; quem fecha é o requireCapability de cada server function.
 const TABS: { key: TabKey; label: string; capability: Capability }[] = [
@@ -24,7 +23,6 @@ const TABS: { key: TabKey; label: string; capability: Capability }[] = [
   { key: 'invitations', label: 'Convites', capability: 'view_invitations' },
   { key: 'audit', label: 'Auditoria', capability: 'view_audit' },
   { key: 'users', label: 'Usuários', capability: 'manage_users' },
-  { key: 'migration', label: 'Migração', capability: 'manage_users' },
 ]
 
 export const Route = createFileRoute('/backoffice/')({
@@ -89,7 +87,6 @@ function BackofficeHome() {
       {tab === 'invitations' ? <InvitationsPanel /> : null}
       {tab === 'audit' ? <AuditPanel /> : null}
       {tab === 'users' ? <UsersPanel /> : null}
-      {tab === 'migration' ? <MigrationPanel /> : null}
     </BackofficeShell>
   )
 }

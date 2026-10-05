@@ -23,7 +23,7 @@ test('o login e as abas do backoffice não guardam nada local', async ({ page })
   expect(await page.evaluate(nothingLocal)).toEqual([0, 0])
   await login(page)
   expect(await page.evaluate(nothingLocal)).toEqual([0, 0])
-  for (const tab of ['Eventos', 'Convites', 'Adesões', 'Auditoria', 'Usuários', 'Migração', 'Respostas']) {
+  for (const tab of ['Eventos', 'Convites', 'Adesões', 'Auditoria', 'Usuários', 'Respostas']) {
     await page.getByRole('link', { name: tab }).click()
     await expect(page.getByRole('link', { name: tab })).toHaveClass(/is-active/)
     expect(await page.evaluate(nothingLocal)).toEqual([0, 0])

@@ -84,13 +84,30 @@ normal), com Nodemailer. Só envio: ninguém lê a caixa, então não peça resp
 ## Git — em toda implementação
 
 1. `git switch main && git pull --ff-only && git switch -c <tipo>/<assunto>`
-2. Commits pequenos, Conventional Commits, descrição em português:
-   `feat(diagnostico): …`, `fix(backoffice): …`. **Sem `Co-Authored-By`.**
+2. Commits pequenos, no padrão abaixo.
 3. `pnpm db:up && pnpm lint && pnpm typecheck && pnpm test` — tudo limpo.
-   Mudou fluxo de tela? Rode também `pnpm test:e2e`.
-4. `git switch main && git merge --no-ff <branch> -m "merge: <assunto>" && git branch -d <branch>`
+   O `pnpm test:e2e` local não é obrigatório; rode quando quiser conferir um fluxo de tela.
+4. `git switch main && git pull --ff-only && git merge --no-ff <branch> -m "merge: <assunto>" && git branch -d <branch>`
 5. `git push origin main`.
 6. Nunca envie outra branch ao remoto.
+
+**O remoto é a fonte da verdade.** Nunca `git push --force`, `--force-with-lease` nem `git reset` da `main` sobre o
+remoto. Se a `main` local divergiu, `git fetch origin && git merge origin/main`, resolva os conflitos preservando o
+que já está no remoto, rode o passo 3 e só então o push. O `pull --ff-only` falhou? É divergência: faça esse merge,
+não force.
+
+### Padrão de commit
+
+- `<tipo>(<escopo>): <descrição>` — uma linha, em português com acento, minúscula, sem ponto final, sem corpo
+  quando a linha basta.
+- Tipos: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`.
+- Escopo: a área, em português sem acento — `diagnostico`, `adesao`, `eventos`, `backoffice`, `auth`,
+  `permissoes`, `backup`, `portal`, `cnpj`, `mail`, `e2e`, `agents` (este arquivo), `virada`.
+- A descrição diz o que muda, no presente: `fix(portal): devolve o favicon perdido na remoção do código antigo`,
+  `docs(agents): como usar o envio de e-mail no-reply`, `feat(cnpj): limite por IP nas consultas de CNPJ`.
+- Merge na `main` sempre `--no-ff`, mensagem `merge: <assunto>` (`merge: favicon`).
+- Branch `<tipo>/<assunto>` em inglês e kebab-case: `feat/email-no-reply`, `fix/favicon`.
+- **Sem `Co-Authored-By`** nem outra linha de atribuição, em commit nenhum.
 
 **Push na `main` é deploy em produção.** O Dokploy publica a `main` em `reforma-tributaria.austercontabil.com.br`
 a cada push (compose "full", arquivo `dokploy-compose.yml`). Não há hml: o banco `forms_victor` e o bucket

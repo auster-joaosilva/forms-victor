@@ -127,17 +127,6 @@ existia antes disso, crie uma vez depois do `pnpm db:up`:
 docker compose exec postgres psql -U app -d forms_victor_dev -c "CREATE DATABASE forms_victor_test"
 ```
 
-## Migração do portal antigo (SQLite → Postgres)
-
-Feita na virada, em 04/10/2026: banco zerado e importação completa do `portal.db`, com os ids preservados. A aba
-Migração e o "Apagar dados de teste" saíram do backoffice depois disso. Usuários, convites, respostas, adesões,
-eventos, encontros, inscrições, imagens dos eventos e auditoria vieram do portal antigo. Os usuários migrados chegam
-sem senha (o resumo antigo é incompatível): a senha é definida na aba Usuários.
-
-O importador continua no repositório só para uso local, contra um arquivo: `pnpm migrate:legacy <caminho> [--dry-run]`
-(o `node:sqlite` não pede flag a partir do Node 22.13). Não rode contra a produção: um id que já existe com outro
-protocolo é conflito e aborta a importação inteira.
-
 ## Backup
 
 Um backup por dia no bucket `forms-victor-backups` (variável `BACKUP_BUCKET`), no MinIO da própria VPS. Protege contra

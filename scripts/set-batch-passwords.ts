@@ -1,5 +1,6 @@
 import { deriveFirstName } from '../src/server/identity/domain/contact'
 import { meetsPasswordRule } from '../src/server/identity/domain/user-rules'
+import { isRunDirectly } from './is-run-directly'
 
 export interface BatchPasswordPlan {
   username: string
@@ -13,7 +14,7 @@ export function planBatchPasswords(users: { username: string; active: boolean }[
 }
 
 async function main() {
-  if (import.meta.url !== `file://${process.argv[1]}`) return
+  if (!isRunDirectly(import.meta.url)) return
   const suffix = process.env.BATCH_PASSWORD_SUFFIX
   if (!suffix) throw new Error('defina BATCH_PASSWORD_SUFFIX no ambiente antes de rodar')
 

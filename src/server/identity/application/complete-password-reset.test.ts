@@ -12,6 +12,7 @@ function setup({ stored, usedAt = null }: { stored: Omit<StoredPasswordResetToke
     issue: async () => {},
     findByHash: async (hash) => (stored && hash === HASH_OF('plain-token') ? { ...stored, usedAt } : null),
     markUsed: async (id, at) => void marked.push({ id, at }),
+    lastIssuedAt: async () => null,
   }
   const completePasswordReset = makeCompletePasswordReset({
     tokens,

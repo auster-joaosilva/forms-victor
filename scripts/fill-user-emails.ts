@@ -1,4 +1,5 @@
 import { deriveEmail } from '../src/server/identity/domain/contact'
+import { isRunDirectly } from './is-run-directly'
 
 export interface EmailFillPlan {
   derivable: { username: string; email: string }[]
@@ -23,7 +24,7 @@ export function planEmailFill(usernames: string[], overrides: Record<string, str
 }
 
 async function main() {
-  if (import.meta.url !== `file://${process.argv[1]}`) return
+  if (!isRunDirectly(import.meta.url)) return
   const { prisma } = await import('../src/server/shared/prisma/client')
   const { recordAudit } = await import('../src/server/audit/composition')
 

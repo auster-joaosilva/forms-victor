@@ -65,4 +65,11 @@ export const sendResetLinksToAllFn = createServerFn({ method: 'POST' })
 export const importUserEmailsFn = createServerFn({ method: 'POST' })
   .middleware([requireCapability('manage_users')])
   .inputValidator(z.object({ text: z.string().max(10_000) }))
-  .handler(({ data, context }) => importUserEmails(context.session.user, data.text))
+  .handler(async ({ data, context }): Promise<ImportUserEmailsResult> => {
+    try {
+      return await importUserEmails(context.session.user, data.text)
+    } catch (error) {
+      if (error instanceof IdentityError) return { ok: false, errors: [{ line: 0, reason: error.message }] }
+      throw error
+    }
+  })

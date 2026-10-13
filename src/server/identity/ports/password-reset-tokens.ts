@@ -16,4 +16,6 @@ export interface PasswordResetTokens {
   issue(token: NewPasswordResetToken): Promise<void>
   findByHash(tokenHash: string): Promise<StoredPasswordResetToken | null>
   markUsed(id: string, at: Date): Promise<void>
+  // Quando saiu o token mais recente do usuário, usado ou não: base do limite de um pedido a cada 10 minutos.
+  lastIssuedAt(userId: string): Promise<Date | null>
 }

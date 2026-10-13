@@ -22,10 +22,15 @@ export function ResetPasswordForm({ token }: { token: string }) {
     setError(null)
     if (password !== repeated) return setError('As duas não conferem.')
     setPending(true)
-    const result = await completePasswordResetFn({ data: { token, password } })
-    setPending(false)
-    if (!result.ok) return setError(result.reason === 'weak_password' ? WEAK_PASSWORD_MESSAGE : INVALID_TOKEN_MESSAGE)
-    await navigate({ to: '/login' })
+    try {
+      const result = await completePasswordResetFn({ data: { token, password } })
+      if (!result.ok) return setError(result.reason === 'weak_password' ? WEAK_PASSWORD_MESSAGE : INVALID_TOKEN_MESSAGE)
+      await navigate({ to: '/login' })
+    } catch {
+      setError(INVALID_TOKEN_MESSAGE)
+    } finally {
+      setPending(false)
+    }
   }
 
   return (

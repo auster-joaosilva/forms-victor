@@ -5,7 +5,7 @@ import type { Clock } from '../ports/clock'
 import type { TokenGenerator } from '../ports/token-generator'
 import type { ResetMailer } from '../ports/reset-mailer'
 
-type AuditRecorder = (entry: { action: 'password_reset_links_sent'; actorId: string; actorUsername: string; reference: string; detail: { count: number } }) => Promise<void>
+type AuditRecorder = (entry: { action: 'password_reset_links_sent'; actorId: string; actorUsername: string; reference: string; detail: { count: number; failed: number } }) => Promise<void>
 
 export function makeSendResetLinks(deps: {
   accounts: { list(): Promise<UserAccount[]>; findByUsername(username: string): Promise<UserAccount | null> }
@@ -16,22 +16,29 @@ export function makeSendResetLinks(deps: {
   recordAudit: AuditRecorder
   baseUrl: string
 }) {
-  return async function sendResetLinks(actor: { id: string; username: string }, input: { usernames: string[] } | { all: true }): Promise<{ sent: number }> {
+  return async function sendResetLinks(actor: { id: string; username: string }, input: { usernames: string[] } | { all: true }): Promise<{ sent: number; failed: number }> {
     const candidates =
       'all' in input
         ? await deps.accounts.list()
         : (await Promise.all(input.usernames.map((u) => deps.accounts.findByUsername(u)))).filter((u): u is UserAccount => u !== null)
 
     let sent = 0
+    let failed = 0
     const now = deps.clock.now()
     for (const user of candidates) {
       if (!user.active || !isDeliverableEmail(user.email)) continue
-      const { token, tokenHash } = deps.tokenGenerator.next()
-      await deps.tokens.issue({ userId: user.id, tokenHash, expiresAt: tokenExpiry(now, BATCH_RESET_TOKEN_TTL_MS) })
-      await deps.mailer.sendResetLink(user.email, `${deps.baseUrl}/reset-password?token=${token}`)
-      sent++
+      // Falha com um destinatário não interrompe os demais: registra e segue (AGENTS.md, E-mail).
+      try {
+        const { token, tokenHash } = deps.tokenGenerator.next()
+        await deps.tokens.issue({ userId: user.id, tokenHash, expiresAt: tokenExpiry(now, BATCH_RESET_TOKEN_TTL_MS) })
+        await deps.mailer.sendResetLink(user.email, `${deps.baseUrl}/reset-password?token=${token}`)
+        sent++
+      } catch (error) {
+        console.error(`falha ao enviar link de redefinição para ${user.username}`, error)
+        failed++
+      }
     }
-    await deps.recordAudit({ action: 'password_reset_links_sent', actorId: actor.id, actorUsername: actor.username, reference: String(sent), detail: { count: sent } })
-    return { sent }
+    await deps.recordAudit({ action: 'password_reset_links_sent', actorId: actor.id, actorUsername: actor.username, reference: String(sent), detail: { count: sent, failed } })
+    return { sent, failed }
   }
 }

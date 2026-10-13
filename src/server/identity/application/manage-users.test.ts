@@ -22,6 +22,7 @@ function fakeAccounts(seed: UserAccount[]) {
     setActive: async (id, active) => void (byId(id).active = active),
     setPassword: async () => {},
     setEmail: async (id, email) => void (byId(id).email = email),
+    setEmails: async (pairs) => pairs.forEach(({ id, email }) => void (byId(id).email = email)),
   }
   return { users, accounts }
 }

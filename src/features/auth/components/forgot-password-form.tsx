@@ -17,9 +17,14 @@ export function ForgotPasswordForm() {
     event.preventDefault()
     const username = String(new FormData(event.currentTarget).get('username') ?? '').trim().toLowerCase()
     setPending(true)
-    const result = await requestPasswordResetFn({ data: { username } })
-    setPending(false)
-    setMessage(result.ok ? SAME_MESSAGE : 'Muitas tentativas. Espere um minuto e tente de novo.')
+    try {
+      const result = await requestPasswordResetFn({ data: { username } })
+      setMessage(result.ok ? SAME_MESSAGE : 'Muitas tentativas. Espere um minuto e tente de novo.')
+    } catch {
+      setMessage(SAME_MESSAGE)
+    } finally {
+      setPending(false)
+    }
   }
 
   return (

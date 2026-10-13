@@ -1,11 +1,10 @@
+import { EMAIL_RULE } from '../domain/contact'
 import { IdentityError, type Actor } from '../domain/user'
+import type { AccountEmailPort } from '../ports/user-accounts'
 
-const EMAIL_RULE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-type AccountEmailPort = { findByUsername(username: string): Promise<{ id: string } | null>; setEmail(id: string, email: string): Promise<void> }
 type AuditRecorder = (entry: { action: 'user_email_changed'; actorId: string; actorUsername: string; reference: string; detail: { email: string } }) => Promise<void>
 
-export function makeSetUserEmail(deps: { accounts: AccountEmailPort; recordAudit: AuditRecorder }) {
+export function makeSetUserEmail(deps: { accounts: Pick<AccountEmailPort, 'findByUsername' | 'setEmail'>; recordAudit: AuditRecorder }) {
   return async function setUserEmail(actor: Actor, username: string, email: string): Promise<void> {
     if (actor.role !== 'admin') throw new IdentityError('forbidden')
     const cleaned = email.trim().toLowerCase()

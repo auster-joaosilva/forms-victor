@@ -22,8 +22,19 @@ describe('prisma password reset tokens', () => {
     const user = await createUser('bia')
     await prismaPasswordResetTokens.issue({ userId: user.id, tokenHash: 'hash-1', expiresAt: new Date('2026-10-12T13:00:00Z') })
     await prismaPasswordResetTokens.issue({ userId: user.id, tokenHash: 'hash-2', expiresAt: new Date('2026-10-12T14:00:00Z') })
-    expect(await prismaPasswordResetTokens.findByHash('hash-1')).toBeNull()
-    expect(await prismaPasswordResetTokens.findByHash('hash-2')).toMatchObject({ userId: user.id })
+    expect((await prismaPasswordResetTokens.findByHash('hash-1'))?.usedAt).not.toBeNull()
+    expect(await prismaPasswordResetTokens.findByHash('hash-2')).toMatchObject({ userId: user.id, usedAt: null })
+  })
+
+  it('tells when the most recent token of the user was issued, used or not', async () => {
+    const bia = await createUser('bia')
+    const caio = await createUser('caio')
+    expect(await prismaPasswordResetTokens.lastIssuedAt(bia.id)).toBeNull()
+    await prismaPasswordResetTokens.issue({ userId: bia.id, tokenHash: 'hash-1', expiresAt: new Date('2026-10-12T13:00:00Z') })
+    await prismaPasswordResetTokens.issue({ userId: bia.id, tokenHash: 'hash-2', expiresAt: new Date('2026-10-12T14:00:00Z') })
+    const newest = await prisma.passwordResetToken.findUniqueOrThrow({ where: { tokenHash: 'hash-2' } })
+    expect(await prismaPasswordResetTokens.lastIssuedAt(bia.id)).toEqual(newest.createdAt)
+    expect(await prismaPasswordResetTokens.lastIssuedAt(caio.id)).toBeNull()
   })
 
   it('marks a token used', async () => {

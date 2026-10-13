@@ -41,4 +41,14 @@ describe('ResetPasswordForm', () => {
     await fillAndSubmit('Abc12345!')
     expect(await screen.findByText(/Esse link não vale mais/)).toBeInTheDocument()
   })
+
+  it('never stays stuck on "Salvando…" when the call fails', async () => {
+    navigate.mockClear()
+    completePasswordResetFn.mockRejectedValue(new Error('rede caiu'))
+    render(<ResetPasswordForm token="abc123" />)
+    await fillAndSubmit('Abc12345!')
+    expect(await screen.findByText(/Esse link não vale mais/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Definir nova senha' })).toBeEnabled()
+    expect(navigate).not.toHaveBeenCalled()
+  })
 })

@@ -35,4 +35,13 @@ describe('ForgotPasswordForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Enviar link de redefinição' }))
     expect(await screen.findByText('Muitas tentativas. Espere um minuto e tente de novo.')).toBeInTheDocument()
   })
+
+  it('never stays stuck on "Enviando…" when the call fails, and still shows the same message', async () => {
+    requestPasswordResetFn.mockRejectedValue(new Error('rede caiu'))
+    render(<ForgotPasswordForm />)
+    await userEvent.type(screen.getByLabelText('Usuário'), 'victor.medeiros')
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar link de redefinição' }))
+    expect(await screen.findByText(/Se o usuário existir e tiver e-mail cadastrado/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Enviar link de redefinição' })).toBeEnabled()
+  })
 })

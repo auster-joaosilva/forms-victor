@@ -16,4 +16,8 @@ export const prismaPasswordResetTokens: PasswordResetTokens = {
   async markUsed(id, at) {
     await prisma.passwordResetToken.update({ where: { id }, data: { usedAt: at } })
   },
+  async lastIssuedAt(userId) {
+    const row = await prisma.passwordResetToken.findFirst({ where: { userId }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } })
+    return row?.createdAt ?? null
+  },
 }

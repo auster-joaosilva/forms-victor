@@ -1,17 +1,19 @@
 import { useState } from 'react'
-import { importUserEmailsFn, type ImportUserEmailsResult } from '../api/users'
+import type { ImportUserEmailsResult } from '../api/users'
 
-export function ImportEmailsForm() {
+type Props = {
+  pending: boolean
+  result: ImportUserEmailsResult | null
+  failure: string | null
+  // Devolve se o lote foi gravado; só então o texto colado é limpo.
+  onImport(text: string): Promise<boolean>
+}
+
+export function ImportEmailsForm({ pending, result, failure, onImport }: Props) {
   const [text, setText] = useState('')
-  const [result, setResult] = useState<ImportUserEmailsResult | null>(null)
-  const [pending, setPending] = useState(false)
 
   const submit = async () => {
-    setPending(true)
-    const outcome = await importUserEmailsFn({ data: { text } })
-    setPending(false)
-    setResult(outcome)
-    if (outcome.ok) setText('')
+    if (await onImport(text)) setText('')
   }
 
   return (
@@ -30,14 +32,15 @@ export function ImportEmailsForm() {
           Importar e-mails
         </button>
       </div>
-      {result?.ok === false ? (
+      {failure ? <div className="bo-error">{failure}</div> : null}
+      {!failure && result?.ok === false ? (
         <div className="bo-error">
           {result.errors.map((error) => (
-            <div key={error.line}>{`Linha ${error.line}: ${error.reason}`}</div>
+            <div key={`${error.line}-${error.reason}`}>{error.line > 0 ? `Linha ${error.line}: ${error.reason}` : error.reason}</div>
           ))}
         </div>
       ) : null}
-      {result?.ok ? <div className="bo-note">{`${result.appliedUsernames.length} e-mail(s) atualizado(s): ${result.appliedUsernames.join(', ')}`}</div> : null}
+      {!failure && result?.ok ? <div className="bo-note">{`${result.appliedUsernames.length} e-mail(s) atualizado(s): ${result.appliedUsernames.join(', ')}`}</div> : null}
     </div>
   )
 }

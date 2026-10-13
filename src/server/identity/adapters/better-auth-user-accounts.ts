@@ -22,9 +22,11 @@ const isDuplicate = (error: unknown): boolean => {
   return e?.code === 'P2002' || (typeof e?.body?.code === 'string' && e.body.code.startsWith('USER_ALREADY_EXISTS'))
 }
 
+// Com driver adapter, o P2002 do Prisma 7 não traz `meta.target`. Quem chama só altera a coluna `email`, então um P2002
+// ali só pode ser dela.
 const isDuplicateEmail = (error: unknown): boolean => {
-  const e = error as { code?: unknown; meta?: { target?: unknown } } | null
-  return e?.code === 'P2002' && Array.isArray(e.meta?.target) && e.meta.target.includes('email')
+  const e = error as { code?: unknown } | null
+  return e?.code === 'P2002'
 }
 
 const select = { id: true, username: true, name: true, role: true, banned: true, lastLoginAt: true, createdAt: true, email: true } as const
@@ -65,6 +67,15 @@ export const betterAuthUserAccounts: UserAccounts = {
   async setEmail(id, email) {
     try {
       await prisma.user.update({ where: { id }, data: { email } })
+    } catch (error) {
+      if (isDuplicateEmail(error)) throw new IdentityError('email_taken')
+      throw error
+    }
+  },
+  async setEmails(pairs) {
+    try {
+      // Uma transação só: ou todos os e-mails do lote entram, ou nenhum.
+      await prisma.$transaction(pairs.map(({ id, email }) => prisma.user.update({ where: { id }, data: { email } })))
     } catch (error) {
       if (isDuplicateEmail(error)) throw new IdentityError('email_taken')
       throw error

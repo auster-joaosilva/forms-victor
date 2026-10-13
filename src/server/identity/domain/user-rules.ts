@@ -1,7 +1,10 @@
 import { IdentityError, type Actor, type UserAccount, type UserChanges } from './user'
 
 export const USERNAME_RULE = /^[a-z][a-z0-9._-]{2,31}$/
-export const MINIMUM_PASSWORD = 12
+export const MINIMUM_PASSWORD = 8
+const HAS_LETTER = /[A-Za-z]/
+const HAS_DIGIT = /[0-9]/
+const HAS_SYMBOL = /[^A-Za-z0-9]/
 
 export function normalizeUsername(raw: string): string {
   const username = raw.trim().toLowerCase()
@@ -9,8 +12,12 @@ export function normalizeUsername(raw: string): string {
   return username
 }
 
+export function meetsPasswordRule(password: string): boolean {
+  return password.length >= MINIMUM_PASSWORD && HAS_LETTER.test(password) && HAS_DIGIT.test(password) && HAS_SYMBOL.test(password)
+}
+
 export function assertPassword(password: string): void {
-  if (password.length < MINIMUM_PASSWORD) throw new IdentityError('weak_password')
+  if (!meetsPasswordRule(password)) throw new IdentityError('weak_password')
 }
 
 export function assertMayChange(actor: Actor, target: UserAccount, changes: UserChanges): void {

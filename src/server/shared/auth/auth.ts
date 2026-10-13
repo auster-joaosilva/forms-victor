@@ -9,7 +9,9 @@ import { recordAudit } from '@/server/audit/composition'
 import { CLIENT_IP_HEADER, requestOrigin } from '../http/request-origin'
 
 export const USERNAME_RULE = /^[a-z][a-z0-9._-]{2,31}$/
-export const MINIMUM_PASSWORD = 12
+// Só o piso de tamanho: o better-auth não confere composição. A regra completa mora em identity/domain/user-rules.ts;
+// o teste "matches the auth configuration" ali confere que os dois números não divergem.
+export const MINIMUM_PASSWORD = 8
 const SIGN_IN_PATH = '/sign-in/username'
 const HTTP_ALLOWED_PATHS = new Set([SIGN_IN_PATH, '/get-session', '/sign-out', '/ok', '/error'])
 

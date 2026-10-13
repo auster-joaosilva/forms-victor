@@ -31,12 +31,12 @@ describe('OwnPasswordButton', () => {
   })
 
   it('tells the refusal of the server', async () => {
-    changeOwnPasswordFn.mockResolvedValue({ ok: false, message: 'a senha precisa de pelo menos 12 caracteres' })
+    changeOwnPasswordFn.mockResolvedValue({ ok: false, message: 'a senha precisa de pelo menos 8 caracteres, com letra, número e símbolo' })
     const alert = vi.spyOn(window, 'alert').mockImplementation(() => undefined)
     navigate.mockClear()
     render(<OwnPasswordButton username="bia" />)
     await changeTo('senha-bem-longa-1')
-    await waitFor(() => expect(alert).toHaveBeenCalledWith('Trocar minha senha: a senha precisa de pelo menos 12 caracteres'))
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Trocar minha senha: a senha precisa de pelo menos 8 caracteres, com letra, número e símbolo'))
     expect(navigate).not.toHaveBeenCalled()
   })
 })

@@ -7,11 +7,11 @@ describe('PasswordDialog', () => {
   it('refuses short and mismatching passwords and returns a good one', async () => {
     const onSubmit = vi.fn()
     render(<PasswordDialog open title="Senha de ana" onSubmit={onSubmit} onCancel={vi.fn()} />)
-    expect(screen.getByText(/No mínimo 12 caracteres\. Comprimento é o que protege/)).toBeInTheDocument()
+    expect(screen.getByText(/No mínimo 8 caracteres, com letra, número e símbolo\./)).toBeInTheDocument()
     await userEvent.type(screen.getByPlaceholderText('Senha'), 'curta')
     await userEvent.type(screen.getByPlaceholderText('Repita a senha'), 'curta')
     await userEvent.click(screen.getByRole('button', { name: 'Definir' }))
-    expect(screen.getByText('Curta demais.')).toBeInTheDocument()
+    expect(screen.getByText('Precisa de 8 caracteres ou mais, com letra, número e símbolo.')).toBeInTheDocument()
     await userEvent.clear(screen.getByPlaceholderText('Senha'))
     await userEvent.type(screen.getByPlaceholderText('Senha'), 'senha-bem-longa-1')
     await userEvent.click(screen.getByRole('button', { name: 'Definir' }))

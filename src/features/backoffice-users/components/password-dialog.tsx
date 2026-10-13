@@ -1,6 +1,6 @@
 import { Dialog } from 'radix-ui'
 import { useState, type FormEvent } from 'react'
-import { MINIMUM_PASSWORD } from '@/server/identity/domain/user-rules'
+import { MINIMUM_PASSWORD, meetsPasswordRule } from '@/server/identity/domain/user-rules'
 
 type Props = { open: boolean; title: string; onSubmit(password: string): void; onCancel(): void }
 
@@ -11,7 +11,7 @@ function PasswordForm({ title, onSubmit, onCancel }: Omit<Props, 'open'>) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (password.length < MINIMUM_PASSWORD) return setError('Curta demais.')
+    if (!meetsPasswordRule(password)) return setError(`Precisa de ${MINIMUM_PASSWORD} caracteres ou mais, com letra, número e símbolo.`)
     if (password !== repeated) return setError('As duas não conferem.')
     onSubmit(password)
   }
@@ -22,7 +22,7 @@ function PasswordForm({ title, onSubmit, onCancel }: Omit<Props, 'open'>) {
         <h3 style={{ margin: '0 0 4px' }}>{title}</h3>
       </Dialog.Title>
       <Dialog.Description className="bo-note" style={{ margin: '0 0 14px' }}>
-        {`No mínimo ${MINIMUM_PASSWORD} caracteres. Comprimento é o que protege: não exigimos símbolo nem maiúscula, porque isso produz senha curta e anotada em papel.`}
+        {`No mínimo ${MINIMUM_PASSWORD} caracteres, com letra, número e símbolo.`}
       </Dialog.Description>
       <input type="password" placeholder="Senha" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} />
       <input type="password" placeholder="Repita a senha" autoComplete="new-password" value={repeated} onChange={(event) => setRepeated(event.target.value)} />

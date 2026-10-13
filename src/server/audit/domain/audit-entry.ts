@@ -3,7 +3,8 @@ export const AUDIT_ACTIONS = [
   'invitation_created', 'invitation_deleted', 'response_received', 'response_updated', 'response_handled',
   'adhesion_received', 'adhesion_handled', 'event_created', 'event_updated', 'event_slug_changed',
   'registration_received', 'registration_handled', 'file_stored', 'spreadsheet_exported', 'legacy_imported',
-  'test_data_reset',
+  'test_data_reset', 'password_reset_requested', 'password_reset_completed', 'password_reset_links_sent',
+  'user_email_changed', 'passwords_set_in_batch',
 ] as const
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
@@ -30,6 +31,11 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   spreadsheet_exported: 'planilha exportada',
   legacy_imported: 'migração do portal antigo',
   test_data_reset: 'dados de teste apagados',
+  password_reset_requested: 'pedido de redefinição de senha',
+  password_reset_completed: 'senha redefinida por email',
+  password_reset_links_sent: 'links de redefinição enviados',
+  user_email_changed: 'email do usuário alterado',
+  passwords_set_in_batch: 'senhas definidas em lote',
 }
 
 export interface AuditEntryInput {

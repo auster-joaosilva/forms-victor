@@ -4,7 +4,7 @@ import { assertTestDatabase } from './guard'
 const tables = [
   'registrations', 'event_sessions', 'events', 'adhesions', 'responses', 'diagnosis_drafts',
   'invitations', 'stored_files', 'rate_limit_hits', 'auth_rate_limits', 'verifications',
-  'sessions', 'accounts', 'users',
+  'password_reset_tokens', 'sessions', 'accounts', 'users',
 ]
 
 export async function resetDatabase() {

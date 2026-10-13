@@ -657,7 +657,7 @@ A pedra angular de R4: a resposta é idêntica exista ou não o usuário, esteja
 
 **Interfaces:**
 - Consumes: `UserAccounts` (de `../ports/user-accounts`, já existente — ver Tarefa 8 para a extensão com `email`), `PasswordResetTokens`, `TokenGenerator`, `ResetMailer`, `Clock`, `RateLimiter` (Tarefa 5), `isDeliverableEmail` e `tokenExpiry`/`RESET_TOKEN_TTL_MS` (Tarefa 2).
-- Produces: `makeRequestPasswordReset(deps): (input: { username: string; origin: string | null; baseUrl: string }) => Promise<RequestPasswordResetResult>`, `RequestPasswordResetResult = { ok: true } | { ok: false; reason: 'rate_limited'; retryAfterSeconds: number }`. Usado pela Tarefa 9 (`composition.ts`) e pela Tarefa 10 (server function pública).
+- Produces: `makeRequestPasswordReset(deps: { ...; baseUrl: string }): (input: { username: string; origin: string | null }) => Promise<RequestPasswordResetResult>` — `baseUrl` é dependência de composição, não argumento por chamada. `RequestPasswordResetResult = { ok: true } | { ok: false; reason: 'rate_limited'; retryAfterSeconds: number }`. Usado pela Tarefa 9 (`composition.ts`) e pela Tarefa 10 (server function pública).
 
 - [ ] **Step 1: Escrever o teste com fakes**
 

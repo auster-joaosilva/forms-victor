@@ -10,6 +10,7 @@ export interface UserAccount {
   active: boolean
   lastLoginAt: Date | null
   createdAt: Date
+  email: string
 }
 
 export interface Actor {
@@ -25,7 +26,9 @@ export interface UserChanges {
   active?: boolean
 }
 
-export type IdentityErrorReason = 'invalid_username' | 'weak_password' | 'username_taken' | 'not_found' | 'forbidden' | 'last_admin'
+export type IdentityErrorReason =
+  | 'invalid_username' | 'weak_password' | 'username_taken' | 'not_found' | 'forbidden' | 'last_admin'
+  | 'invalid_email' | 'email_taken'
 
 const MESSAGES: Record<IdentityErrorReason, string> = {
   invalid_username: 'usuário deve ter de 3 a 32 caracteres: letras minúsculas, números, ponto, hífen ou sublinhado, começando por letra',
@@ -34,6 +37,8 @@ const MESSAGES: Record<IdentityErrorReason, string> = {
   not_found: 'usuário não encontrado',
   forbidden: 'só administrador',
   last_admin: 'não dá para desativar ou rebaixar o único administrador ativo; promova outro antes',
+  invalid_email: 'e-mail inválido',
+  email_taken: 'já existe um usuário com esse e-mail',
 }
 
 export class IdentityError extends Error {

@@ -13,7 +13,7 @@ function fakeAccounts(seed: UserAccount[]) {
     findByUsername: async (username) => users.get(username) ?? null,
     countActiveAdmins: async () => [...users.values()].filter((u) => u.role === 'admin' && u.active).length,
     create: async ({ username, name, role }) => {
-      const user: UserAccount = { id: username, username, name, role, active: true, lastLoginAt: null, createdAt: new Date(0) }
+      const user: UserAccount = { id: username, username, name, role, active: true, lastLoginAt: null, createdAt: new Date(0), email: `${username}@users.invalid` }
       users.set(username, user)
       return user
     },
@@ -21,11 +21,12 @@ function fakeAccounts(seed: UserAccount[]) {
     setRole: async (id, role) => void (byId(id).role = role),
     setActive: async (id, active) => void (byId(id).active = active),
     setPassword: async () => {},
+    setEmail: async (id, email) => void (byId(id).email = email),
   }
   return { users, accounts }
 }
 
-const ana: UserAccount = { id: 'ana', username: 'ana', name: 'Ana', role: 'admin', active: true, lastLoginAt: null, createdAt: new Date(0) }
+const ana: UserAccount = { id: 'ana', username: 'ana', name: 'Ana', role: 'admin', active: true, lastLoginAt: null, createdAt: new Date(0), email: 'ana@users.invalid' }
 const actorAna = { id: 'ana', username: 'ana', role: 'admin' as const }
 
 describe('manage users', () => {

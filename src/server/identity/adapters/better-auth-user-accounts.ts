@@ -4,7 +4,7 @@ import { prisma } from '@/server/shared/prisma/client'
 import { IdentityError, type UserAccount } from '../domain/user'
 import type { UserAccounts } from '../ports/user-accounts'
 
-type Row = { id: string; username: string | null; name: string; role: string; banned: boolean; lastLoginAt: Date | null; createdAt: Date }
+type Row = { id: string; username: string | null; name: string; role: string; banned: boolean; lastLoginAt: Date | null; createdAt: Date; email: string }
 
 const toAccount = (row: Row): UserAccount => ({
   id: row.id,
@@ -14,6 +14,7 @@ const toAccount = (row: Row): UserAccount => ({
   active: !row.banned,
   lastLoginAt: row.lastLoginAt,
   createdAt: row.createdAt,
+  email: row.email,
 })
 
 const isDuplicate = (error: unknown): boolean => {
@@ -21,7 +22,12 @@ const isDuplicate = (error: unknown): boolean => {
   return e?.code === 'P2002' || (typeof e?.body?.code === 'string' && e.body.code.startsWith('USER_ALREADY_EXISTS'))
 }
 
-const select = { id: true, username: true, name: true, role: true, banned: true, lastLoginAt: true, createdAt: true } as const
+const isDuplicateEmail = (error: unknown): boolean => {
+  const e = error as { code?: unknown; meta?: { target?: unknown } } | null
+  return e?.code === 'P2002' && Array.isArray(e.meta?.target) && e.meta.target.includes('email')
+}
+
+const select = { id: true, username: true, name: true, role: true, banned: true, lastLoginAt: true, createdAt: true, email: true } as const
 
 export const betterAuthUserAccounts: UserAccounts = {
   list: async () => (await prisma.user.findMany({ select, orderBy: { username: 'asc' } })).map(toAccount),
@@ -55,5 +61,13 @@ export const betterAuthUserAccounts: UserAccounts = {
       await prisma.account.create({ data: { id: crypto.randomUUID(), accountId: id, providerId: 'credential', userId: id, password: hash } })
     }
     await prisma.session.deleteMany({ where: { userId: id } })
+  },
+  async setEmail(id, email) {
+    try {
+      await prisma.user.update({ where: { id }, data: { email } })
+    } catch (error) {
+      if (isDuplicateEmail(error)) throw new IdentityError('email_taken')
+      throw error
+    }
   },
 }

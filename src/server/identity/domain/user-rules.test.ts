@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MINIMUM_PASSWORD, USERNAME_RULE, assertKeepsAnAdmin, assertMayChange, assertPassword, meetsPasswordRule, normalizeUsername } from './user-rules'
 import type { UserAccount } from './user'
 
-const admin: UserAccount = { id: 'a', username: 'ana', name: 'Ana', role: 'admin', active: true, lastLoginAt: null, createdAt: new Date(0) }
+const admin: UserAccount = { id: 'a', username: 'ana', name: 'Ana', role: 'admin', active: true, lastLoginAt: null, createdAt: new Date(0), email: 'ana@users.invalid' }
 const team: UserAccount = { ...admin, id: 't', username: 'bia', role: 'operator' }
 
 describe('password rule', () => {

@@ -9,4 +9,5 @@ export interface UserAccounts {
   setRole(id: string, role: Role): Promise<void>
   setActive(id: string, active: boolean): Promise<void>
   setPassword(id: string, password: string): Promise<void>
+  setEmail(id: string, email: string): Promise<void>
 }

@@ -43,3 +43,26 @@ describe('betterAuthUserAccounts.setPassword', () => {
     expect(await context.password.verify({ hash: account?.password ?? '', password: 'senha-nova-123' })).toBe(true)
   })
 })
+
+describe('betterAuthUserAccounts.setEmail', () => {
+  beforeEach(resetDatabase)
+
+  it('sets a real email', async () => {
+    await betterAuthUserAccounts.create(input)
+    const user = await betterAuthUserAccounts.findByUsername('bia')
+    if (!user) throw new Error('usuário não criado')
+    await betterAuthUserAccounts.setEmail(user.id, 'bia@austercontabil.com.br')
+    expect((await betterAuthUserAccounts.findByUsername('bia'))?.email).toBe('bia@austercontabil.com.br')
+  })
+
+  it('refuses an email already used by another account', async () => {
+    await betterAuthUserAccounts.create(input)
+    await betterAuthUserAccounts.create({ ...input, username: 'caio' })
+    const bia = await betterAuthUserAccounts.findByUsername('bia')
+    if (!bia) throw new Error('usuário não criado')
+    await betterAuthUserAccounts.setEmail(bia.id, 'bia@austercontabil.com.br')
+    const caio = await betterAuthUserAccounts.findByUsername('caio')
+    if (!caio) throw new Error('usuário não criado')
+    await expect(betterAuthUserAccounts.setEmail(caio.id, 'bia@austercontabil.com.br')).rejects.toMatchObject({ reason: 'email_taken' })
+  })
+})

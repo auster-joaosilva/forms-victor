@@ -43,3 +43,55 @@ describe('betterAuthUserAccounts.setPassword', () => {
     expect(await context.password.verify({ hash: account?.password ?? '', password: 'senha-nova-123' })).toBe(true)
   })
 })
+
+describe('betterAuthUserAccounts.setEmail', () => {
+  beforeEach(resetDatabase)
+
+  it('sets a real email', async () => {
+    await betterAuthUserAccounts.create(input)
+    const user = await betterAuthUserAccounts.findByUsername('bia')
+    if (!user) throw new Error('usuário não criado')
+    await betterAuthUserAccounts.setEmail(user.id, 'bia@austercontabil.com.br')
+    expect((await betterAuthUserAccounts.findByUsername('bia'))?.email).toBe('bia@austercontabil.com.br')
+  })
+
+  it('refuses an email already used by another account', async () => {
+    await betterAuthUserAccounts.create(input)
+    await betterAuthUserAccounts.create({ ...input, username: 'caio' })
+    const bia = await betterAuthUserAccounts.findByUsername('bia')
+    if (!bia) throw new Error('usuário não criado')
+    await betterAuthUserAccounts.setEmail(bia.id, 'bia@austercontabil.com.br')
+    const caio = await betterAuthUserAccounts.findByUsername('caio')
+    if (!caio) throw new Error('usuário não criado')
+    await expect(betterAuthUserAccounts.setEmail(caio.id, 'bia@austercontabil.com.br')).rejects.toMatchObject({ reason: 'email_taken' })
+  })
+})
+
+describe('betterAuthUserAccounts.setEmails', () => {
+  beforeEach(resetDatabase)
+
+  const createBoth = async () => {
+    await betterAuthUserAccounts.create(input)
+    await betterAuthUserAccounts.create({ ...input, username: 'caio' })
+    const bia = await betterAuthUserAccounts.findByUsername('bia')
+    const caio = await betterAuthUserAccounts.findByUsername('caio')
+    if (!bia || !caio) throw new Error('usuário não criado')
+    return { bia, caio }
+  }
+
+  it('sets every email at once', async () => {
+    const { bia, caio } = await createBoth()
+    await betterAuthUserAccounts.setEmails([{ id: bia.id, email: 'bia@austercontabil.com.br' }, { id: caio.id, email: 'caio@austercontabil.com.br' }])
+    expect((await betterAuthUserAccounts.findByUsername('bia'))?.email).toBe('bia@austercontabil.com.br')
+    expect((await betterAuthUserAccounts.findByUsername('caio'))?.email).toBe('caio@austercontabil.com.br')
+  })
+
+  it('writes nothing when one of the emails already belongs to someone else', async () => {
+    const { bia, caio } = await createBoth()
+    const davi = await betterAuthUserAccounts.create({ ...input, username: 'davi' })
+    await betterAuthUserAccounts.setEmail(davi.id, 'davi@austercontabil.com.br')
+    const pairs = [{ id: bia.id, email: 'bia@austercontabil.com.br' }, { id: caio.id, email: 'davi@austercontabil.com.br' }]
+    await expect(betterAuthUserAccounts.setEmails(pairs)).rejects.toMatchObject({ reason: 'email_taken' })
+    expect((await betterAuthUserAccounts.findByUsername('bia'))?.email).toBe('bia@users.invalid')
+  })
+})

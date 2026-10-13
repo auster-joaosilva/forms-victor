@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useHydrated, useNavigate } from '@tanstack/react-router'
+import { Link, useHydrated, useNavigate } from '@tanstack/react-router'
 import { authClient } from '@/lib/auth-client'
 import { AusterMark } from '@/components/brand/auster-mark'
 import { Button } from '@/components/ui/button'
@@ -46,9 +46,10 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
       <Input id="username" name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} required autoFocus className="mb-4 h-auto px-3.5 py-3" />
       <Label htmlFor="password" className="mb-1.5 block text-xs font-normal uppercase tracking-[.9px] text-auster-gray">Senha</Label>
       <Input id="password" name="password" type="password" autoComplete="current-password" required className="mb-4 h-auto px-3.5 py-3" />
-      <Button type="submit" disabled={pending || !hydrated} className="h-auto w-full py-[13px] font-medium hover:bg-[#0a3d60]">
+      <Button type="submit" disabled={pending || !hydrated} className="mb-3 h-auto w-full py-[13px] font-medium hover:bg-[#0a3d60]">
         {pending ? 'Entrando…' : 'Entrar'}
       </Button>
+      <Link to="/forgot-password" className="text-[13px] text-auster-gray underline">Esqueci a senha</Link>
     </form>
   )
 }

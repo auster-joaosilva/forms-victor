@@ -17,9 +17,13 @@ type Props = {
   onChange(username: string, changes: UserChanges): void
   onRequestPassword(username: string): void
   onRename(username: string, currentName: string): void
+  onChangeEmail(username: string, currentEmail: string): void
+  onSendResetLink(username: string): void
+  onSendResetLinksToAll(): void
 }
 
-function UserLine({ user, pending, onChange, onRequestPassword, onRename }: { user: UserRow } & Omit<Props, 'users' | 'error' | 'onCreate'>) {
+function UserLine({ user, pending, onChange, onRequestPassword, onRename, onChangeEmail, onSendResetLink }: { user: UserRow } & Omit<Props, 'users' | 'error' | 'onCreate' | 'onSendResetLinksToAll'>) {
+  const hasRealEmail = !user.email.endsWith('@users.invalid')
   return (
     <tr className={user.active ? undefined : 'is-inactive'}>
       <td>
@@ -30,6 +34,7 @@ function UserLine({ user, pending, onChange, onRequestPassword, onRename }: { us
       <td>
         <span className={user.role === 'admin' ? 'bo-role is-admin' : 'bo-role'}>{ROLE_LABELS[user.role]}</span>
       </td>
+      <td>{hasRealEmail ? user.email : <span className="bo-muted">sem e-mail</span>}</td>
       <td>{user.active ? 'ativo' : 'desativado'}</td>
       <td>{formatShortDateTime(user.lastLoginAt)}</td>
       <td>{formatShortDateTime(user.createdAt)}</td>
@@ -56,12 +61,18 @@ function UserLine({ user, pending, onChange, onRequestPassword, onRename }: { us
         <button type="button" className="bo-button is-light" disabled={pending} onClick={() => onRename(user.username, user.name)}>
           Renomear
         </button>
+        <button type="button" className="bo-button is-light" disabled={pending} onClick={() => onChangeEmail(user.username, hasRealEmail ? user.email : '')}>
+          E-mail
+        </button>
+        <button type="button" className="bo-button is-light" disabled={pending || !hasRealEmail} onClick={() => onSendResetLink(user.username)}>
+          Enviar link de redefinição
+        </button>
       </td>
     </tr>
   )
 }
 
-export function UsersView({ users, error, pending, onCreate, ...lineProps }: Props) {
+export function UsersView({ users, error, pending, onCreate, onSendResetLinksToAll, ...lineProps }: Props) {
   const [username, setUsername] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<Role>('operator')
@@ -76,6 +87,9 @@ export function UsersView({ users, error, pending, onCreate, ...lineProps }: Pro
   return (
     <>
       <h2 style={{ margin: '0 0 4px', fontSize: 'var(--text-title)', fontWeight: 400 }}>Usuários internos</h2>
+      <button type="button" className="bo-button is-light" style={{ float: 'right' }} disabled={pending} onClick={onSendResetLinksToAll}>
+        Enviar link de redefinição para todos com e-mail cadastrado
+      </button>
       <p className="bo-note" style={{ margin: '0 0 18px' }}>
         Cada pessoa entra com usuário e senha próprios, e é esse nome que fica gravado na auditoria de cada resposta validada. A senha nunca é guardada: guarda-se o
         resumo <code>scrypt</code> com sal por usuário.
@@ -119,6 +133,7 @@ export function UsersView({ users, error, pending, onCreate, ...lineProps }: Pro
             <tr>
               <th>Usuário</th>
               <th>Papel</th>
+              <th>E-mail</th>
               <th>Situação</th>
               <th>Último acesso</th>
               <th>Criado</th>

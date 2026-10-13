@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { UserChanges } from '@/server/identity/domain/user'
-import { createUserFn, listUsersFn, updateUserFn, type Outcome } from '../api/users'
+import { createUserFn, importUserEmailsFn, listUsersFn, sendResetLinkFn, sendResetLinksToAllFn, setUserEmailFn, updateUserFn, type Outcome } from '../api/users'
+import { ImportEmailsForm } from './import-emails-form'
 import { PasswordDialog } from './password-dialog'
 import { UsersView, type NewUser } from './users-view'
 
@@ -42,6 +43,43 @@ export function UsersPanel() {
     if (name) change.mutate({ username, changes: { name }, title: 'Renomear' })
   }
 
+  const setEmail = useMutation({
+    mutationFn: ({ username, email }: { username: string; email: string }) => setUserEmailFn({ data: { username, email } }),
+    onSuccess: settle('E-mail: '),
+    onError: (failure) => setError(`E-mail: não deu para falar com o servidor (${failure.message})`),
+  })
+  const sendReset = useMutation({
+    mutationFn: (username: string) => sendResetLinkFn({ data: { username } }),
+    onSuccess: (result) => setError(result.failed ? 'Enviar link: o envio falhou; tente de novo em instantes.' : null),
+    onError: (failure) => setError(`Enviar link: não deu para falar com o servidor (${failure.message})`),
+  })
+  const sendResetToAll = useMutation({
+    mutationFn: () => sendResetLinksToAllFn(),
+    onSuccess: (result) => setError(`Enviado para ${result.sent} pessoa(s)${result.failed ? `, ${result.failed} falha(s)` : ''}.`),
+    onError: (failure) => setError(`Enviar para todos: não deu para falar com o servidor (${failure.message})`),
+  })
+  const importEmails = useMutation({
+    mutationFn: (text: string) => importUserEmailsFn({ data: { text } }),
+    onSuccess: async (result) => {
+      if (result.ok) await queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+  })
+
+  const changeEmail = (username: string, currentEmail: string) => {
+    const email = window.prompt(`E-mail de ${username}`, currentEmail)?.trim()
+    if (email) setEmail.mutate({ username, email })
+  }
+  const sendResetLinksToAll = () => {
+    if (window.confirm('Enviar o link de redefinição para todos os usuários com e-mail cadastrado?')) sendResetToAll.mutate()
+  }
+  const importPastedEmails = async (text: string) => {
+    try {
+      return (await importEmails.mutateAsync(text)).ok
+    } catch {
+      return false
+    }
+  }
+
   if (list.isPending) return <>carregando…</>
   if (list.isError) return <div className="bo-empty">{`Falha ao carregar: ${list.error.message}`}</div>
 
@@ -50,11 +88,20 @@ export function UsersPanel() {
       <UsersView
         users={list.data}
         error={error}
-        pending={create.isPending || change.isPending}
+        pending={create.isPending || change.isPending || setEmail.isPending || sendReset.isPending || sendResetToAll.isPending}
         onCreate={(user) => setAsking({ kind: 'create', user })}
         onChange={(username, changes) => change.mutate({ username, changes, title: changes.role ? 'Mudar papel' : 'Mudar situação' })}
         onRequestPassword={(username) => setAsking({ kind: 'password', username })}
         onRename={rename}
+        onChangeEmail={changeEmail}
+        onSendResetLink={(username) => sendReset.mutate(username)}
+        onSendResetLinksToAll={sendResetLinksToAll}
+      />
+      <ImportEmailsForm
+        pending={importEmails.isPending}
+        result={importEmails.data ?? null}
+        failure={importEmails.isError ? `Importar e-mails: não deu para falar com o servidor (${importEmails.error.message})` : null}
+        onImport={importPastedEmails}
       />
       <PasswordDialog open={asking !== null} title={asking ? titleOf(asking) : ''} onSubmit={submitPassword} onCancel={() => setAsking(null)} />
     </>

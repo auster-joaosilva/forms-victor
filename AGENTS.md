@@ -68,7 +68,8 @@ As fronteiras estão no `eslint.config.js`. Lint quebrado não entra.
 ## E-mail
 
 Envio no-reply pela caixa `no-reply@austercontabil.com.br` na UOL Host (`smtps.uhserver.com:465`, SSL/TLS, senha
-normal), com Nodemailer. Só envio: ninguém lê a caixa, então não peça resposta no texto. Nenhum fluxo usa ainda.
+normal), com Nodemailer. Só envio: ninguém lê a caixa, então não peça resposta no texto. Quem usa: a redefinição de
+senha por e-mail (`server/identity`).
 
 - `server/mail/composition.ts` exporta `mailSender` (`send({ to, subject, text, html? })`). O remetente é sempre
   `SMTP_USER`: a UOL recusa outro `From`.
@@ -136,6 +137,8 @@ Traefik, "Setup Server" da VPS — sem SSH.
   e `e2e-operator` (`tests/e2e/users.ts`). Até 30/10/2026 o formulário de adesão está aberto e os testes
   de `adhesion.spec.ts` dependem disso. Os de `events.spec.ts` criam o próprio evento, com data 45 dias à frente,
   e não vencem.
+  O de `password-reset.spec.ts` lê o e-mail no Mailpit do `docker-compose.yml` (SMTP em `localhost:1025`, tela e API em
+  `http://localhost:8025`); o `playwright.config.ts` já aponta o SMTP do `pnpm dev` para ele.
   Porta 3000 ocupada? `E2E_PORT=3100 pnpm test:e2e` sobe o `pnpm dev` nessa porta.
 
 ## Rodar
@@ -143,7 +146,7 @@ Traefik, "Setup Server" da VPS — sem SSH.
 ```bash
 pnpm install
 cp .env.example .env    # valores de desenvolvimento
-pnpm db:up
+pnpm db:up              # Postgres, MinIO e Mailpit (e-mails de desenvolvimento em http://localhost:8025)
 pnpm db:migrate
 pnpm db:seed
 pnpm auth:bootstrap-admin   # antes, preencha BOOTSTRAP_ADMIN_* no .env

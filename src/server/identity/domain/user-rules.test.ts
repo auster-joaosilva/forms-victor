@@ -1,9 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { MINIMUM_PASSWORD, USERNAME_RULE, assertKeepsAnAdmin, assertMayChange, normalizeUsername } from './user-rules'
+import { MINIMUM_PASSWORD, USERNAME_RULE, assertKeepsAnAdmin, assertMayChange, assertPassword, meetsPasswordRule, normalizeUsername } from './user-rules'
 import type { UserAccount } from './user'
 
-const admin: UserAccount = { id: 'a', username: 'ana', name: 'Ana', role: 'admin', active: true, lastLoginAt: null, createdAt: new Date(0) }
+const admin: UserAccount = { id: 'a', username: 'ana', name: 'Ana', role: 'admin', active: true, lastLoginAt: null, createdAt: new Date(0), email: 'ana@users.invalid' }
 const team: UserAccount = { ...admin, id: 't', username: 'bia', role: 'operator' }
+
+describe('password rule', () => {
+  it('needs 8 characters or more, with a letter, a digit and a symbol', () => {
+    expect(meetsPasswordRule('Abc12345!')).toBe(true)
+    expect(meetsPasswordRule('Abc1234!')).toBe(true)
+    expect(meetsPasswordRule('abc1234!')).toBe(true)
+    expect(meetsPasswordRule('Abc123!')).toBe(false)
+    expect(meetsPasswordRule('Abcdefg!')).toBe(false)
+    expect(meetsPasswordRule('Abcd1234')).toBe(false)
+    expect(meetsPasswordRule('12345678')).toBe(false)
+  })
+  it('does not count whitespace or an accented letter as the symbol', () => {
+    expect(meetsPasswordRule('Convidado1')).toBe(false)
+    expect(meetsPasswordRule('Convidança1')).toBe(false)
+    expect(meetsPasswordRule('Minha senha1')).toBe(false)
+    expect(meetsPasswordRule('Convidança1!')).toBe(true)
+  })
+  it('assertPassword throws weak_password for anything that fails the rule', () => {
+    expect(() => assertPassword('abcdefgh')).toThrow('letra, número e símbolo')
+    expect(() => assertPassword('Abc12345!')).not.toThrow()
+  })
+})
 
 describe('user rules', () => {
   it('normalizes usernames', () => {

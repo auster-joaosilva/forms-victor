@@ -14,4 +14,12 @@ describe('audit actions', () => {
   it('labels every action in Portuguese', () => {
     for (const action of AUDIT_ACTIONS) expect(AUDIT_ACTION_LABELS[action]).toMatch(/^[a-zà-ú ]+$/)
   })
+
+  it('knows the password reset actions', () => {
+    expect(AUDIT_ACTIONS).toContain('password_reset_requested')
+    expect(AUDIT_ACTIONS).toContain('password_reset_completed')
+    expect(AUDIT_ACTIONS).toContain('password_reset_links_sent')
+    expect(AUDIT_ACTIONS).toContain('user_email_changed')
+    expect(AUDIT_ACTIONS).toContain('passwords_set_in_batch')
+  })
 })

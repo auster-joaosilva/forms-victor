@@ -2,9 +2,9 @@ import { IdentityError, type Actor, type UserAccount, type UserChanges } from '.
 
 export const USERNAME_RULE = /^[a-z][a-z0-9._-]{2,31}$/
 export const MINIMUM_PASSWORD = 8
-const HAS_LETTER = /[A-Za-z]/
-const HAS_DIGIT = /[0-9]/
-const HAS_SYMBOL = /[^A-Za-z0-9]/
+const HAS_LETTER = /\p{L}/u
+const HAS_DIGIT = /\p{N}/u
+const HAS_SYMBOL = /[^\p{L}\p{N}\s]/u
 
 export function normalizeUsername(raw: string): string {
   const username = raw.trim().toLowerCase()

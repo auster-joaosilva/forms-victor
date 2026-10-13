@@ -15,6 +15,12 @@ describe('password rule', () => {
     expect(meetsPasswordRule('Abcd1234')).toBe(false)
     expect(meetsPasswordRule('12345678')).toBe(false)
   })
+  it('does not count whitespace or an accented letter as the symbol', () => {
+    expect(meetsPasswordRule('Convidado1')).toBe(false)
+    expect(meetsPasswordRule('Convidança1')).toBe(false)
+    expect(meetsPasswordRule('Minha senha1')).toBe(false)
+    expect(meetsPasswordRule('Convidança1!')).toBe(true)
+  })
   it('assertPassword throws weak_password for anything that fails the rule', () => {
     expect(() => assertPassword('abcdefgh')).toThrow('letra, número e símbolo')
     expect(() => assertPassword('Abc12345!')).not.toThrow()

@@ -30,8 +30,8 @@ describe('prisma password reset tokens', () => {
     const user = await createUser('bia')
     await prismaPasswordResetTokens.issue({ userId: user.id, tokenHash: 'hash-1', expiresAt: new Date('2026-10-12T13:00:00Z') })
     const stored = await prismaPasswordResetTokens.findByHash('hash-1')
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- acabamos de emitir o token: ele existe
-    await prismaPasswordResetTokens.markUsed(stored!.id, new Date('2026-10-12T12:30:00Z'))
+    if (!stored) throw new Error('token não encontrado')
+    await prismaPasswordResetTokens.markUsed(stored.id, new Date('2026-10-12T12:30:00Z'))
     expect((await prismaPasswordResetTokens.findByHash('hash-1'))?.usedAt).toEqual(new Date('2026-10-12T12:30:00Z'))
   })
 

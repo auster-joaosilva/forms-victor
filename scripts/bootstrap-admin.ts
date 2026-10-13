@@ -1,12 +1,13 @@
 import { auth, MINIMUM_PASSWORD, USERNAME_RULE } from '../src/server/shared/auth/auth'
 import { prisma } from '../src/server/shared/prisma/client'
 import { recordAudit } from '../src/server/audit/composition'
+import { meetsPasswordRule } from '../src/server/identity/domain/user-rules'
 
 const username = (process.env.BOOTSTRAP_ADMIN_USERNAME ?? '').trim().toLowerCase()
 const password = process.env.BOOTSTRAP_ADMIN_PASSWORD ?? ''
 
 if (!USERNAME_RULE.test(username)) throw new Error('BOOTSTRAP_ADMIN_USERNAME inválido (a-z, 3 a 32, começa com letra)')
-if (password.length < MINIMUM_PASSWORD) throw new Error(`BOOTSTRAP_ADMIN_PASSWORD precisa de ${MINIMUM_PASSWORD} caracteres ou mais`)
+if (!meetsPasswordRule(password)) throw new Error(`BOOTSTRAP_ADMIN_PASSWORD precisa de ${MINIMUM_PASSWORD} caracteres ou mais, com letra, número e símbolo`)
 
 const existing = await prisma.user.findUnique({ where: { username } })
 if (existing) {

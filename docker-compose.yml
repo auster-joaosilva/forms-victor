@@ -25,7 +25,7 @@ services:
       interval: 2s
       retries: 20
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.31.3
     ports: ['1025:1025', '8025:8025']
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://localhost:8025/readyz']

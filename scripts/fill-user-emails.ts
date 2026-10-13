@@ -1,26 +1,30 @@
-import { deriveEmail } from '../src/server/identity/domain/contact'
+import { deriveEmail, isDeliverableEmail } from '../src/server/identity/domain/contact'
 import { isRunDirectly } from './is-run-directly'
 
 export interface EmailFillPlan {
   derivable: { username: string; email: string }[]
   notDerivable: string[]
   collisions: string[]
+  alreadySet: string[]
 }
 
 const PLAIN_USERNAME = /^[a-z]+(\.[a-z]+)+$/
 
 // "nome.sobrenome" dá para derivar com confiança; qualquer outro formato (admin, e2e-*, um nome só) entra à parte.
-export function planEmailFill(usernames: string[], overrides: Record<string, string>): EmailFillPlan {
+// Quem já tem e-mail de verdade fica como está: pode ser um ajuste que um admin fez à mão.
+export function planEmailFill(users: { username: string; email: string }[], overrides: Record<string, string>): EmailFillPlan {
   const derivable: { username: string; email: string }[] = []
   const notDerivable: string[] = []
-  for (const username of usernames) {
-    if (overrides[username] || PLAIN_USERNAME.test(username)) derivable.push({ username, email: deriveEmail(username, overrides) })
+  const alreadySet: string[] = []
+  for (const { username, email } of users) {
+    if (isDeliverableEmail(email)) alreadySet.push(username)
+    else if (overrides[username] || PLAIN_USERNAME.test(username)) derivable.push({ username, email: deriveEmail(username, overrides) })
     else notDerivable.push(username)
   }
   const seen = new Map<string, number>()
   for (const { email } of derivable) seen.set(email, (seen.get(email) ?? 0) + 1)
   const collisions = [...seen.entries()].filter(([, count]) => count > 1).map(([email]) => email)
-  return { derivable, notDerivable, collisions }
+  return { derivable, notDerivable, collisions, alreadySet }
 }
 
 async function main() {
@@ -31,11 +35,12 @@ async function main() {
   const apply = process.argv.includes('--apply')
   const overrides: Record<string, string> = { 'victor.medeiros': 'victor@austercontabil.com.br' }
 
-  const users = await prisma.user.findMany({ select: { id: true, username: true } })
-  const plan = planEmailFill(users.map((u) => u.username ?? ''), overrides)
+  const users = await prisma.user.findMany({ select: { id: true, username: true, email: true } })
+  const plan = planEmailFill(users.map((u) => ({ username: u.username ?? '', email: u.email })), overrides)
 
   console.log(`${plan.derivable.length} e-mail(s) a aplicar:`)
   for (const { username, email } of plan.derivable) console.log(`  ${username} -> ${email}`)
+  if (plan.alreadySet.length) console.log(`\nJá têm e-mail de verdade, ficam como estão: ${plan.alreadySet.join(', ')}`)
   if (plan.notDerivable.length) console.log(`\nSem derivação automática (informe à mão): ${plan.notDerivable.join(', ')}`)
   if (plan.collisions.length) {
     console.log(`\nColisão de e-mail, nada será gravado para os envolvidos: ${plan.collisions.join(', ')}`)

@@ -26,6 +26,9 @@ export type { Actor, Role, UserAccount, UserChanges } from './domain/user'
 
 const rateLimiter: RateLimiter = { check: (route, origin) => checkRateLimit({ route, origin }) }
 
+// Sem barra no fim, senão o link sai com "//reset-password".
+const baseUrl = getEnv().APP_PUBLIC_URL.replace(/\/$/, '')
+
 export const requestPasswordReset = makeRequestPasswordReset({
   accounts: betterAuthUserAccounts,
   tokens: prismaPasswordResetTokens,
@@ -34,7 +37,7 @@ export const requestPasswordReset = makeRequestPasswordReset({
   clock: systemClock,
   rateLimiter,
   recordAudit,
-  baseUrl: getEnv().APP_PUBLIC_URL,
+  baseUrl,
 })
 
 export const completePasswordReset = makeCompletePasswordReset({
@@ -55,7 +58,7 @@ export const sendResetLinks = makeSendResetLinks({
   mailer: resetMailerOf(mailSender),
   clock: systemClock,
   recordAudit,
-  baseUrl: getEnv().APP_PUBLIC_URL,
+  baseUrl,
 })
 
 export type { RequestPasswordResetResult } from './application/request-password-reset'

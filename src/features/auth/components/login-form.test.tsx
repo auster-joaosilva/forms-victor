@@ -1,10 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 
+// `Link` needs a <RouterProvider> context it doesn't have under Testing Library (nor under
+// `renderToString` here); stub it with a plain anchor.
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tanstack/react-router')>()),
   useNavigate: () => vi.fn(),
+  Link: ({ children, to, ...rest }: { children?: ReactNode; to: string }) => (
+    <a href={to} {...rest}>
+      {children}
+    </a>
+  ),
 }))
 vi.mock('@/lib/auth-client', () => ({ authClient: { signIn: { username: vi.fn() } } }))
 

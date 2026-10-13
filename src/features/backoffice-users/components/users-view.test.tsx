@@ -4,11 +4,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { UsersView } from './users-view'
 
 const users = [
-  { id: 'u1', username: 'victor', name: 'Victor', role: 'admin' as const, active: true, lastLoginAt: null, createdAt: '2026-09-01T12:00:00.000Z' },
-  { id: 'u2', username: 'ana', name: 'Ana', role: 'operator' as const, active: false, lastLoginAt: null, createdAt: '2026-09-02T12:00:00.000Z' },
+  { id: 'u1', username: 'victor', name: 'Victor', role: 'admin' as const, active: true, lastLoginAt: null, createdAt: '2026-09-01T12:00:00.000Z', email: 'victor@austercontabil.com.br' },
+  { id: 'u2', username: 'ana', name: 'Ana', role: 'operator' as const, active: false, lastLoginAt: null, createdAt: '2026-09-02T12:00:00.000Z', email: 'ana@users.invalid' },
 ]
 
-const handlers = () => ({ onCreate: vi.fn(), onChange: vi.fn(), onRequestPassword: vi.fn(), onRename: vi.fn() })
+const handlers = () => ({ onCreate: vi.fn(), onChange: vi.fn(), onRequestPassword: vi.fn(), onRename: vi.fn(), onChangeEmail: vi.fn(), onSendResetLink: vi.fn(), onSendResetLinksToAll: vi.fn() })
 
 describe('UsersView', () => {
   it('shows role and situation and sends one change at a time', async () => {
@@ -47,5 +47,22 @@ describe('UsersView', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Papel do novo usuário' }), 'administrador')
     await userEvent.click(screen.getByRole('button', { name: 'Criar usuário' }))
     expect(props.onCreate).toHaveBeenCalledWith({ username: 'bia', name: 'Beatriz', role: 'admin' })
+  })
+
+  it('shows the real email, hides the fake one, and the reset button only works with a real email', async () => {
+    const props = handlers()
+    render(<UsersView users={users} error={null} pending={false} {...props} />)
+    const victor = screen.getByText('victor').closest('tr')
+    const ana = screen.getByText('ana').closest('tr')
+    if (!victor || !ana) throw new Error('sem linha')
+    expect(within(victor).getByText('victor@austercontabil.com.br')).toBeInTheDocument()
+    expect(within(ana).getByText('sem e-mail')).toBeInTheDocument()
+    expect(within(ana).getByRole('button', { name: 'Enviar link de redefinição' })).toBeDisabled()
+    await userEvent.click(within(victor).getByRole('button', { name: 'Enviar link de redefinição' }))
+    expect(props.onSendResetLink).toHaveBeenCalledWith('victor')
+    await userEvent.click(within(victor).getByRole('button', { name: 'E-mail' }))
+    expect(props.onChangeEmail).toHaveBeenCalledWith('victor', 'victor@austercontabil.com.br')
+    await userEvent.click(screen.getByRole('button', { name: /Enviar link de redefinição para todos/ }))
+    expect(props.onSendResetLinksToAll).toHaveBeenCalled()
   })
 })

@@ -4,12 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { createQueryClient } from '@/lib/query-client'
 
-const { listUsersFn, createUserFn, updateUserFn } = vi.hoisted(() => ({ listUsersFn: vi.fn(), createUserFn: vi.fn(), updateUserFn: vi.fn() }))
-vi.mock('../api/users', () => ({ listUsersFn, createUserFn, updateUserFn }))
+const { listUsersFn, createUserFn, updateUserFn, setUserEmailFn, sendResetLinkFn, sendResetLinksToAllFn } = vi.hoisted(() => ({
+  listUsersFn: vi.fn(), createUserFn: vi.fn(), updateUserFn: vi.fn(), setUserEmailFn: vi.fn(), sendResetLinkFn: vi.fn(), sendResetLinksToAllFn: vi.fn(),
+}))
+vi.mock('../api/users', () => ({ listUsersFn, createUserFn, updateUserFn, setUserEmailFn, sendResetLinkFn, sendResetLinksToAllFn }))
 
 const { UsersPanel } = await import('./users-panel')
 
-const victor = { id: 'u1', username: 'victor', name: 'Victor', role: 'admin' as const, active: true, lastLoginAt: null, createdAt: '2026-09-01T12:00:00.000Z' }
+const victor = { id: 'u1', username: 'victor', name: 'Victor', role: 'admin' as const, active: true, lastLoginAt: null, createdAt: '2026-09-01T12:00:00.000Z', email: 'victor@austercontabil.com.br' }
 
 const renderPanel = () =>
   render(
@@ -61,5 +63,13 @@ describe('UsersPanel', () => {
     expect(prompt).toHaveBeenCalledWith('Novo nome de victor', 'Victor')
     await waitFor(() => expect(updateUserFn).toHaveBeenCalledWith({ data: { username: 'victor', changes: { name: 'Victor Hugo' } } }))
     prompt.mockRestore()
+  })
+
+  it('sends the reset link for one user', async () => {
+    listUsersFn.mockResolvedValue([victor])
+    sendResetLinkFn.mockResolvedValue({ sent: 1 })
+    renderPanel()
+    await userEvent.click(await screen.findByRole('button', { name: 'Enviar link de redefinição' }))
+    await waitFor(() => expect(sendResetLinkFn).toHaveBeenCalledWith({ data: { username: 'victor' } }))
   })
 })

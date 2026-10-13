@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { UserChanges } from '@/server/identity/domain/user'
-import { createUserFn, listUsersFn, updateUserFn, type Outcome } from '../api/users'
+import { createUserFn, listUsersFn, sendResetLinkFn, sendResetLinksToAllFn, setUserEmailFn, updateUserFn, type Outcome } from '../api/users'
 import { PasswordDialog } from './password-dialog'
 import { UsersView, type NewUser } from './users-view'
 
@@ -42,6 +42,27 @@ export function UsersPanel() {
     if (name) change.mutate({ username, changes: { name }, title: 'Renomear' })
   }
 
+  const setEmail = useMutation({
+    mutationFn: ({ username, email }: { username: string; email: string }) => setUserEmailFn({ data: { username, email } }),
+    onSuccess: settle('E-mail: '),
+    onError: (failure) => setError(`E-mail: não deu para falar com o servidor (${failure.message})`),
+  })
+  const sendReset = useMutation({
+    mutationFn: (username: string) => sendResetLinkFn({ data: { username } }),
+    onSuccess: () => setError(null),
+    onError: (failure) => setError(`Enviar link: não deu para falar com o servidor (${failure.message})`),
+  })
+  const sendResetToAll = useMutation({
+    mutationFn: () => sendResetLinksToAllFn(),
+    onSuccess: (result) => setError(`Enviado para ${result.sent} pessoa(s) com e-mail cadastrado.`),
+    onError: (failure) => setError(`Enviar para todos: não deu para falar com o servidor (${failure.message})`),
+  })
+
+  const changeEmail = (username: string, currentEmail: string) => {
+    const email = window.prompt(`E-mail de ${username}`, currentEmail)?.trim()
+    if (email) setEmail.mutate({ username, email })
+  }
+
   if (list.isPending) return <>carregando…</>
   if (list.isError) return <div className="bo-empty">{`Falha ao carregar: ${list.error.message}`}</div>
 
@@ -55,6 +76,9 @@ export function UsersPanel() {
         onChange={(username, changes) => change.mutate({ username, changes, title: changes.role ? 'Mudar papel' : 'Mudar situação' })}
         onRequestPassword={(username) => setAsking({ kind: 'password', username })}
         onRename={rename}
+        onChangeEmail={changeEmail}
+        onSendResetLink={(username) => sendReset.mutate(username)}
+        onSendResetLinksToAll={() => sendResetToAll.mutate()}
       />
       <PasswordDialog open={asking !== null} title={asking ? titleOf(asking) : ''} onSubmit={submitPassword} onCancel={() => setAsking(null)} />
     </>

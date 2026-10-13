@@ -1,11 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import { IdentityError, createUser, listUsers, updateUser } from '@/server/identity/composition'
+import { IdentityError, createUser, listUsers, sendResetLinks, setUserEmail, updateUser } from '@/server/identity/composition'
 import type { Role } from '@/server/identity/domain/user'
 import { ROLES } from '@/server/shared/domain/permissions'
 import { requireCapability } from '@/server/shared/http/session-middleware'
 
-export type UserRow = { id: string; username: string; name: string; role: Role; active: boolean; lastLoginAt: string | null; createdAt: string }
+export type UserRow = { id: string; username: string; name: string; role: Role; active: boolean; lastLoginAt: string | null; createdAt: string; email: string }
 export type Outcome = { ok: true } | { ok: false; message: string }
 
 const role = z.enum(ROLES)
@@ -46,3 +46,17 @@ export const changeOwnPasswordFn = createServerFn({ method: 'POST' })
   .middleware([requireCapability('own_access')])
   .inputValidator(z.object({ password }))
   .handler(({ data, context }) => outcome(() => updateUser(context.session.user, context.session.user.username, { password: data.password })))
+
+export const setUserEmailFn = createServerFn({ method: 'POST' })
+  .middleware([requireCapability('manage_users')])
+  .inputValidator(z.object({ username: z.string().max(64), email: z.string().max(254) }))
+  .handler(({ data, context }) => outcome(() => setUserEmail(context.session.user, data.username, data.email)))
+
+export const sendResetLinkFn = createServerFn({ method: 'POST' })
+  .middleware([requireCapability('manage_users')])
+  .inputValidator(z.object({ username: z.string().max(64) }))
+  .handler(({ data, context }) => sendResetLinks(context.session.user, { usernames: [data.username] }))
+
+export const sendResetLinksToAllFn = createServerFn({ method: 'POST' })
+  .middleware([requireCapability('manage_users')])
+  .handler(({ context }) => sendResetLinks(context.session.user, { all: true }))

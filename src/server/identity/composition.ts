@@ -11,6 +11,7 @@ import { systemClock } from './adapters/system-clock'
 import { makeCompletePasswordReset } from './application/complete-password-reset'
 import { makeManageUsers } from './application/manage-users'
 import { makeRequestPasswordReset } from './application/request-password-reset'
+import { makeSendResetLinks } from './application/send-reset-links'
 import { makeSetUserEmail } from './application/set-user-email'
 import type { RateLimiter } from './ports/rate-limiter'
 
@@ -45,6 +46,16 @@ export const completePasswordReset = makeCompletePasswordReset({
 })
 
 export const setUserEmail = makeSetUserEmail({ accounts: betterAuthUserAccounts, recordAudit })
+
+export const sendResetLinks = makeSendResetLinks({
+  accounts: betterAuthUserAccounts,
+  tokens: prismaPasswordResetTokens,
+  tokenGenerator: createRandomTokenGenerator(),
+  mailer: resetMailerOf(mailSender),
+  clock: systemClock,
+  recordAudit,
+  baseUrl: getEnv().APP_PUBLIC_URL,
+})
 
 export type { RequestPasswordResetResult } from './application/request-password-reset'
 export type { CompletePasswordResetResult } from './application/complete-password-reset'

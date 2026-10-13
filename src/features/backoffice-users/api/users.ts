@@ -1,12 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import { IdentityError, createUser, listUsers, sendResetLinks, setUserEmail, updateUser } from '@/server/identity/composition'
+import { IdentityError, createUser, importUserEmails, listUsers, sendResetLinks, setUserEmail, updateUser, type ImportUserEmailsResult } from '@/server/identity/composition'
 import type { Role } from '@/server/identity/domain/user'
 import { ROLES } from '@/server/shared/domain/permissions'
 import { requireCapability } from '@/server/shared/http/session-middleware'
 
 export type UserRow = { id: string; username: string; name: string; role: Role; active: boolean; lastLoginAt: string | null; createdAt: string; email: string }
 export type Outcome = { ok: true } | { ok: false; message: string }
+export type { ImportUserEmailsResult }
 
 const role = z.enum(ROLES)
 const password = z.string().max(128)
@@ -60,3 +61,8 @@ export const sendResetLinkFn = createServerFn({ method: 'POST' })
 export const sendResetLinksToAllFn = createServerFn({ method: 'POST' })
   .middleware([requireCapability('manage_users')])
   .handler(({ context }) => sendResetLinks(context.session.user, { all: true }))
+
+export const importUserEmailsFn = createServerFn({ method: 'POST' })
+  .middleware([requireCapability('manage_users')])
+  .inputValidator(z.object({ text: z.string().max(10_000) }))
+  .handler(({ data, context }) => importUserEmails(context.session.user, data.text))

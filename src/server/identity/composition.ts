@@ -9,6 +9,7 @@ import { prismaSessionEnder } from './adapters/prisma-session-ender'
 import { createRandomTokenGenerator, hashToken } from './adapters/random-token-generator'
 import { systemClock } from './adapters/system-clock'
 import { makeCompletePasswordReset } from './application/complete-password-reset'
+import { makeImportUserEmails } from './application/import-user-emails'
 import { makeManageUsers } from './application/manage-users'
 import { makeRequestPasswordReset } from './application/request-password-reset'
 import { makeSendResetLinks } from './application/send-reset-links'
@@ -59,3 +60,6 @@ export const sendResetLinks = makeSendResetLinks({
 
 export type { RequestPasswordResetResult } from './application/request-password-reset'
 export type { CompletePasswordResetResult } from './application/complete-password-reset'
+
+export const importUserEmails = makeImportUserEmails({ accounts: betterAuthUserAccounts, recordAudit })
+export type { ImportUserEmailsResult } from './application/import-user-emails'

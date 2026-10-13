@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { UserChanges } from '@/server/identity/domain/user'
 import { createUserFn, listUsersFn, sendResetLinkFn, sendResetLinksToAllFn, setUserEmailFn, updateUserFn, type Outcome } from '../api/users'
+import { ImportEmailsForm } from './import-emails-form'
 import { PasswordDialog } from './password-dialog'
 import { UsersView, type NewUser } from './users-view'
 
@@ -80,6 +81,7 @@ export function UsersPanel() {
         onSendResetLink={(username) => sendReset.mutate(username)}
         onSendResetLinksToAll={() => sendResetToAll.mutate()}
       />
+      <ImportEmailsForm />
       <PasswordDialog open={asking !== null} title={asking ? titleOf(asking) : ''} onSubmit={submitPassword} onCancel={() => setAsking(null)} />
     </>
   )

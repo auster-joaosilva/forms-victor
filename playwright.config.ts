@@ -15,6 +15,6 @@ export default defineConfig({
     url: `${origin}/health`,
     reuseExistingServer: true,
     timeout: 120_000,
-    env: { PORT: String(port), BETTER_AUTH_URL: origin, APP_PUBLIC_URL: origin },
+    env: { PORT: String(port), BETTER_AUTH_URL: origin, APP_PUBLIC_URL: origin, SMTP_HOST: 'localhost', SMTP_PORT: '1025', SMTP_USER: 'dev', SMTP_PASSWORD: 'dev' },
   },
 })

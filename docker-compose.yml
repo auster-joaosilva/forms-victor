@@ -24,6 +24,13 @@ services:
       test: ['CMD', 'mc', 'ready', 'local']
       interval: 2s
       retries: 20
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ['1025:1025', '8025:8025']
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8025/readyz']
+      interval: 2s
+      retries: 20
 volumes:
   pgdata:
   miniodata:

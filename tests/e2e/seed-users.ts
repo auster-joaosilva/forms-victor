@@ -17,4 +17,5 @@ for (const user of [E2E_REGULARIZATION, E2E_OPERATOR]) {
   }
   console.log(`usuário do ponta a ponta pronto: ${user.username} (${user.role})`)
 }
+await prisma.user.update({ where: { username: E2E_OPERATOR.username }, data: { email: `${E2E_OPERATOR.username}@austercontabil.com.br` } })
 process.exit(0)
